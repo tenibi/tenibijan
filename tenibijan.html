@@ -1851,6 +1851,33 @@ body{
 </div>
 
 <!-- LOBBY -->
+<!-- ログイン画面 -->
+<div id="loginScreen" style="
+  display:none;
+  position:fixed;inset:0;z-index:9999;
+  background:#0b1520;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:24px;
+  font-family:sans-serif;
+">
+  <img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/logo.png" alt="手にビじゃん" style="max-width:280px;width:70%;height:auto;">
+  <p style="color:#5a7a6a;font-size:.85rem;letter-spacing:.1em;">ログインしてゲームを始めよう</p>
+  <a id="googleLoginBtn" href="#" onclick="doGoogleLogin()" style="
+    display:flex;align-items:center;gap:10px;
+    background:#fff;color:#333;
+    border:none;border-radius:8px;
+    padding:12px 24px;
+    font-size:1rem;font-weight:700;
+    cursor:pointer;text-decoration:none;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  ">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:22px;height:22px;">
+    Googleでログイン
+  </a>
+</div>
+
 <div id="lobby">
 <div id="lobbyInner">
   <div class="lobby-title">
@@ -14360,8 +14387,21 @@ function _shopToast(msg){
   t._tid=setTimeout(()=>{t.style.opacity='0';},2400);
 }
 
+// Googleログインへリダイレクト
+function doGoogleLogin(){
+  window.location.href = BACKEND + '/auth/google';
+}
+
 // Show profile on first load if no name saved
 (function(){
+  // JWTトークンがなければログイン画面を表示
+  const token = localStorage.getItem('jwt_token');
+  if(!token){
+    document.getElementById('loginScreen').style.display='flex';
+    document.getElementById('lobby').style.display='none';
+    return;
+  }
+
   loadProfile();
   loadSettings(); // ★ 音量・BGM設定を復元
   renderCpuSlots(); // CPU設定スロットを初期描画

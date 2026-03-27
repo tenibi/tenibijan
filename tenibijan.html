@@ -1878,7 +1878,7 @@ body{
   </a>
 </div>
 
-<div id="lobby">
+<div id="lobby" style="display:none">
 <div id="lobbyInner">
   <div class="lobby-title">
     <img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/logo.png" alt="手にビじゃん" style="max-width:320px;width:80%;height:auto;display:block;margin:0 auto;">
@@ -14398,10 +14398,10 @@ function doGoogleLogin(){
   const token = localStorage.getItem('jwt_token');
   if(!token){
     document.getElementById('loginScreen').style.display='flex';
-    document.getElementById('lobby').style.display='none';
     return;
   }
 
+  document.getElementById('lobby').style.display='';
   loadProfile();
   loadSettings(); // ★ 音量・BGM設定を復元
   renderCpuSlots(); // CPU設定スロットを初期描画

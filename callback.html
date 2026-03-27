@@ -82,7 +82,7 @@
 
         if (isAdmin) {
           document.getElementById("status").textContent = "管理画面に移動します...";
-          setTimeout(() => { window.location.href = ADMIN_URL; }, 800);
+          setTimeout(() => { window.location.href = ADMIN_URL + "?token=" + encodeURIComponent(data.token); }, 800);
         } else {
           document.getElementById("status").textContent = "ログイン成功！ゲームに移動します...";
           setTimeout(() => { window.location.href = GAME_URL; }, 800);

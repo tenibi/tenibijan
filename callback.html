@@ -37,7 +37,8 @@
 
 <script>
   const BACKEND = "https://tenibijan.duckdns.org";
-  const GAME_URL = "/tenibijan/tenibijan.html";
+  const GAME_URL  = "/tenibijan/tenibijan.html";
+  const ADMIN_URL = "http://localhost:3000/admin.html";
 
   async function handleCallback() {
     const params = new URLSearchParams(window.location.search);
@@ -49,7 +50,9 @@
       return;
     }
 
-    const provider = state.startsWith("twitch") ? "twitch" : "google";
+    // stateの先頭でproviderを判別
+    const isAdmin    = state.startsWith("googleadmin");
+    const provider   = state.startsWith("twitch") ? "twitch" : "google";
 
     if (!code) {
       showError("認証コードがありません");
@@ -77,12 +80,16 @@
         localStorage.setItem("user_name", data.name || "");
         localStorage.setItem("user_photo", data.photo || "");
 
-        document.getElementById("status").textContent = "ログイン成功！ゲームに移動します...";
-        setTimeout(() => {
-          window.location.href = GAME_URL;
-        }, 800);
+        if (isAdmin) {
+          document.getElementById("status").textContent = "管理画面に移動します...";
+          setTimeout(() => { window.location.href = ADMIN_URL; }, 800);
+        } else {
+          document.getElementById("status").textContent = "ログイン成功！ゲームに移動します...";
+          setTimeout(() => { window.location.href = GAME_URL; }, 800);
+        }
 
       } else if (provider === "twitch") {
+        // Twitch連携完了 → ゲームに戻る
         document.getElementById("status").textContent = "Twitch連携完了！ゲームに戻ります...";
         setTimeout(() => {
           window.location.href = GAME_URL + "?twitch=linked";

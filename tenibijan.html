@@ -1275,6 +1275,89 @@ body{
   font-size:.55rem;color:#4a7a5a;margin-top:-6px;margin-bottom:10px;letter-spacing:.05em;
 }
 
+/* ===== FRIEND SCREEN ===== */
+#friendScreen{
+  position:fixed;inset:0;z-index:10;
+  display:none;flex-direction:column;align-items:center;
+  min-height:100vh;overflow-y:auto;
+  background-color:var(--bg);padding:50px 20px 80px;
+}
+#friendScreen.active{display:flex;}
+.friend-card{
+  background:linear-gradient(135deg,rgba(9,20,34,.82),rgba(6,14,24,.82));
+  border:1px solid #1a3a2a;border-radius:14px;padding:18px 20px;
+  width:100%;max-width:420px;margin-bottom:14px;
+}
+.friend-card h3{font-size:.75rem;color:var(--gold);letter-spacing:.2em;margin-bottom:12px;text-align:center;border-bottom:1px solid #1a3a2a;padding-bottom:8px;}
+.friend-row{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:8px;
+  background:#030a10;border:1px solid #1a3a2a;margin-bottom:6px;
+}
+.friend-row-icon{width:32px;height:32px;border-radius:50%;overflow:hidden;background:#0a1a10;border:1px solid #2a4a3a;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.friend-row-icon img{width:100%;height:100%;object-fit:cover;}
+.friend-row-info{flex:1;min-width:0;}
+.friend-row-name{font-size:.72rem;font-weight:700;color:#c0d8c0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.friend-row-sub{font-size:.55rem;color:#4a7a5a;}
+.friend-row-btns{display:flex;gap:5px;flex-shrink:0;}
+.friend-btn{font-size:.6rem;padding:4px 8px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;}
+.friend-btn-danger{background:#1a0505;border-color:#5a1a1a;color:#ff7777;}
+.friend-btn-danger:hover{border-color:#ff4444;background:#2a0808;}
+.friend-btn-ok{background:#051508;border-color:#2a5a2a;color:#55cc55;}
+.friend-btn-ok:hover{border-color:#55cc55;background:#0a2a0a;}
+.friend-btn-ng{background:#1a0505;border-color:#5a1a1a;color:#ff7777;}
+.friend-btn-ng:hover{border-color:#ff4444;}
+.friend-search-input{
+  width:100%;padding:8px 12px;background:#030a10;
+  border:1.5px solid #1a4a2a;border-radius:7px;
+  color:var(--gold);font-family:inherit;font-size:.85rem;
+  letter-spacing:.1em;text-align:center;box-sizing:border-box;
+}
+.friend-search-input:focus{outline:none;border-color:var(--gold);}
+.friend-code-box{
+  text-align:center;background:#030a10;border:1px solid #2a4a3a;
+  border-radius:8px;padding:10px 14px;margin-bottom:10px;
+}
+.friend-code-val{
+  font-size:1.5rem;font-weight:900;color:var(--gold);letter-spacing:.3em;
+  cursor:pointer;
+}
+/* ===== GIFT MODAL ===== */
+#giftModal{
+  position:fixed;inset:0;z-index:200;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.75);
+}
+#giftModal.show{display:flex;}
+.gift-modal-inner{
+  background:linear-gradient(135deg,#0a1820,#050d18);
+  border:1.5px solid #2a4a6a;border-radius:16px;
+  padding:22px 22px 18px;width:min(92vw,360px);
+  box-shadow:0 0 32px #0088ff22;
+}
+.gift-modal-title{font-size:.8rem;font-weight:900;color:var(--gold);letter-spacing:.15em;margin-bottom:14px;text-align:center;}
+.gift-type-tab{display:flex;gap:6px;margin-bottom:14px;}
+.gift-type-btn{flex:1;padding:7px 4px;border-radius:7px;border:1.5px solid #2a4a6a;background:#030a10;color:#5a8aaa;font-size:.65rem;cursor:pointer;transition:all .15s;text-align:center;}
+.gift-type-btn.active{border-color:#4488cc;background:#0a1a2a;color:#88ccff;}
+.gift-tbb-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.gift-tbb-input{flex:1;padding:8px 10px;background:#030a10;border:1.5px solid #2a4a6a;border-radius:7px;color:var(--gold);font-size:.9rem;text-align:center;font-family:inherit;}
+.gift-tbb-input:focus{outline:none;border-color:#88ccff;}
+.gift-quick-btns{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;}
+.gift-quick-btn{padding:4px 8px;border-radius:5px;border:1px solid #2a4a6a;background:#030a10;color:#5a8aaa;font-size:.58rem;cursor:pointer;}
+.gift-quick-btn:hover{border-color:#4488cc;color:#88ccff;}
+.gift-skin-item{display:flex;align-items:center;gap:10px;padding:10px;background:#0a1020;border:1.5px solid #3a2a5a;border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+.gift-skin-item:hover,.gift-skin-item.selected{border-color:#8844cc;background:#12082a;}
+.gift-send-btn{width:100%;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,#1a3a6a,#0a1a4a);color:#88ccff;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s;margin-top:4px;}
+.gift-send-btn:hover{background:linear-gradient(135deg,#2a4a8a,#1a2a5a);}
+.gift-send-btn:disabled{opacity:.5;cursor:default;}
+.gift-inbox-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#030a10;border:1px solid #1a3a2a;border-radius:8px;margin-bottom:6px;}
+.gift-inbox-icon{font-size:1.4rem;flex-shrink:0;}
+.gift-inbox-info{flex:1;min-width:0;}
+.gift-inbox-sender{font-size:.62rem;font-weight:700;color:#c0d8c0;}
+.gift-inbox-desc{font-size:.55rem;color:#4a7a5a;margin-top:1px;}
+.gift-claim-btn{padding:5px 10px;border-radius:5px;border:1px solid #2a5a2a;background:#051508;color:#55cc55;font-size:.6rem;cursor:pointer;flex-shrink:0;}
+.gift-claim-btn:hover{border-color:#55cc55;}
+
 /* ===== PROFILE SCREEN ===== */
 #profileScreen{
   position:relative;z-index:10;
@@ -1589,6 +1672,12 @@ body{
         background:linear-gradient(135deg,#0a1a10,#051008);border:1.5px solid #3ada8a;color:#3ada8a;">
         ⭐ 常設ガチャ
       </button>
+      <button id="gachaTabTbb" onclick="switchGachaTab('tbb')" style="
+        flex:1;padding:9px 0;border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;
+        cursor:pointer;transition:all .2s;letter-spacing:.05em;
+        background:#030a10;border:1.5px solid #2a3a4a;color:#3a5a6a;">
+        💉 TBBガチャ
+      </button>
       <button id="gachaTabCollab" onclick="switchGachaTab('collab')" style="
         flex:1;padding:9px 0;border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;
         cursor:pointer;transition:all .2s;letter-spacing:.05em;
@@ -1623,6 +1712,65 @@ body{
       </div>
       <!-- 統計 -->
       <div style="margin-top:12px;text-align:center;font-size:.55rem;color:#2a4a3a;" id="gachaStat"></div>
+    </div>
+
+    <!-- TBBガチャパネル -->
+    <div id="gachaPanelTbb" style="display:none;">
+      <!-- ヘッダービジュアル -->
+      <div style="
+        background:linear-gradient(135deg,#0d0820,#1a0830,#0a0518);
+        border:1.5px solid #8844cc;border-radius:14px;
+        padding:18px 16px 14px;text-align:center;margin-bottom:16px;
+        position:relative;overflow:hidden;box-shadow:0 0 24px #8844cc33;
+      ">
+        <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;
+          background:radial-gradient(circle,#8844cc44,transparent 70%);pointer-events:none;"></div>
+        <div style="font-size:2.2rem;margin-bottom:6px;">💉</div>
+        <div style="font-size:.88rem;font-weight:700;color:#cc88ff;letter-spacing:.1em;margin-bottom:4px;">TBBコインガチャ</div>
+        <div style="font-size:.56rem;color:#7a5a9a;line-height:1.7;">
+          TBBコインで引ける限定ガチャ<br>
+          <span style="color:#cc88ff;">刺青など限定スキンが出る！</span>
+        </div>
+      </div>
+
+      <!-- レアリティ表 -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;justify-content:center;">
+        <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#18081a;border:1px solid #8833aa;color:#cc66ff;">EPIC 100%（現在）</span>
+      </div>
+
+      <!-- TBBコイン残高 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;justify-content:center;
+        background:#0a0515;border:1px solid #4a2a7a;border-radius:10px;padding:10px 16px;">
+        <img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/coin/tbb.png" style="width:22px;height:22px;object-fit:contain;">
+        <span style="font-size:.92rem;font-weight:700;color:#88ddff;" id="gachaTbbDisplay">0</span>
+        <span style="font-size:.62rem;color:#5a7a6a;">TBBコイン</span>
+      </div>
+
+      <!-- 引くボタン -->
+      <div class="gacha-btn-wrap">
+        <button class="gacha-pull-btn" id="tbbPullBtn" onclick="doPullTbb()" style="
+          background:linear-gradient(135deg,#1a0830,#0d0518);
+          border:1.5px solid #8844cc;color:#cc88ff;
+          box-shadow:0 0 10px #8844cc33;
+        ">💉 1回引く（<img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">150枚）</button>
+      </div>
+
+      <!-- 排出アイテム一覧 -->
+      <div style="margin-top:16px;background:#0a0515;border:1px solid #3a1a5a;border-radius:10px;padding:12px 14px;">
+        <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:10px;">📋 排出アイテム</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;
+          background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+          <span style="font-size:1.6rem;flex-shrink:0;">🖊️</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">刺青01</div>
+            <div style="font-size:.52rem;color:#7a5a9a;margin-top:2px;">牌を切る時の手に刺青が入る</div>
+          </div>
+          <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC</div>
+        </div>
+      </div>
+
+      <!-- 所持スキン状態 -->
+      <div style="margin-top:12px;text-align:center;font-size:.55rem;color:#4a2a7a;" id="tbbGachaStat"></div>
     </div>
 
     <!-- コラボガチャパネル -->
@@ -1778,6 +1926,111 @@ body{
   <div id="iconCollectionContent" style="width:100%;max-width:520px;"></div>
 </div>
 
+<!-- ===== FRIEND SCREEN ===== -->
+<div id="friendScreen">
+  <button onclick="closeFriendScreen()" style="
+    position:fixed;top:14px;left:14px;z-index:20;
+    background:#030a10;border:1px solid #2a4a3a;border-radius:8px;
+    color:#5a9a7a;font-size:.72rem;padding:7px 13px;cursor:pointer;">◀ ロビーへ戻る</button>
+
+  <div class="lobby-title" style="margin-top:10px;">
+    <h1 style="font-size:clamp(1.2rem,4vw,2rem);">👥 フレンド</h1>
+  </div>
+
+  <!-- 自分のフレンドコード -->
+  <div class="friend-card">
+    <h3>📋 自分のフレンドコード</h3>
+    <div class="friend-code-box">
+      <div style="font-size:.55rem;color:#5a7a6a;margin-bottom:4px;">このコードを相手に教えてください</div>
+      <div class="friend-code-val" id="myFriendCode" onclick="copyFriendCode()" title="タップでコピー">------</div>
+      <div style="font-size:.5rem;color:#3a5a4a;margin-top:3px;">タップでコピー</div>
+    </div>
+  </div>
+
+  <!-- フレンド検索 -->
+  <div class="friend-card">
+    <h3>🔍 フレンドを追加</h3>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input id="friendSearchInput" class="friend-search-input" type="text" maxlength="10"
+        placeholder="フレンドコードを入力"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+        onkeydown="if(event.key==='Enter')searchFriend()">
+      <button class="btn btn-primary" onclick="searchFriend()" style="padding:8px 12px;font-size:.75rem;flex-shrink:0;">検索</button>
+    </div>
+    <div id="friendSearchResult" style="min-height:24px;"></div>
+  </div>
+
+  <!-- 受信中の申請 -->
+  <div class="friend-card" id="friendPendingCard" style="display:none;">
+    <h3>📨 フレンド申請</h3>
+    <div id="friendPendingList"></div>
+  </div>
+
+  <!-- 受取ボックス -->
+  <div class="friend-card" id="giftInboxCard">
+    <h3>🎁 受取ボックス <span id="giftInboxBadge" style="display:none;background:#ff4444;color:#fff;font-size:.5rem;border-radius:10px;padding:1px 6px;vertical-align:middle;"></span></h3>
+    <div id="giftInboxList">
+      <div style="text-align:center;font-size:.6rem;color:#3a5a4a;padding:8px 0;">読み込み中<span class="thinking-dots"></span></div>
+    </div>
+  </div>
+
+  <!-- フレンド一覧 -->
+  <div class="friend-card">
+    <h3>✅ フレンド一覧</h3>
+    <div id="friendList" style="min-height:30px;">
+      <div style="text-align:center;font-size:.6rem;color:#3a5a4a;padding:12px 0;">読み込み中<span class="thinking-dots"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GIFT MODAL ===== -->
+<div id="giftModal">
+  <div class="gift-modal-inner">
+    <div class="gift-modal-title">🎁 プレゼントを送る</div>
+    <div id="giftModalTo" style="text-align:center;font-size:.6rem;color:#5a8a6a;margin-bottom:12px;"></div>
+
+    <!-- タブ -->
+    <div class="gift-type-tab">
+      <div class="gift-type-btn active" id="giftTabTbb" onclick="switchGiftTab('tbb')">
+        <div style="font-size:1rem;">🪙</div>
+        <div>TBBコイン</div>
+      </div>
+      <div class="gift-type-btn" id="giftTabSkin" onclick="switchGiftTab('skin')">
+        <div style="font-size:1rem;">🖊️</div>
+        <div>スキン</div>
+      </div>
+    </div>
+
+    <!-- TBBコインパネル -->
+    <div id="giftPanelTbb">
+      <div style="font-size:.55rem;color:#4a7a6a;margin-bottom:6px;text-align:center;">
+        所持: <span id="giftMyTbb" style="color:#88ddff;font-weight:700;">0</span> TBBコイン
+      </div>
+      <div class="gift-tbb-row">
+        <img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/coin/tbb.png" style="width:20px;height:20px;object-fit:contain;">
+        <input id="giftTbbAmount" class="gift-tbb-input" type="number" min="1" max="10000" placeholder="枚数">
+      </div>
+      <div class="gift-quick-btns">
+        <button class="gift-quick-btn" onclick="setGiftTbb(10)">10</button>
+        <button class="gift-quick-btn" onclick="setGiftTbb(50)">50</button>
+        <button class="gift-quick-btn" onclick="setGiftTbb(100)">100</button>
+        <button class="gift-quick-btn" onclick="setGiftTbb(500)">500</button>
+        <button class="gift-quick-btn" onclick="setGiftTbb(Math.floor((PROFILE.tbbCoins||0)/2))">半分</button>
+        <button class="gift-quick-btn" onclick="setGiftTbb(PROFILE.tbbCoins||0)">全部</button>
+      </div>
+    </div>
+
+    <!-- スキンパネル -->
+    <div id="giftPanelSkin" style="display:none;">
+      <div id="giftSkinList"></div>
+    </div>
+
+    <div id="giftModalMsg" style="font-size:.6rem;color:#7a3a3a;text-align:center;min-height:1.2em;margin-bottom:6px;"></div>
+    <button class="gift-send-btn" id="giftSendBtn" onclick="doSendGift()">送る 🎁</button>
+    <button onclick="closeGiftModal()" style="width:100%;margin-top:8px;padding:7px;border-radius:6px;border:1px solid #2a4a3a;background:none;color:#5a7a6a;font-size:.65rem;cursor:pointer;">キャンセル</button>
+  </div>
+</div>
+
 <div id="profileScreen">
   <button onclick="document.getElementById('profileScreen').classList.remove('active');document.getElementById('lobby').style.display='';" style="
     position:absolute;top:14px;left:14px;z-index:10;
@@ -1877,6 +2130,22 @@ body{
 
     </div><!-- /2列グリッド -->
 
+    <!-- 手のスキン（刺青） -->
+    <div style="margin-top:14px;">
+      <h3 style="margin-bottom:6px;">💉 手のスキン</h3>
+      <div id="handSkinDisplay" onclick="toggleHandSkin()" style="
+        display:flex;align-items:center;gap:10px;
+        background:#040c12;border:2px solid #2a5a3a;border-radius:10px;
+        padding:8px 12px;cursor:pointer;transition:border-color .15s;
+      " onmouseover="this.style.borderColor='#3a7a5a'" onmouseout="this.style.borderColor='#2a5a3a'">
+        <span style="font-size:1.6rem;flex-shrink:0;">🖊️</span>
+        <div style="min-width:0;">
+          <div id="handSkinName" style="font-size:.68rem;font-weight:700;color:#c0d8c0;">刺青なし</div>
+          <div style="font-size:.5rem;color:#4a7a5a;margin-top:2px;">タップで刺青01を切替</div>
+        </div>
+      </div>
+    </div>
+
     <!-- タイトル背景 -->
     <div style="margin-top:14px;">
       <h3 style="margin-bottom:8px;">🖼️ タイトル背景</h3>
@@ -1939,6 +2208,10 @@ body{
       background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
       color:#5a8a6a;font-size:1rem;padding:6px 10px;cursor:pointer;
       transition:all .15s;align-self:stretch;" title="設定">⚙️</button>
+    <button onclick="openFriendScreen()" style="
+      background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
+      color:#5a8a6a;font-size:1rem;padding:6px 10px;cursor:pointer;
+      transition:all .15s;align-self:stretch;position:relative;" title="フレンド" id="friendLobbyBtn">👥<span id="friendBadge" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ff4444;"></span></button>
   </div>
 
   <!-- タイトル設定パネル -->
@@ -3822,12 +4095,18 @@ let _discardAnimActivePidx = null; // lock期間中ずっと保持（複数回re
 let _discardAnimLocked = false;   // 捨てアニメ再生中フラグ（妨害防止）
 let _discardAnimLockTimer = null; // ロック解除タイマー
 const _HAND_ANIM_SRC = 'https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/tete.webm';
+const _HAND_ANIM_TAT_SRC = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tete2.webm';
 let _handAnimBlobUrl = null;  // プリロード済みBlobURL
+let _handAnimTatBlobUrl = null; // 刺青01用BlobURL
 // ゲーム開始前にバックグラウンドでプリロード
 (function _preloadHandAnim(){
   fetch(_HAND_ANIM_SRC)
     .then(r=>r.blob())
     .then(b=>{ _handAnimBlobUrl = URL.createObjectURL(b); })
+    .catch(()=>{});
+  fetch(_HAND_ANIM_TAT_SRC)
+    .then(r=>r.blob())
+    .then(b=>{ _handAnimTatBlobUrl = URL.createObjectURL(b); })
     .catch(()=>{});
 })();
 let playerAFK=false;
@@ -4603,7 +4882,7 @@ function _reconnectToNewHost(newHostPeerId, retryCount=0){
     NET._promotingToHost = false;
     if(conn.peer) peerRegistryAdd(conn.peer, newHostIdx, conn);
     conn.send({type:'reconnect', originalIdx: myOriginalIdx, peerId: NET.peer?.id||''});
-    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||''});
+    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||''});
     addLog('✅ 新ホストに再接続しました','log-new');
     hideReconnectOverlay();
   });
@@ -5451,8 +5730,7 @@ function onNetData(msg, senderIdx){
         G_ABILITY_MODE=msg.abilityMode;
       }
       // 自分のプロフィール名・アイコン・PeerIDをホストに送信
-      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||''});
-      if(isReconnecting){
+      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||''});
         // 再接続完了：ゲーム状態は次の stateUpdate で同期される
         addLog('🔄 新ホストと同期中…','log-new');
       } else if(NET.isRankMatch){
@@ -5548,7 +5826,7 @@ function onNetData(msg, senderIdx){
       setTimeout(saveRejoinSession, 600);
       // ゲスト: ホストに自分のアイコン情報とPeerIDを送信（makePlayer後に反映させるため）
       setTimeout(()=>{
-        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||''});
+        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||''});
       }, 400);
     } else if(msg.type==='emote'){
       // ホストから転送されたエモートをゲスト側で表示
@@ -5811,7 +6089,8 @@ function handleGuestAction(msg, senderIdx){
           equippedTitle:PROFILE.equippedTitle||'',
           emote:PROFILE.emote||'',
           emotes:PROFILE.emotes||['','','',''],
-          peerId:NET.peer?.id||''
+          peerId:NET.peer?.id||'',
+          handSkin:PROFILE.handSkin||''
         });
       }
       break;
@@ -5824,6 +6103,7 @@ function handleGuestAction(msg, senderIdx){
       NET.guestAbilities[senderIdx-1]=msg.ability??'';
       NET.guestIconIds[senderIdx-1]=msg.iconId||'';
       NET.guestEquippedTitles = NET.guestEquippedTitles||[]; NET.guestEquippedTitles[senderIdx-1]=msg.equippedTitle||'';
+      NET.guestHandSkins = NET.guestHandSkins||[]; NET.guestHandSkins[senderIdx-1]=msg.handSkin||'';
       NET.guestEmotes[senderIdx-1]=msg.emote||'';
       if(msg.emotes) NET.guestEmotesSlots = NET.guestEmotesSlots||{}; if(msg.emotes) NET.guestEmotesSlots[senderIdx] = msg.emotes;
       if(msg.peerId) NET.guestPeerIds[senderIdx-1]=msg.peerId;
@@ -5832,6 +6112,7 @@ function handleGuestAction(msg, senderIdx){
         G.players[senderIdx].iconId = msg.iconId||'';
         G.players[senderIdx].name   = msg.name||'プレイヤー';
         G.players[senderIdx].equippedTitle = msg.equippedTitle||'';
+        G.players[senderIdx].handSkin = msg.handSkin||'';
         // ★ peerId を player に紐付け（人格固定の核心）
         if(msg.peerId) G.players[senderIdx].peerId = msg.peerId;
         broadcastState();
@@ -6590,10 +6871,12 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
       if(i !== NET.myIdx && _prevPlayers[i].iconId) p.iconId = _prevPlayers[i].iconId;
       if(i !== NET.myIdx && _prevPlayers[i].name) p.name = _prevPlayers[i].name;
       if(i !== NET.myIdx && _prevPlayers[i].equippedTitle !== undefined) p.equippedTitle = _prevPlayers[i].equippedTitle;
+      if(i !== NET.myIdx && _prevPlayers[i].handSkin !== undefined) p.handSkin = _prevPlayers[i].handSkin;
     }
     // ★ オンライン: NET.guestIconIds から iconId を確実に反映（初回・再局問わず）
     if(NET.online && i !== NET.myIdx && NET.guestIconIds[i-1]) p.iconId = NET.guestIconIds[i-1];
     if(NET.online && i !== NET.myIdx && NET.guestEquippedTitles && NET.guestEquippedTitles[i-1] !== undefined) p.equippedTitle = NET.guestEquippedTitles[i-1];
+    if(NET.online && i !== NET.myIdx && NET.guestHandSkins && NET.guestHandSkins[i-1] !== undefined) p.handSkin = NET.guestHandSkins[i-1];
     return p;
   });
 
@@ -11981,13 +12264,13 @@ function renderTable(){
     // 捨てアニメ手の動き: HTML生成時点でクラス付与済み、ここでは手アニメのみ再生
     if(_animPidxSnap !== null){
       const _si = _animSeatMap.indexOf(_animPidxSnap);
-      if(_si >= 0){ _playDiscardHandAnim(_si); }
+      if(_si >= 0){ _playDiscardHandAnim(_si, _animPidxSnap); }
     }
   });
 }
 
 // ── 捨て牌手アニメーション ──────────────────────────────────
-function _playDiscardHandAnim(si){
+function _playDiscardHandAnim(si, pidx){
   const wrapper = document.getElementById('tableWrapper');
   if(!wrapper) return;
   // si=0:bottom, 1:right, 2:top, 3:left
@@ -12022,7 +12305,15 @@ function _playDiscardHandAnim(si){
   // 既存の捨てアニメを除去
   wrapper.querySelectorAll('.discard-hand-vid').forEach(v=>v.remove());
 
-  const animUrl = _handAnimBlobUrl || _HAND_ANIM_SRC;
+  // ★ handSkin判定: 自分か相手かでスキンを取得
+  let useSkin = '';
+  if(pidx !== undefined && pidx !== null){
+    if(pidx === NET.myIdx){ useSkin = PROFILE.handSkin || ''; }
+    else if(G && G.players && G.players[pidx]){ useSkin = G.players[pidx].handSkin || ''; }
+  }
+  const animUrl = (useSkin === 'tattoo01')
+    ? (_handAnimTatBlobUrl || _HAND_ANIM_TAT_SRC)
+    : (_handAnimBlobUrl    || _HAND_ANIM_SRC);
   const vid = document.createElement('video');
   vid.className = 'discard-hand-vid';
   vid.src = animUrl;
@@ -12337,7 +12628,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}};
 
 // ── タイトル背景リスト ──────────────────────────────
 const TITLE_BG_LIST = [
@@ -12511,6 +12802,31 @@ function _applyProfile(){
   });
   updateProfileBadge();
   if(typeof _updateEquippedTitleUI==='function') _updateEquippedTitleUI();
+  _updateHandSkinUI();
+}
+
+function _updateHandSkinUI(){
+  const el = document.getElementById('handSkinName');
+  if(!el) return;
+  const equipped = (PROFILE.handSkin === 'tattoo01');
+  const count = (PROFILE.handSkins && PROFILE.handSkins.tattoo01) || 0;
+  if(count > 0){
+    el.textContent = equipped ? `刺青01 ✓ 装備中（×${count}）` : `刺青01 未装備（×${count}）`;
+  } else {
+    el.textContent = '刺青なし';
+  }
+  const display = document.getElementById('handSkinDisplay');
+  if(display){
+    display.style.borderColor = equipped ? '#ffd700' : '#2a5a3a';
+  }
+}
+
+function toggleHandSkin(){
+  const count = (PROFILE.handSkins && PROFILE.handSkins.tattoo01) || 0;
+  if(count === 0) return; // 未所持なら切替不可
+  PROFILE.handSkin = (PROFILE.handSkin === 'tattoo01') ? '' : 'tattoo01';
+  _updateHandSkinUI();
+  saveProfileSilent();
 }
 
 function loadProfile(){
@@ -12556,6 +12872,8 @@ function loadProfile(){
           ...(Array.isArray(PROFILE.yakumanTitles) ? PROFILE.yakumanTitles : []),
         ])),
         equippedTitle: data.equippedTitle ?? PROFILE.equippedTitle ?? '',
+        handSkin:      data.handSkin      ?? PROFILE.handSkin      ?? '',
+        handSkins:     data.handSkins     ?? PROFILE.handSkins     ?? {},
         cpuUnlocks: Array.from(new Set([
           ...(Array.isArray(data.cpuUnlocks)      ? data.cpuUnlocks      : []),
           ...(Array.isArray(PROFILE.cpuUnlocks)   ? PROFILE.cpuUnlocks   : []),
@@ -12578,6 +12896,7 @@ function loadProfile(){
         }
       }catch(_){}
       _applyProfile();
+      if(typeof refreshFriendBadge==='function') refreshFriendBadge();
     })
     .catch(()=>{ /* サーバー未接続時はlocalStorageのデータをそのまま使う */ });
 }
@@ -13245,30 +13564,138 @@ function updateGachaCoinDisplay(){
   if(el) el.textContent=(PROFILE.coins||0).toLocaleString();
 }
 
+function updateGachaTbbDisplay(){
+  const el=document.getElementById('gachaTbbDisplay');
+  if(el) el.textContent=(PROFILE.tbbCoins||0).toLocaleString();
+}
+
+function updateTbbGachaStat(){
+  const el=document.getElementById('tbbGachaStat');
+  if(!el) return;
+  const count = (PROFILE.handSkins && PROFILE.handSkins.tattoo01) || 0;
+  if(count > 0){
+    el.textContent = `✓ 刺青01 ×${count} 所持`;
+    el.style.color = '#8844cc';
+  } else {
+    el.textContent = '未所持';
+    el.style.color = '#4a2a7a';
+  }
+}
+
+// TBBガチャ: 150TBBで1回、刺青01が確定排出
+function doPullTbb(){
+  const cost = 150;
+  if((PROFILE.tbbCoins||0) < cost){
+    const el=document.getElementById('gachaTbbDisplay');
+    if(el){el.style.color='#ff4444';setTimeout(()=>{el.style.color='#88ddff';},600);}
+    const btn=document.getElementById('tbbPullBtn');
+    if(btn){btn.style.boxShadow='0 0 14px #ff444488';setTimeout(()=>{btn.style.boxShadow='0 0 10px #8844cc33';},600);}
+    return;
+  }
+  authFetch('/api/gacha-tbb',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({pullType:'pull1'})})
+  .then(r=>r.json()).then(d=>{
+    if(!d.ok){
+      const el=document.getElementById('gachaTbbDisplay');
+      if(el){el.style.color='#ff4444';setTimeout(()=>{el.style.color='#88ddff';},600);}
+      return;
+    }
+    // サーバーの最新TBBコイン残高で更新
+    PROFILE.tbbCoins = d.tbbCoins ?? (PROFILE.tbbCoins - cost);
+    // サーバー返却の所持数で上書き（なければクライアント側でインクリメント）
+    const isNew = !((PROFILE.handSkins && PROFILE.handSkins.tattoo01) > 0);
+    if(d.handSkins){
+      PROFILE.handSkins = d.handSkins;
+    } else {
+      PROFILE.handSkins = PROFILE.handSkins || {};
+      PROFILE.handSkins.tattoo01 = (PROFILE.handSkins.tattoo01 || 0) + 1;
+    }
+    PROFILE.handSkin = 'tattoo01'; // 自動装備
+    saveProfileSilent();
+    _updateHandSkinUI();
+    updateGachaTbbDisplay();
+    updateTbbGachaStat();
+    // 演出
+    _showTbbGachaAnim(isNew);
+  }).catch(()=>{
+    // サーバーエンドポイント未実装時: クライアント側でコイン消費してスキン付与
+    if((PROFILE.tbbCoins||0) < cost) return;
+    PROFILE.tbbCoins = (PROFILE.tbbCoins||0) - cost;
+    const isNew = !((PROFILE.handSkins && PROFILE.handSkins.tattoo01) > 0);
+    PROFILE.handSkins = PROFILE.handSkins || {};
+    PROFILE.handSkins.tattoo01 = (PROFILE.handSkins.tattoo01 || 0) + 1;
+    PROFILE.handSkin = 'tattoo01'; // 自動装備
+    saveProfileSilent();
+    _updateHandSkinUI();
+    updateGachaTbbDisplay();
+    updateTbbGachaStat();
+    _showTbbGachaAnim(isNew);
+  });
+}
+
+function _showTbbGachaAnim(isNew){
+  const anim  = document.getElementById('gachaAnim');
+  const flash = document.getElementById('gachaFlash');
+  const inner = document.getElementById('gachaResultInner');
+  flash.style.background = '#8844cc';
+  flash.style.animation  = 'none'; void flash.offsetWidth;
+  flash.style.animation  = 'gFlash .5s ease-out forwards';
+  inner.innerHTML = `
+    <div class="rarity-epic" style="text-align:center;">
+      <div class="gacha-result-card">
+        <div class="gacha-rarity-label" style="color:#cc66ff;">EPIC</div>
+        <div class="gacha-card-icon">🖊️</div>
+        <div class="gacha-card-name">刺青01</div>
+        <div class="gacha-card-desc">牌を切る手に刺青が入る</div>
+        ${isNew ? '<div class="gacha-card-new">NEW!</div>' : '<div style="font-size:.55rem;color:#888;">ダブり（所持済み）</div>'}
+      </div>
+    </div>`;
+  anim.classList.add('show');
+  anim.style.pointerEvents = 'all';
+  anim.style.background    = 'rgba(0,0,0,.82)';
+  SFX.riichi?.();
+}
+
 let _gachaCurrentTab = 'standard';
 
 function switchGachaTab(tab){
   _gachaCurrentTab = tab;
   const isStd = tab === 'standard';
+  const isTbb = tab === 'tbb';
+  const isCollab = tab === 'collab';
 
   // パネル切り替え
-  document.getElementById('gachaPanelStandard').style.display = isStd ? '' : 'none';
-  document.getElementById('gachaPanelCollab').style.display   = isStd ? 'none' : '';
+  document.getElementById('gachaPanelStandard').style.display = isStd   ? '' : 'none';
+  document.getElementById('gachaPanelTbb').style.display      = isTbb   ? '' : 'none';
+  document.getElementById('gachaPanelCollab').style.display   = isCollab ? '' : 'none';
 
   // タブボタンのアクティブスタイル
   const tabStd    = document.getElementById('gachaTabStd');
+  const tabTbb    = document.getElementById('gachaTabTbb');
   const tabCollab = document.getElementById('gachaTabCollab');
   if(tabStd){
-    tabStd.style.background     = isStd ? 'linear-gradient(135deg,#0a1a10,#051008)' : '#030a10';
-    tabStd.style.borderColor    = isStd ? '#3ada8a' : '#2a3a4a';
-    tabStd.style.color          = isStd ? '#3ada8a' : '#3a5a6a';
-    tabStd.style.boxShadow      = isStd ? '0 0 10px #3ada8a33' : '';
+    tabStd.style.background  = isStd ? 'linear-gradient(135deg,#0a1a10,#051008)' : '#030a10';
+    tabStd.style.borderColor = isStd ? '#3ada8a' : '#2a3a4a';
+    tabStd.style.color       = isStd ? '#3ada8a' : '#3a5a6a';
+    tabStd.style.boxShadow   = isStd ? '0 0 10px #3ada8a33' : '';
+  }
+  if(tabTbb){
+    tabTbb.style.background  = isTbb ? 'linear-gradient(135deg,#1a0830,#0d0518)' : '#030a10';
+    tabTbb.style.borderColor = isTbb ? '#8844cc' : '#2a3a4a';
+    tabTbb.style.color       = isTbb ? '#cc88ff' : '#3a5a6a';
+    tabTbb.style.boxShadow   = isTbb ? '0 0 10px #8844cc33' : '';
   }
   if(tabCollab){
-    tabCollab.style.background  = !isStd ? 'linear-gradient(135deg,#0a1020,#050818)' : '#030a10';
-    tabCollab.style.borderColor = !isStd ? '#6a8acc' : '#2a3a4a';
-    tabCollab.style.color       = !isStd ? '#8aaaff' : '#3a5a6a';
-    tabCollab.style.boxShadow   = !isStd ? '0 0 10px #6a8acc33' : '';
+    tabCollab.style.background  = isCollab ? 'linear-gradient(135deg,#0a1020,#050818)' : '#030a10';
+    tabCollab.style.borderColor = isCollab ? '#6a8acc' : '#2a3a4a';
+    tabCollab.style.color       = isCollab ? '#8aaaff' : '#3a5a6a';
+    tabCollab.style.boxShadow   = isCollab ? '0 0 10px #6a8acc33' : '';
+  }
+
+  // TBBタブ開いたときに残高・状態を更新
+  if(isTbb){
+    updateGachaTbbDisplay();
+    updateTbbGachaStat();
   }
 }
 
@@ -13279,10 +13706,386 @@ function openGacha(){
   renderGachaCollection();
   updateGachaStat();
   updateGachaCoinDisplay();
+  updateGachaTbbDisplay();
 }
 function closeGacha(){
   document.getElementById('gachaScreen').classList.remove('active');
   document.getElementById('lobby').style.display='';
+}
+
+// ============================================================
+// フレンド機能
+// ============================================================
+let _friendData = {friends:[], pendingRequests:[]};
+
+function openFriendScreen(){
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('friendScreen').classList.add('active');
+  loadFriendCode();
+  loadFriends();
+}
+function closeFriendScreen(){
+  document.getElementById('friendScreen').classList.remove('active');
+  document.getElementById('lobby').style.display='';
+}
+
+function loadFriendCode(){
+  const el = document.getElementById('myFriendCode');
+  if(!el) return;
+  const cached = localStorage.getItem('myFriendCode');
+  if(cached){ el.textContent = cached; }
+  authFetch('/api/friend-code').then(r=>r.json()).then(d=>{
+    if(d.ok && d.friendCode){
+      el.textContent = d.friendCode;
+      localStorage.setItem('myFriendCode', d.friendCode);
+    }
+  }).catch(()=>{});
+}
+
+function copyFriendCode(){
+  const code = document.getElementById('myFriendCode')?.textContent;
+  if(!code || code==='------') return;
+  navigator.clipboard?.writeText(code).catch(()=>{});
+  const el = document.getElementById('myFriendCode');
+  const orig = el.textContent;
+  el.textContent = 'コピー！';
+  setTimeout(()=>{ el.textContent = orig; }, 1200);
+}
+
+function _friendIconHTML(iconId){
+  if(!iconId) return '<div class="friend-row-icon"><span style="font-size:.9rem;">👤</span></div>';
+  return `<div class="friend-row-icon"><img src="${gachaIconUrl(iconId)}" alt=""></div>`;
+}
+
+function renderFriendList(){
+  const listEl = document.getElementById('friendList');
+  const pendCard = document.getElementById('friendPendingCard');
+  const pendList = document.getElementById('friendPendingList');
+
+  // 申請バッジ
+  const badge = document.getElementById('friendBadge');
+  if(badge) badge.style.display = _friendData.pendingRequests.length > 0 ? '' : 'none';
+
+  // 受信申請
+  if(_friendData.pendingRequests.length > 0){
+    pendCard.style.display = '';
+    pendList.innerHTML = _friendData.pendingRequests.map(u=>`
+      <div class="friend-row">
+        ${_friendIconHTML(u.iconId)}
+        <div class="friend-row-info">
+          <div class="friend-row-name">${_esc(u.name||'プレイヤー')}</div>
+          <div class="friend-row-sub">フレンド申請が届いています</div>
+        </div>
+        <div class="friend-row-btns">
+          <button class="friend-btn friend-btn-ok" onclick="respondFriend('${u.id}','accept')">✓ 承認</button>
+          <button class="friend-btn friend-btn-ng" onclick="respondFriend('${u.id}','reject')">✕</button>
+        </div>
+      </div>`).join('');
+  } else {
+    pendCard.style.display = 'none';
+    pendList.innerHTML = '';
+  }
+
+  // フレンド一覧
+  if(_friendData.friends.length === 0){
+    listEl.innerHTML = '<div style="text-align:center;font-size:.6rem;color:#3a5a4a;padding:12px 0;">フレンドがいません</div>';
+  } else {
+    listEl.innerHTML = _friendData.friends.map(u=>`
+      <div class="friend-row">
+        ${_friendIconHTML(u.iconId)}
+        <div class="friend-row-info">
+          <div class="friend-row-name">${_esc(u.name||'プレイヤー')}</div>
+          <div class="friend-row-sub">${_abilityLabel(u.ability)}</div>
+        </div>
+        <div class="friend-row-btns">
+          <button class="friend-btn friend-btn-ok" style="background:#0a1520;border-color:#2a4a6a;color:#88ccff;" onclick="openGiftModal('${u.id}','${_esc(u.name||'プレイヤー')}')">🎁</button>
+          <button class="friend-btn friend-btn-danger" onclick="deleteFriend('${u.id}','${_esc(u.name||'プレイヤー')}')">削除</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function _esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _abilityLabel(a){
+  const m={'':'能力なし','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン'};
+  return m[a||'']||'能力なし';
+}
+
+function loadFriends(){
+  document.getElementById('friendList').innerHTML = '<div style="text-align:center;font-size:.6rem;color:#3a5a4a;padding:12px 0;">読み込み中<span class="thinking-dots"></span></div>';
+  authFetch('/api/friends').then(r=>r.json()).then(d=>{
+    if(!d.ok) return;
+    _friendData.friends = d.friends||[];
+    _friendData.pendingRequests = d.pendingRequests||[];
+    renderFriendList();
+  }).catch(()=>{
+    document.getElementById('friendList').innerHTML = '<div style="text-align:center;font-size:.6rem;color:#5a2a2a;padding:12px 0;">読み込みに失敗しました</div>';
+  });
+  loadGiftInbox();
+}
+
+function searchFriend(){
+  const code = (document.getElementById('friendSearchInput')?.value||'').trim().toUpperCase();
+  const resEl = document.getElementById('friendSearchResult');
+  if(!code){ resEl.innerHTML='<div style="font-size:.6rem;color:#5a4a2a;">コードを入力してください</div>'; return; }
+  resEl.innerHTML = '<div style="font-size:.6rem;color:#4a7a5a;">検索中<span class="thinking-dots"></span></div>';
+  authFetch('/api/friends/search?code='+encodeURIComponent(code))
+    .then(r=>r.json()).then(d=>{
+      if(!d.ok){
+        resEl.innerHTML = `<div style="font-size:.6rem;color:#7a3a3a;">${_esc(d.error||'見つかりません')}</div>`;
+        return;
+      }
+      const u = d.user;
+      const rel = d.relation;
+      let actionHTML = '';
+      if(rel==='accepted'){
+        actionHTML = '<span style="font-size:.58rem;color:#55cc55;">✓ すでにフレンド</span>';
+      } else if(rel==='pending'){
+        actionHTML = '<span style="font-size:.58rem;color:#aaaaff;">申請済み / 受信中</span>';
+      } else {
+        actionHTML = `<button class="friend-btn friend-btn-ok" onclick="sendFriendRequest('${u.id}',this)">➕ 申請</button>`;
+      }
+      resEl.innerHTML = `
+        <div class="friend-row" style="margin-bottom:0;">
+          ${_friendIconHTML(u.iconId)}
+          <div class="friend-row-info">
+            <div class="friend-row-name">${_esc(u.name||'プレイヤー')}</div>
+            <div class="friend-row-sub">${_abilityLabel(u.ability)}</div>
+          </div>
+          <div class="friend-row-btns">${actionHTML}</div>
+        </div>`;
+    }).catch(()=>{ resEl.innerHTML='<div style="font-size:.6rem;color:#5a2a2a;">エラーが発生しました</div>'; });
+}
+
+function sendFriendRequest(targetId, btn){
+  if(btn){ btn.disabled=true; btn.textContent='送信中…'; }
+  authFetch('/api/friends/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetId})})
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){
+        if(btn){ btn.textContent='✓ 申請送信済み'; btn.className='friend-btn'; btn.style.color='#55cc55'; }
+      } else {
+        if(btn){ btn.disabled=false; btn.textContent='➕ 申請'; }
+        alert(d.error||'エラーが発生しました');
+      }
+    }).catch(()=>{ if(btn){ btn.disabled=false; btn.textContent='➕ 申請'; } });
+}
+
+function respondFriend(requesterId, action){
+  authFetch('/api/friends/respond',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterId,action})})
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){ loadFriends(); }
+      else { alert(d.error||'エラーが発生しました'); }
+    }).catch(()=>{});
+}
+
+function deleteFriend(friendId, name){
+  if(!confirm(`${name} をフレンドから削除しますか？`)) return;
+  authFetch('/api/friends/'+encodeURIComponent(friendId),{method:'DELETE'})
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){ _friendData.friends=_friendData.friends.filter(f=>f.id!==friendId); renderFriendList(); }
+      else { alert(d.error||'エラーが発生しました'); }
+    }).catch(()=>{});
+}
+
+// ロビー帰還時にバッジ更新（loadProfile後に呼ばれることが多い）
+function refreshFriendBadge(){
+  authFetch('/api/friends').then(r=>r.json()).then(d=>{
+    if(!d.ok) return;
+    _friendData.friends = d.friends||[];
+    _friendData.pendingRequests = d.pendingRequests||[];
+    const badge = document.getElementById('friendBadge');
+    if(badge) badge.style.display = _friendData.pendingRequests.length > 0 ? '' : 'none';
+  }).catch(()=>{});
+}
+
+// ============================================================
+// プレゼント機能
+// ============================================================
+let _giftTarget = {id:'', name:''};
+let _giftTab    = 'tbb';
+const GIFT_SKIN_CATALOG = [
+  {key:'tattoo01', icon:'🖊️', name:'刺青01', desc:'牌を切る手に刺青が入る'},
+];
+
+function openGiftModal(friendId, friendName){
+  _giftTarget = {id:friendId, name:friendName};
+  _giftTab = 'tbb';
+  document.getElementById('giftModalTo').textContent = `送り先: ${friendName}`;
+  document.getElementById('giftMyTbb').textContent = (PROFILE.tbbCoins||0).toLocaleString();
+  document.getElementById('giftTbbAmount').value = '';
+  document.getElementById('giftModalMsg').textContent = '';
+  document.getElementById('giftSendBtn').disabled = false;
+  switchGiftTab('tbb');
+  document.getElementById('giftModal').classList.add('show');
+}
+function closeGiftModal(){
+  document.getElementById('giftModal').classList.remove('show');
+}
+// モーダル背景クリックで閉じる
+document.addEventListener('DOMContentLoaded',()=>{
+  const m = document.getElementById('giftModal');
+  if(m) m.addEventListener('click', e=>{ if(e.target===m) closeGiftModal(); });
+});
+
+function switchGiftTab(tab){
+  _giftTab = tab;
+  document.getElementById('giftTabTbb').classList.toggle('active', tab==='tbb');
+  document.getElementById('giftTabSkin').classList.toggle('active', tab==='skin');
+  document.getElementById('giftPanelTbb').style.display  = tab==='tbb'  ? '' : 'none';
+  document.getElementById('giftPanelSkin').style.display = tab==='skin' ? '' : 'none';
+  document.getElementById('giftModalMsg').textContent = '';
+  if(tab==='skin') renderGiftSkinList();
+}
+
+function renderGiftSkinList(){
+  const el = document.getElementById('giftSkinList');
+  const hs = PROFILE.handSkins || {};
+  if(GIFT_SKIN_CATALOG.length === 0){
+    el.innerHTML = '<div style="font-size:.6rem;color:#4a5a6a;text-align:center;padding:12px;">送れるスキンがありません</div>';
+    return;
+  }
+  el.innerHTML = GIFT_SKIN_CATALOG.map(s=>{
+    const cnt = hs[s.key]||0;
+    const disabled = cnt < 1;
+    return `<div class="gift-skin-item${disabled?' locked':''}${!disabled?' selected':''}" id="giftSkinItem_${s.key}"
+      style="${disabled?'opacity:.4;cursor:default;':''}" onclick="${disabled?'':'selectGiftSkin(\''+s.key+'\')'}">
+      <span style="font-size:1.8rem;">${s.icon}</span>
+      <div style="flex:1;">
+        <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">${s.name}</div>
+        <div style="font-size:.52rem;color:#7a5a9a;">${s.desc}</div>
+      </div>
+      <div style="font-size:.62rem;color:${cnt>0?'#cc88ff':'#5a4a6a'};font-weight:700;">×${cnt}</div>
+    </div>`;
+  }).join('');
+  // 最初の所持スキンを自動選択
+  const first = GIFT_SKIN_CATALOG.find(s=>(hs[s.key]||0)>0);
+  if(first) selectGiftSkin(first.key);
+}
+
+let _selectedSkinKey = '';
+function selectGiftSkin(key){
+  _selectedSkinKey = key;
+  GIFT_SKIN_CATALOG.forEach(s=>{
+    const el = document.getElementById('giftSkinItem_'+s.key);
+    if(el) el.classList.toggle('selected', s.key===key);
+  });
+}
+
+function setGiftTbb(n){
+  const v = Math.max(0, Math.min(n, PROFILE.tbbCoins||0));
+  document.getElementById('giftTbbAmount').value = v > 0 ? v : '';
+}
+
+async function doSendGift(){
+  const btn = document.getElementById('giftSendBtn');
+  const msg = document.getElementById('giftModalMsg');
+  btn.disabled = true;
+  msg.textContent = '';
+  msg.style.color = '#7a3a3a';
+
+  let body;
+  if(_giftTab === 'tbb'){
+    const amt = parseInt(document.getElementById('giftTbbAmount').value, 10);
+    if(!amt || amt < 1){ msg.textContent='枚数を入力してください'; btn.disabled=false; return; }
+    if(amt > (PROFILE.tbbCoins||0)){ msg.textContent='TBBコインが不足しています'; btn.disabled=false; return; }
+    body = {receiverId:_giftTarget.id, type:'tbb_coins', amount:amt};
+  } else {
+    if(!_selectedSkinKey){ msg.textContent='スキンを選択してください'; btn.disabled=false; return; }
+    const cnt = (PROFILE.handSkins&&PROFILE.handSkins[_selectedSkinKey])||0;
+    if(cnt < 1){ msg.textContent='所持数が足りません'; btn.disabled=false; return; }
+    body = {receiverId:_giftTarget.id, type:'skin', skinKey:_selectedSkinKey};
+  }
+
+  try{
+    const r = await authFetch('/api/gifts/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    if(!d.ok){ msg.textContent = d.error||'エラーが発生しました'; btn.disabled=false; return; }
+
+    // ローカル反映
+    if(_giftTab==='tbb'){
+      PROFILE.tbbCoins = d.tbbCoins ?? ((PROFILE.tbbCoins||0) - body.amount);
+      updateGachaTbbDisplay();
+    } else {
+      if(d.handSkins) PROFILE.handSkins = d.handSkins;
+      else {
+        PROFILE.handSkins = PROFILE.handSkins||{};
+        PROFILE.handSkins[_selectedSkinKey] = Math.max(0,(PROFILE.handSkins[_selectedSkinKey]||0)-1);
+        if(!PROFILE.handSkins[_selectedSkinKey] && PROFILE.handSkin===_selectedSkinKey) PROFILE.handSkin='';
+      }
+      _updateHandSkinUI();
+    }
+    updateProfileBadge();
+
+    msg.style.color = '#55cc55';
+    msg.textContent = `${_giftTarget.name} に送りました！`;
+    setTimeout(()=>closeGiftModal(), 1400);
+  }catch(e){
+    msg.textContent = '通信エラーが発生しました';
+    btn.disabled = false;
+  }
+}
+
+// 受取ボックス
+function loadGiftInbox(){
+  const el = document.getElementById('giftInboxList');
+  if(el) el.innerHTML = '<div style="text-align:center;font-size:.6rem;color:#3a5a4a;padding:8px 0;">読み込み中<span class="thinking-dots"></span></div>';
+  authFetch('/api/gifts/inbox').then(r=>r.json()).then(d=>{
+    if(!d.ok) return;
+    renderGiftInbox(d.gifts||[]);
+  }).catch(()=>{ if(el) el.innerHTML=''; });
+}
+
+function renderGiftInbox(gifts){
+  const el = document.getElementById('giftInboxList');
+  const badge = document.getElementById('giftInboxBadge');
+  if(!el) return;
+  if(gifts.length===0){
+    el.innerHTML='<div style="text-align:center;font-size:.6rem;color:#3a5a4a;padding:8px 0;">受け取るプレゼントはありません</div>';
+    if(badge) badge.style.display='none';
+    return;
+  }
+  if(badge){ badge.textContent=gifts.length; badge.style.display=''; }
+  el.innerHTML = gifts.map(g=>{
+    const isCoins = g.type==='tbb_coins';
+    const icon = isCoins ? '🪙' : '🖊️';
+    const desc = isCoins
+      ? `TBBコイン ×${g.amount} from ${_esc(g.sender_name||'プレイヤー')}`
+      : `${GIFT_SKIN_CATALOG.find(s=>s.key===g.skin_key)?.name||g.skin_key} from ${_esc(g.sender_name||'プレイヤー')}`;
+    return `<div class="gift-inbox-item" id="giftInboxItem_${g.id}">
+      <div class="gift-inbox-icon">${icon}</div>
+      <div class="gift-inbox-info">
+        <div class="gift-inbox-sender">${_esc(g.sender_name||'プレイヤー')}</div>
+        <div class="gift-inbox-desc">${desc}</div>
+      </div>
+      <button class="gift-claim-btn" onclick="claimGift(${g.id},this)">受け取る</button>
+    </div>`;
+  }).join('');
+}
+
+async function claimGift(giftId, btn){
+  if(btn) btn.disabled = true;
+  try{
+    const r = await authFetch(`/api/gifts/claim/${giftId}`,{method:'POST'});
+    const d = await r.json();
+    if(!d.ok){ alert(d.error||'エラーが発生しました'); if(btn) btn.disabled=false; return; }
+    // ローカル反映
+    if(d.type==='tbb_coins'){
+      PROFILE.tbbCoins = d.tbbCoins ?? ((PROFILE.tbbCoins||0)+d.amount);
+      updateGachaTbbDisplay();
+    } else if(d.type==='skin'){
+      if(d.handSkins) PROFILE.handSkins = d.handSkins;
+      else { PROFILE.handSkins=PROFILE.handSkins||{}; PROFILE.handSkins[d.skinKey]=(PROFILE.handSkins[d.skinKey]||0)+1; }
+      PROFILE.handSkin = d.skinKey;
+      _updateHandSkinUI();
+    }
+    updateProfileBadge();
+    // 受取済み行を消す
+    const row = document.getElementById('giftInboxItem_'+giftId);
+    if(row){ row.style.transition='opacity .3s'; row.style.opacity='0'; setTimeout(()=>row.remove(),300); }
+    // バッジ更新
+    const badge = document.getElementById('giftInboxBadge');
+    if(badge){ const n=parseInt(badge.textContent||'1')-1; badge.textContent=n; if(n<=0) badge.style.display='none'; }
+  }catch(e){ alert('通信エラーが発生しました'); if(btn) btn.disabled=false; }
 }
 
 function saveProfileSilent(){
@@ -13305,6 +14108,8 @@ function saveProfileSilent(){
       cpuUnlocks:      PROFILE.cpuUnlocks    ||[],
       bombBestStage:   PROFILE.bombBestStage ||0,
       bombBestScore:   PROFILE.bombBestScore ??0,
+      handSkin:        PROFILE.handSkin      ||'',
+      handSkins:       PROFILE.handSkins     ||{},
     }),
   }).catch(()=>{});
 }

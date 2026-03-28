@@ -4100,18 +4100,18 @@ let _discardAnimActivePidx = null; // lock期間中ずっと保持（複数回re
 let _discardAnimLocked = false;   // 捨てアニメ再生中フラグ（妨害防止）
 let _discardAnimLockTimer = null; // ロック解除タイマー
 const _HAND_ANIM_SRC = 'https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/tete.webm';
-const _HAND_ANIM_TAT_SRC = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tete2.webm';
+const _HAND_ANIM_TAT_SRC = 'https://github.com/tenibi/tenibijan/raw/main/hand/tete2.webm';
 let _handAnimBlobUrl = null;  // プリロード済みBlobURL
 let _handAnimTatBlobUrl = null; // 刺青01用BlobURL
 // ゲーム開始前にバックグラウンドでプリロード
 (function _preloadHandAnim(){
   fetch(_HAND_ANIM_SRC)
-    .then(r=>r.blob())
-    .then(b=>{ _handAnimBlobUrl = URL.createObjectURL(b); })
+    .then(r=>{ if(!r.ok) throw new Error('fetch failed'); return r.blob(); })
+    .then(b=>{ if(b.type&&b.type.includes('video')) _handAnimBlobUrl = URL.createObjectURL(b); })
     .catch(()=>{});
   fetch(_HAND_ANIM_TAT_SRC)
-    .then(r=>r.blob())
-    .then(b=>{ _handAnimTatBlobUrl = URL.createObjectURL(b); })
+    .then(r=>{ if(!r.ok) throw new Error('fetch failed'); return r.blob(); })
+    .then(b=>{ if(b.type&&b.type.includes('video')) _handAnimTatBlobUrl = URL.createObjectURL(b); })
     .catch(()=>{});
 })();
 let playerAFK=false;

@@ -6786,6 +6786,7 @@ function makePlayer(id,dealer){
   return{id,name:pname,iconId:pIconId,equippedTitle:pEquippedTitle,
     peerId:'', // 接続PeerID（オンライン時に設定）
     isCpu: false, // 切断してCPU代打中
+    handSkin: (id === NET.myIdx) ? (PROFILE.handSkin || '') : '',
     wind:WINDS[id],hand:[],melds:[],discards:[],kitaTiles:[],kitaCount:0,
     score:0,isDealer:dealer,riichi:false,doubleRiichi:false,openRiichi:false,
     ippatsu:false,isTenhou:false,isChiihou:false,isRenhou:false,

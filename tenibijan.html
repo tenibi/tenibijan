@@ -14244,7 +14244,7 @@ function renderTwitchSubPanel(){
        </div>`;
   }
 
-  // 未連携の場合は連携ボタンを下に表示
+  // 未連携の場合は連携ボタンを、連携済みの場合はログアウトボタンを下に表示
   const linkPrompt = !linked ? `
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;
       padding:10px 0 2px;border-top:1px solid #2a1a4a;">
@@ -14256,7 +14256,17 @@ function renderTwitchSubPanel(){
         border:1.5px solid #9a60e8;border-radius:8px;color:#fff;font-weight:700;
         font-size:.7rem;padding:8px 20px;text-decoration:none;letter-spacing:.05em;
       ">💜 Twitchでログインして連携する</a>
-    </div>` : '';
+    </div>` : `
+    <div style="display:flex;flex-direction:column;align-items:flex-end;
+      padding:8px 0 2px;border-top:1px solid #2a1a4a;">
+      <button onclick="doTwitchLogout()" style="
+        background:#0d0a18;border:1px solid #4a2a5a;border-radius:7px;
+        color:#7a5a8a;font-size:.6rem;padding:5px 12px;cursor:pointer;
+        letter-spacing:.04em;transition:all .2s;
+      " onmouseover="this.style.borderColor='#9a60b8';this.style.color='#c9a0e8';"
+         onmouseout="this.style.borderColor='#4a2a5a';this.style.color='#7a5a8a';"
+      >🔓 Twitchログアウト</button>
+    </div>`;
 
   actionEl.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">
     ${coinBtn}${tbbCoinBtn}${emoteBtn}${linkPrompt}
@@ -14396,6 +14406,24 @@ function doGoogleLogin(){
 function doTwitchLogin(){
   const token = localStorage.getItem('jwt_token');
   window.location.href = BACKEND + '/auth/twitch?token=' + encodeURIComponent(token);
+}
+
+// Twitchログアウト（連携解除）
+function doTwitchLogout(){
+  if(!confirm('Twitchの連携を解除しますか？\n解除後はサブスク特典が受け取れなくなります。')) return;
+  authFetch('/api/twitch/unlink', {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      PROFILE.twitchLinked = false;
+      PROFILE.twitchSubClaimable = false;
+      PROFILE.twitchEmoteClaimable = false;
+      PROFILE.tbbSubClaimable = false;
+      renderTwitchSubPanel();
+      _shopToast('🔓 Twitchの連携を解除しました');
+    })
+    .catch(() => {
+      _shopToast('連携解除に失敗しました。もう一度お試しください。');
+    });
 }
 
 // Show profile on first load if no name saved

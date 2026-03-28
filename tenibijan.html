@@ -1729,13 +1729,15 @@ body{
         <div style="font-size:.88rem;font-weight:700;color:#cc88ff;letter-spacing:.1em;margin-bottom:4px;">TBBコインガチャ</div>
         <div style="font-size:.56rem;color:#7a5a9a;line-height:1.7;">
           TBBコインで引ける限定ガチャ<br>
-          <span style="color:#cc88ff;">刺青など限定スキンが出る！</span>
+          <span style="color:#cc88ff;">刺青・指輪など限定アイテムが出る！</span>
         </div>
       </div>
 
       <!-- レアリティ表 -->
       <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;justify-content:center;">
-        <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#18081a;border:1px solid #8833aa;color:#cc66ff;">EPIC 100%（現在）</span>
+        <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#18081a;border:1px solid #8833aa;color:#cc66ff;">EPIC 60%</span>
+        <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#0a0a24;border:1px solid #3333aa;color:#8888ff;">RARE 35%</span>
+        <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#1a0e00;border:1px solid #ffd700;color:#ffd700;">LEGEND 5%</span>
       </div>
 
       <!-- TBBコイン残高 -->
@@ -1758,14 +1760,50 @@ body{
       <!-- 排出アイテム一覧 -->
       <div style="margin-top:16px;background:#0a0515;border:1px solid #3a1a5a;border-radius:10px;padding:12px 14px;">
         <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:10px;">📋 排出アイテム</div>
-        <div style="display:flex;align-items:center;gap:10px;padding:8px;
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
           background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
           <span style="font-size:1.6rem;flex-shrink:0;">🖊️</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">刺青01</div>
             <div style="font-size:.52rem;color:#7a5a9a;margin-top:2px;">牌を切る時の手に刺青が入る</div>
           </div>
-          <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC</div>
+          <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC 50%</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
+          background:#0a0a24;border:1px solid #3333aa;border-radius:8px;">
+          <span style="font-size:1.6rem;flex-shrink:0;">💍</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#8888ff;">指輪01</div>
+            <div style="font-size:.52rem;color:#5a5a9a;margin-top:2px;">手に指輪をつける</div>
+          </div>
+          <div style="font-size:.6rem;color:#8888ff;font-weight:700;flex-shrink:0;">RARE 20%</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
+          background:#0a0a24;border:1px solid #3333aa;border-radius:8px;">
+          <span style="font-size:1.6rem;flex-shrink:0;">💍</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#8888ff;">指輪02</div>
+            <div style="font-size:.52rem;color:#5a5a9a;margin-top:2px;">手に指輪をつける</div>
+          </div>
+          <div style="font-size:.6rem;color:#8888ff;font-weight:700;flex-shrink:0;">RARE 15%</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
+          background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+          <span style="font-size:1.6rem;flex-shrink:0;">💍</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">指輪03</div>
+            <div style="font-size:.52rem;color:#7a5a9a;margin-top:2px;">手に指輪をつける</div>
+          </div>
+          <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC 10%</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;
+          background:#1a0e00;border:1px solid #ffd700;border-radius:8px;">
+          <span style="font-size:1.6rem;flex-shrink:0;">💍</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#ffd700;">指輪04</div>
+            <div style="font-size:.52rem;color:#9a7a3a;margin-top:2px;">特別な指輪をつける</div>
+          </div>
+          <div style="font-size:.6rem;color:#ffd700;font-weight:700;flex-shrink:0;">LEGEND 5%</div>
         </div>
       </div>
 
@@ -2140,6 +2178,19 @@ body{
       " onmouseover="this.style.borderColor='#6a3a9a'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'">
         <video id="handSkinVideo" muted loop autoplay playsinline
           style="width:100%;display:block;background:#000;pointer-events:none;aspect-ratio:1;object-fit:cover;"></video>
+      </div>
+    </div>
+
+    <!-- 装飾：指輪 -->
+    <div style="margin-top:14px;">
+      <h3 style="margin-bottom:6px;">💍 指輪（装飾図鑑）</h3>
+      <div id="ringDisplay" onclick="openRingBook()" style="
+        cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+        border-radius:10px;padding:10px 12px;
+        display:flex;align-items:center;transition:border-color .15s;
+      " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#7a4acc'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'" data-equipped="0">
+        <span style="font-size:1.2rem;margin-right:8px;">💍</span>
+        <div style="font-size:.68rem;color:#4a6a5a;">指輪なし<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で装備</span></div>
       </div>
     </div>
 
@@ -4884,7 +4935,7 @@ function _reconnectToNewHost(newHostPeerId, retryCount=0){
     NET._promotingToHost = false;
     if(conn.peer) peerRegistryAdd(conn.peer, newHostIdx, conn);
     conn.send({type:'reconnect', originalIdx: myOriginalIdx, peerId: NET.peer?.id||''});
-    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||''});
+    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||''});
     addLog('✅ 新ホストに再接続しました','log-new');
     hideReconnectOverlay();
   });
@@ -5732,7 +5783,7 @@ function onNetData(msg, senderIdx){
         G_ABILITY_MODE=msg.abilityMode;
       }
       // 自分のプロフィール名・アイコン・PeerIDをホストに送信
-      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||''});
+      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||''});
       if(isReconnecting){
         // 再接続完了：ゲーム状態は次の stateUpdate で同期される
         addLog('🔄 新ホストと同期中…','log-new');
@@ -5829,7 +5880,7 @@ function onNetData(msg, senderIdx){
       setTimeout(saveRejoinSession, 600);
       // ゲスト: ホストに自分のアイコン情報とPeerIDを送信（makePlayer後に反映させるため）
       setTimeout(()=>{
-        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||''});
+        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||''});
       }, 400);
     } else if(msg.type==='emote'){
       // ホストから転送されたエモートをゲスト側で表示
@@ -6093,7 +6144,8 @@ function handleGuestAction(msg, senderIdx){
           emote:PROFILE.emote||'',
           emotes:PROFILE.emotes||['','','',''],
           peerId:NET.peer?.id||'',
-          handSkin:PROFILE.handSkin||''
+          handSkin:PROFILE.handSkin||'',
+          ring:PROFILE.ring||''
         });
       }
       break;
@@ -6107,6 +6159,7 @@ function handleGuestAction(msg, senderIdx){
       NET.guestIconIds[senderIdx-1]=msg.iconId||'';
       NET.guestEquippedTitles = NET.guestEquippedTitles||[]; NET.guestEquippedTitles[senderIdx-1]=msg.equippedTitle||'';
       NET.guestHandSkins = NET.guestHandSkins||[]; NET.guestHandSkins[senderIdx-1]=msg.handSkin||'';
+      NET.guestRings = NET.guestRings||[]; NET.guestRings[senderIdx-1]=msg.ring||'';
       NET.guestEmotes[senderIdx-1]=msg.emote||'';
       if(msg.emotes) NET.guestEmotesSlots = NET.guestEmotesSlots||{}; if(msg.emotes) NET.guestEmotesSlots[senderIdx] = msg.emotes;
       if(msg.peerId) NET.guestPeerIds[senderIdx-1]=msg.peerId;
@@ -6116,6 +6169,7 @@ function handleGuestAction(msg, senderIdx){
         G.players[senderIdx].name   = msg.name||'プレイヤー';
         G.players[senderIdx].equippedTitle = msg.equippedTitle||'';
         G.players[senderIdx].handSkin = msg.handSkin||'';
+        G.players[senderIdx].ring = msg.ring||'';
         // ★ peerId を player に紐付け（人格固定の核心）
         if(msg.peerId) G.players[senderIdx].peerId = msg.peerId;
         broadcastState();
@@ -6876,11 +6930,13 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
       if(i !== NET.myIdx && _prevPlayers[i].name) p.name = _prevPlayers[i].name;
       if(i !== NET.myIdx && _prevPlayers[i].equippedTitle !== undefined) p.equippedTitle = _prevPlayers[i].equippedTitle;
       if(i !== NET.myIdx && _prevPlayers[i].handSkin !== undefined) p.handSkin = _prevPlayers[i].handSkin;
+      if(i !== NET.myIdx && _prevPlayers[i].ring !== undefined) p.ring = _prevPlayers[i].ring;
     }
     // ★ オンライン: NET.guestIconIds から iconId を確実に反映（初回・再局問わず）
     if(NET.online && i !== NET.myIdx && NET.guestIconIds[i-1]) p.iconId = NET.guestIconIds[i-1];
     if(NET.online && i !== NET.myIdx && NET.guestEquippedTitles && NET.guestEquippedTitles[i-1] !== undefined) p.equippedTitle = NET.guestEquippedTitles[i-1];
     if(NET.online && i !== NET.myIdx && NET.guestHandSkins && NET.guestHandSkins[i-1] !== undefined) p.handSkin = NET.guestHandSkins[i-1];
+    if(NET.online && i !== NET.myIdx && NET.guestRings && NET.guestRings[i-1] !== undefined) p.ring = NET.guestRings[i-1];
     return p;
   });
 
@@ -12344,6 +12400,42 @@ function _playDiscardHandAnim(si, pidx){
 
   wrapper.appendChild(vid);
   vid.play().catch(cleanup);
+
+  // ★ 指輪オーバーレイ: 自分の指輪だけ重ねる（自分の席のみ）
+  let useRing = '';
+  if(pidx !== undefined && pidx !== null){
+    if(pidx === NET.myIdx){ useRing = PROFILE.ring || ''; }
+    else if(G && G.players && G.players[pidx]){ useRing = G.players[pidx].ring || ''; }
+  }
+  if(useRing){
+    const ringDef = _RING_CATALOG.find(r=>r.key===useRing);
+    if(ringDef){
+      const ringVid = document.createElement('video');
+      ringVid.className = 'discard-hand-vid';
+      ringVid.src = ringDef.videoUrl;
+      ringVid.autoplay = true;
+      ringVid.playsInline = true;
+      ringVid.muted = true;
+      ringVid.style.cssText = [
+        'position:absolute',
+        `left:${localX - VW/2 + offX}px`,
+        `top:${localY - VH/2 + offY}px`,
+        `width:${VW}px`,
+        `height:${VH}px`,
+        'pointer-events:none',
+        'z-index:501',
+        'object-fit:contain',
+        'background:transparent',
+        `transform:rotate(${rotDeg}deg)`,
+      ].join(';');
+      const ringCleanup = ()=>{ try{ ringVid.remove(); }catch(e){} };
+      ringVid.onended = ringCleanup;
+      ringVid.onerror = ringCleanup;
+      setTimeout(ringCleanup, 5000);
+      wrapper.appendChild(ringVid);
+      ringVid.play().catch(ringCleanup);
+    }
+  }
 }
 
 function _positionDiscards(table){
@@ -12632,7 +12724,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}};
 
 // ── タイトル背景リスト ──────────────────────────────
 const TITLE_BG_LIST = [
@@ -12807,6 +12899,7 @@ function _applyProfile(){
   updateProfileBadge();
   if(typeof _updateEquippedTitleUI==='function') _updateEquippedTitleUI();
   _updateHandSkinUI();
+  _updateRingUI();
 }
 
 function _updateHandSkinUI(){
@@ -12841,6 +12934,98 @@ const _SKIN_CATALOG = [
   { key:'tattoo01', name:'刺青01', icon:'🖊️', desc:'牌を切る手に刺青が入る',
     videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tete2.webm' },
 ];
+
+// ── 指輪カタログ ──────────────────────────────────────────────
+const _RING_CATALOG = [
+  { key:'ring01', name:'指輪01', icon:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring01.png',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ring/yubiwa01.webm' },
+  { key:'ring02', name:'指輪02', icon:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring02.png',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ring/yubiwa02.webm' },
+  { key:'ring03', name:'指輪03', icon:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring03.png',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ring/yubiwa04.webm' },
+  { key:'ring04', name:'指輪04', icon:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring04.png',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ring/yubiwa04.webm' },
+];
+
+// ── TBBガチャ排出プール ──────────────────────────────────────
+const _TBB_POOL = [
+  { type:'skin', key:'tattoo01', weight:50, rarity:'epic',   name:'刺青01',  icon:'🖊️', desc:'牌を切る手に刺青が入る' },
+  { type:'ring', key:'ring01',   weight:20, rarity:'rare',   name:'指輪01',  icon:'💍', desc:'手に指輪をつける' },
+  { type:'ring', key:'ring02',   weight:15, rarity:'rare',   name:'指輪02',  icon:'💍', desc:'手に指輪をつける' },
+  { type:'ring', key:'ring03',   weight:10, rarity:'epic',   name:'指輪03',  icon:'💍', desc:'手に指輪をつける' },
+  { type:'ring', key:'ring04',   weight:5,  rarity:'legend', name:'指輪04',  icon:'💍', desc:'特別な指輪をつける' },
+];
+function _tbbRoll(){
+  const total = _TBB_POOL.reduce((s,e)=>s+e.weight,0);
+  let r = Math.random()*total;
+  for(const e of _TBB_POOL){ r-=e.weight; if(r<=0) return e; }
+  return _TBB_POOL[0];
+}
+
+function _updateRingUI(){
+  const display = document.getElementById('ringDisplay');
+  const equippedKey = PROFILE.ring || '';
+  const r = _RING_CATALOG.find(x=>x.key===equippedKey);
+  if(!display) return;
+  if(r){
+    display.innerHTML = `<img src="${r.icon}" style="width:40px;height:40px;object-fit:contain;border-radius:8px;margin-right:8px;" onerror="this.style.display='none'"><div><div style="font-size:.68rem;font-weight:700;color:var(--gold);">${r.name}</div><div style="font-size:.52rem;color:#7a5a9a;">装備中</div></div>`;
+    display.style.borderColor='#ffd700';
+    display.dataset.equipped='1';
+  } else {
+    display.innerHTML = `<span style="font-size:1.2rem;margin-right:8px;">💍</span><div style="font-size:.68rem;color:#4a6a5a;">指輪なし<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で装備</span></div>`;
+    display.style.borderColor='#2a5a3a';
+    display.dataset.equipped='0';
+  }
+}
+
+function openRingBook(){
+  document.getElementById('profileScreen').classList.remove('active');
+  document.getElementById('ringBookScreen').style.display='flex';
+  _renderRingBookGrid();
+}
+function closeRingBook(){
+  document.getElementById('ringBookScreen').style.display='none';
+  document.getElementById('profileScreen').classList.add('active');
+}
+
+// [DEBUG] コンソールから呼び出してテスト解放: debugUnlockAllRings()
+function debugUnlockAllRings(){
+  if(!PROFILE.rings) PROFILE.rings={};
+  _RING_CATALOG.forEach(r=>{ PROFILE.rings[r.key]=1; });
+  saveProfileSilent();
+  _updateRingUI();
+  console.log('✅ 全指輪解放済み:', Object.keys(PROFILE.rings));
+}
+function _renderRingBookGrid(){
+  const grid = document.getElementById('ringBookGrid');
+  const equippedEl = document.getElementById('ringBookEquipped');
+  if(!grid) return;
+  const cur = PROFILE.ring || '';
+  const curR = _RING_CATALOG.find(r=>r.key===cur);
+  if(equippedEl) equippedEl.textContent = curR ? curR.name : 'なし';
+  grid.innerHTML = _RING_CATALOG.map(r=>{
+    const owned = !!(PROFILE.rings && PROFILE.rings[r.key]);
+    const sel = r.key === cur;
+    return `<div onclick="${owned?`selectRing('${r.key}')`:''}" style="
+      cursor:${owned?'pointer':'default'};
+      background:#040c12;border:2px solid ${sel?'#ffd700':owned?'#3a2a5a':'#1a2a2a'};
+      border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;
+      opacity:${owned?1:0.4};transition:border-color .15s;
+    " ${owned?`onmouseover="this.style.borderColor='${sel?'#ffd700':'#7a4acc'}'" onmouseout="this.style.borderColor='${sel?'#ffd700':owned?'#3a2a5a':'#1a2a2a'}'"`:''}>
+      <img src="${r.icon}" style="width:54px;height:54px;object-fit:contain;border-radius:8px;${owned?'':'filter:grayscale(1) brightness(.3);'}" onerror="this.style.display='none'">
+      <div style="font-size:.62rem;font-weight:700;color:${sel?'var(--gold)':owned?'#aa88ee':'#3a4a3a'};text-align:center;">${r.name}</div>
+      ${sel?'<span style="font-size:.5rem;background:#2a1a4a;border:1px solid #ffd700;border-radius:4px;padding:1px 6px;color:#ffd700;">✓ 装備中</span>':''}
+      ${!owned?'<span style="font-size:.5rem;color:#3a4a3a;">🔒 未解放</span>':''}
+    </div>`;
+  }).join('');
+}
+function selectRing(key){
+  if(!(PROFILE.rings && PROFILE.rings[key])) return;
+  PROFILE.ring = (PROFILE.ring === key) ? '' : key;
+  saveProfileSilent();
+  _updateRingUI();
+  _renderRingBookGrid();
+}
 
 let _skinPreviewKey = null;
 
@@ -12974,6 +13159,8 @@ function loadProfile(){
         equippedTitle: data.equippedTitle ?? PROFILE.equippedTitle ?? '',
         handSkin:      data.handSkin      ?? PROFILE.handSkin      ?? '',
         handSkins:     data.handSkins     ?? PROFILE.handSkins     ?? {},
+        ring:          data.ring          ?? PROFILE.ring          ?? '',
+        rings:         data.rings         ?? PROFILE.rings         ?? {},
         emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
         cpuUnlocks: Array.from(new Set([
           ...(Array.isArray(data.cpuUnlocks)      ? data.cpuUnlocks      : []),
@@ -13681,9 +13868,13 @@ function _showTbbMsg(msg){
 function updateTbbGachaStat(){
   const el=document.getElementById('tbbGachaStat');
   if(!el) return;
-  const count = (PROFILE.handSkins && PROFILE.handSkins.tattoo01) || 0;
-  if(count > 0){
-    el.textContent = `✓ 刺青01 ×${count} 所持`;
+  const tattoo = (PROFILE.handSkins && PROFILE.handSkins.tattoo01) || 0;
+  const ownedRings = _RING_CATALOG.filter(r=>PROFILE.rings&&PROFILE.rings[r.key]).map(r=>r.name);
+  const parts = [];
+  if(tattoo>0) parts.push(`🖊️ 刺青01 ×${tattoo}`);
+  if(ownedRings.length) parts.push('💍 ' + ownedRings.join(' / '));
+  if(parts.length){
+    el.textContent = '✓ ' + parts.join('　');
     el.style.color = '#8844cc';
   } else {
     el.textContent = '未所持';
@@ -13691,7 +13882,7 @@ function updateTbbGachaStat(){
   }
 }
 
-// TBBガチャ: 150TBBで1回、刺青01が確定排出
+// TBBガチャ: 150TBBで1回、刺青01 or 指輪が排出
 function doPullTbb(){
   const cost = 150;
   const btn=document.getElementById('tbbPullBtn');
@@ -13715,41 +13906,61 @@ function doPullTbb(){
     }
     // サーバーの最新TBBコイン残高で更新
     PROFILE.tbbCoins = d.tbbCoins ?? (PROFILE.tbbCoins - cost);
-    // サーバー返却の所持数で上書き（なければクライアント側でインクリメント）
-    const isNew = !((PROFILE.handSkins && PROFILE.handSkins.tattoo01) > 0);
-    if(d.handSkins){
-      PROFILE.handSkins = d.handSkins;
+
+    // サーバーが指定アイテムを返す場合はそれを優先、なければクライアント側でロール
+    let wonItem;
+    if(d.ring){
+      wonItem = _TBB_POOL.find(e=>e.key===d.ring) || _TBB_POOL.find(e=>e.type==='ring');
+    } else if(d.handSkins){
+      wonItem = _TBB_POOL.find(e=>e.type==='skin');
     } else {
-      PROFILE.handSkins = PROFILE.handSkins || {};
-      PROFILE.handSkins.tattoo01 = (PROFILE.handSkins.tattoo01 || 0) + 1;
+      wonItem = _tbbRoll();
     }
-    // 自動装備しない（スキン図鑑から手動で装備）
+
+    let isNew = false;
+    if(wonItem.type === 'ring'){
+      if(!PROFILE.rings) PROFILE.rings = {};
+      isNew = !PROFILE.rings[wonItem.key];
+      PROFILE.rings[wonItem.key] = (PROFILE.rings[wonItem.key] || 0) + 1;
+      if(d.rings) PROFILE.rings = d.rings; // サーバー返却があれば上書き
+      _updateRingUI();
+      _renderRingBookGrid && _renderRingBookGrid();
+    } else {
+      if(d.handSkins){
+        PROFILE.handSkins = d.handSkins;
+      } else {
+        PROFILE.handSkins = PROFILE.handSkins || {};
+        PROFILE.handSkins.tattoo01 = (PROFILE.handSkins.tattoo01 || 0) + 1;
+      }
+      isNew = !((PROFILE.handSkins && PROFILE.handSkins.tattoo01) > 1);
+      _updateHandSkinUI();
+    }
     saveProfileSilent();
-    _updateHandSkinUI();
     updateGachaTbbDisplay();
     updateTbbGachaStat();
-    // 演出
-    _showTbbGachaAnim(isNew);
+    _showTbbGachaAnim(wonItem, isNew);
   }).catch((e)=>{
     if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">150枚）'; }
     _showTbbMsg('通信エラーが発生しました。再度お試しください');
   });
 }
 
-function _showTbbGachaAnim(isNew){
+function _showTbbGachaAnim(item, isNew){
   const anim  = document.getElementById('gachaAnim');
   const flash = document.getElementById('gachaFlash');
   const inner = document.getElementById('gachaResultInner');
-  flash.style.background = '#8844cc';
+  const rarityColors = { normal:'#5a8a7a', rare:'#8888ff', epic:'#cc66ff', legend:'#ffd700' };
+  const color = rarityColors[item.rarity] || '#cc66ff';
+  flash.style.background = color;
   flash.style.animation  = 'none'; void flash.offsetWidth;
   flash.style.animation  = 'gFlash .5s ease-out forwards';
   inner.innerHTML = `
-    <div class="rarity-epic" style="text-align:center;">
+    <div class="rarity-${item.rarity}" style="text-align:center;">
       <div class="gacha-result-card">
-        <div class="gacha-rarity-label" style="color:#cc66ff;">EPIC</div>
-        <div class="gacha-card-icon">🖊️</div>
-        <div class="gacha-card-name">刺青01</div>
-        <div class="gacha-card-desc">牌を切る手に刺青が入る</div>
+        <div class="gacha-rarity-label" style="color:${color};">${item.rarity.toUpperCase()}</div>
+        <div class="gacha-card-icon">${item.icon}</div>
+        <div class="gacha-card-name">${item.name}</div>
+        <div class="gacha-card-desc">${item.desc}</div>
         ${isNew ? '<div class="gacha-card-new">NEW!</div>' : '<div style="font-size:.55rem;color:#888;">ダブり（所持済み）</div>'}
       </div>
     </div>`;
@@ -14055,14 +14266,37 @@ function _fpmRender(u){
   const vid = document.getElementById('fpm-skin-video');
   const skinNameEl = document.getElementById('fpm-skin-name');
   const sk = _SKIN_CATALOG.find(s=>s.key===(u.handSkin||'')) || _SKIN_CATALOG[0];
-  if(vid && vid.src !== sk.videoUrl){ vid.src = sk.videoUrl; vid.play().catch(()=>{}); }
-  if(skinNameEl) skinNameEl.textContent = `${sk.icon} ${sk.name}`;
+  if(vid && vid.getAttribute('src') !== sk.videoUrl){ vid.src = sk.videoUrl; vid.play().catch(()=>{}); }
+
+  // 指輪オーバーレイ動画
+  const ringVid = document.getElementById('fpm-ring-video');
+  const rk = u.ring || '';
+  const rd = _RING_CATALOG ? _RING_CATALOG.find(r=>r.key===rk) : null;
+  if(ringVid){
+    if(rd){
+      if(ringVid.getAttribute('src') !== rd.videoUrl){ ringVid.src = rd.videoUrl; }
+      ringVid.style.display = 'block';
+      ringVid.play().catch(()=>{});
+    } else {
+      ringVid.style.display = 'none';
+      ringVid.pause();
+      ringVid.src = '';
+    }
+  }
+
+  // スキン名ラベル（指輪装備中は名前を付記）
+  if(skinNameEl){
+    const ringLabel = rd ? `　💍${rd.name}` : '';
+    skinNameEl.textContent = `${sk.icon} ${sk.name}${ringLabel}`;
+  }
 }
 
 function closeFriendProfileModal(){
   document.getElementById('friendProfileModal').style.display = 'none';
   const vid = document.getElementById('fpm-skin-video');
   if(vid){ vid.pause(); vid.src=''; }
+  const ringVid = document.getElementById('fpm-ring-video');
+  if(ringVid){ ringVid.pause(); ringVid.src=''; ringVid.style.display='none'; }
 }
 
 // ロビー帰還時にバッジ更新（loadProfile後に呼ばれることが多い）
@@ -14289,6 +14523,8 @@ function saveProfileSilent(){
       handSkin:        PROFILE.handSkin      ||'',
       handSkins:       PROFILE.handSkins     ||{},
       emoteSets:       PROFILE.emoteSets     ||[['','','','']],
+      ring:            PROFILE.ring          ||'',
+      rings:           PROFILE.rings         ||{},
     }),
   }).catch(()=>{});
 }
@@ -16068,6 +16304,35 @@ function plantMineRinshan(ri){
   ">🀫 自動理牌</button>
 </div>
 
+<!-- ===== 指輪図鑑 ===== -->
+<div id="ringBookScreen" style="
+  position:fixed;inset:0;z-index:15;
+  display:none;flex-direction:column;align-items:center;
+  background:#0b1520;overflow-y:auto;padding:50px 20px 80px;
+">
+  <button onclick="closeRingBook()" style="
+    position:fixed;top:14px;left:14px;z-index:20;
+    background:#030a10;border:1px solid #2a4a3a;border-radius:8px;
+    color:#5a9a7a;font-size:.72rem;padding:7px 13px;cursor:pointer;">◀ 戻る</button>
+
+  <div style="margin-top:10px;text-align:center;margin-bottom:20px;">
+    <div style="font-size:clamp(1.2rem,4vw,1.8rem);font-weight:900;color:#cc99ff;letter-spacing:.15em;">💍 指輪図鑑</div>
+    <div style="font-size:.58rem;color:#7a5a9a;margin-top:4px;">タップして装備・解除</div>
+  </div>
+
+  <div style="width:100%;max-width:480px;margin-bottom:16px;
+    background:#0a0515;border:1.5px solid #5a3a8a;border-radius:12px;padding:12px 16px;
+    display:flex;align-items:center;gap:10px;">
+    <span style="font-size:1.2rem;">💍</span>
+    <div>
+      <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.08em;">装備中</div>
+      <div id="ringBookEquipped" style="font-size:.78rem;font-weight:700;color:#cc99ff;">なし</div>
+    </div>
+  </div>
+
+  <div id="ringBookGrid" style="width:100%;max-width:480px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
+</div>
+
 <!-- ===== スキン図鑑 ===== -->
 <div id="skinBookScreen" style="
   position:fixed;inset:0;z-index:15;
@@ -16137,13 +16402,19 @@ function plantMineRinshan(ri){
       "></div>
     </div>
 
-    <!-- 手のスキン -->
+    <!-- 手のスキン + 指輪オーバーレイ -->
     <div>
       <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:6px;">💉 手のスキン</div>
-      <div id="fpm-skin-wrap" style="max-width:120px;">
+      <div id="fpm-skin-wrap" style="max-width:120px;position:relative;">
         <video id="fpm-skin-video" muted loop autoplay playsinline style="
           width:100%;border-radius:8px;border:1.5px solid #4a2a6a;
           display:block;background:#000;aspect-ratio:1;object-fit:cover;
+          position:relative;z-index:1;
+        "></video>
+        <video id="fpm-ring-video" muted loop autoplay playsinline style="
+          position:absolute;inset:0;width:100%;height:100%;
+          border-radius:8px;object-fit:cover;
+          z-index:2;pointer-events:none;display:none;
         "></video>
         <div id="fpm-skin-name" style="font-size:.52rem;color:#9a6acc;text-align:center;margin-top:4px;"></div>
       </div>

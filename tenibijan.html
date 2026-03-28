@@ -2133,13 +2133,13 @@ body{
     <!-- 手のスキン（刺青） -->
     <div style="margin-top:14px;">
       <h3 style="margin-bottom:6px;">💉 手のスキン</h3>
-      <div style="display:flex;align-items:center;gap:10px;background:#040c12;border:2px solid #2a5a3a;border-radius:10px;padding:8px 12px;">
-        <span style="font-size:1.6rem;flex-shrink:0;">🖊️</span>
-        <div style="flex:1;min-width:0;">
-          <div id="handSkinName" style="font-size:.68rem;font-weight:700;color:#c0d8c0;">刺青なし</div>
-          <div style="font-size:.5rem;color:#4a7a5a;margin-top:2px;">スキン図鑑で装備を変更できます</div>
-        </div>
-        <button onclick="openSkinBook()" style="background:#0a1820;border:1.5px solid #2a6a8a;border-radius:7px;color:#5aaacc;font-size:.62rem;padding:5px 10px;cursor:pointer;flex-shrink:0;white-space:nowrap;">📖 図鑑を開く</button>
+      <div id="handSkinDisplay" onclick="openSkinBook()" style="
+        cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+        border-radius:10px;overflow:hidden;transition:border-color .15s;
+        max-width:160px;
+      " onmouseover="this.style.borderColor='#6a3a9a'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'">
+        <video id="handSkinVideo" muted loop autoplay playsinline
+          style="width:100%;display:block;background:#000;pointer-events:none;aspect-ratio:1;object-fit:cover;"></video>
       </div>
     </div>
 
@@ -12810,18 +12810,19 @@ function _applyProfile(){
 }
 
 function _updateHandSkinUI(){
-  const el = document.getElementById('handSkinName');
-  if(!el) return;
-  const equipped = (PROFILE.handSkin === 'tattoo01');
-  const count = (PROFILE.handSkins && PROFILE.handSkins.tattoo01) || 0;
-  if(count > 0){
-    el.textContent = equipped ? `刺青01 ✓ 装備中（×${count}）` : `刺青01 未装備（×${count}）`;
-  } else {
-    el.textContent = '刺青なし';
-  }
+  const vid = document.getElementById('handSkinVideo');
   const display = document.getElementById('handSkinDisplay');
+  const equippedKey = PROFILE.handSkin || '';
+  const sk = _SKIN_CATALOG.find(s=>s.key===equippedKey) || _SKIN_CATALOG[0];
+  if(vid && sk){
+    if(vid.getAttribute('src') !== sk.videoUrl){
+      vid.src = sk.videoUrl;
+      vid.play().catch(()=>{});
+    }
+  }
   if(display){
-    display.style.borderColor = equipped ? '#ffd700' : '#2a5a3a';
+    display.dataset.equipped = equippedKey ? '1' : '0';
+    display.style.borderColor = equippedKey ? '#ffd700' : '#2a5a3a';
   }
 }
 
@@ -12835,6 +12836,8 @@ function toggleHandSkin(){
 
 // ── スキン図鑑 ────────────────────────────────────────────────
 const _SKIN_CATALOG = [
+  { key:'', name:'デフォルト', icon:'✋', desc:'スキンなし（デフォルト）',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tete.webm' },
   { key:'tattoo01', name:'刺青01', icon:'🖊️', desc:'牌を切る手に刺青が入る',
     videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tete2.webm' },
 ];
@@ -12865,20 +12868,22 @@ function _renderSkinBookGrid(){
   if(!grid) return;
   const hs = PROFILE.handSkins || {};
   grid.innerHTML = _SKIN_CATALOG.map(sk=>{
-    const count = hs[sk.key] || 0;
+    const isDefault = sk.key === '';
+    const count = isDefault ? 1 : (hs[sk.key] || 0);
+    const owned = isDefault || count > 0;
     const equipped = PROFILE.handSkin === sk.key;
-    const owned = count > 0;
-    return `<div onclick="${owned?`openSkinPreview('${sk.key}')`:''}" style="
-      background:${owned?'#120820':'#080510'};
-      border:1.5px solid ${equipped?'#ffd700':owned?'#6a3a9a':'#2a1a3a'};
-      border-radius:10px;padding:8px 6px;text-align:center;cursor:${owned?'pointer':'default'};
-      opacity:${owned?1:.45};transition:border-color .15s;position:relative;overflow:hidden;">
-      ${equipped?'<div style="position:absolute;top:4px;right:5px;font-size:.45rem;color:#ffd700;font-weight:700;">装備中</div>':''}
-      <video src="${sk.videoUrl}" muted loop autoplay playsinline
-        style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;display:block;background:#000;pointer-events:none;"></video>
-      <div style="font-size:.58rem;font-weight:700;color:${owned?'#cc88ff':'#4a2a5a'};margin-top:4px;">${sk.icon} ${sk.name}</div>
-      <div style="font-size:.48rem;color:${owned?'#7a5a9a':'#2a1a3a'};margin-top:1px;">${owned?`×${count} 所持`:'未入手'}</div>
-    </div>`;
+    const countLabel = isDefault ? 'デフォルト' : (owned ? '\u00d7'+count+' \u6240\u6301' : '\u672a\u5165\u624b');
+    return '<div onclick="'+(owned?'openSkinPreview(\''+sk.key+'\')':'')+'" style="'+
+      'background:'+(owned?'#120820':'#080510')+';'+
+      'border:1.5px solid '+(equipped?'#ffd700':owned?'#6a3a9a':'#2a1a3a')+';'+
+      'border-radius:10px;padding:8px 6px;text-align:center;cursor:'+(owned?'pointer':'default')+';'+
+      'opacity:'+(owned?1:.45)+';transition:border-color .15s;position:relative;overflow:hidden;">'+
+      (equipped?'<div style="position:absolute;top:4px;right:5px;font-size:.45rem;color:#ffd700;font-weight:700;">\u88c5\u5099\u4e2d</div>':'')+
+      '<video src="'+sk.videoUrl+'" muted loop autoplay playsinline'+
+      ' style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;display:block;background:#000;pointer-events:none;"></video>'+
+      '<div style="font-size:.58rem;font-weight:700;color:'+(owned?'#cc88ff':'#4a2a5a')+';margin-top:4px;">'+sk.icon+' '+sk.name+'</div>'+
+      '<div style="font-size:.48rem;color:'+(owned?'#7a5a9a':'#2a1a3a')+';margin-top:1px;">'+countLabel+'</div>'+
+    '</div>';
   }).join('');
 }
 
@@ -12892,8 +12897,9 @@ function openSkinPreview(key){
   const btn = document.getElementById('skinPreviewEquipBtn');
   if(vid){ vid.src=sk.videoUrl; vid.play().catch(()=>{}); }
   if(nameEl) nameEl.textContent = `${sk.icon} ${sk.name}`;
-  const count = (PROFILE.handSkins&&PROFILE.handSkins[key])||0;
-  if(countEl) countEl.textContent = `×${count} 所持`;
+  const isDefault = key === '';
+  const count = isDefault ? 1 : ((PROFILE.handSkins&&PROFILE.handSkins[key])||0);
+  if(countEl) countEl.textContent = isDefault ? 'デフォルト' : `×${count} 所持`;
   const equipped = PROFILE.handSkin === key;
   if(btn){ btn.textContent = equipped?'装備を外す':'装備する'; btn.style.background=equipped?'#1a0505':'#1a0830'; btn.style.borderColor=equipped?'#cc4444':'#8844cc'; btn.style.color=equipped?'#ff7777':'#cc88ff'; }
   document.getElementById('skinPreviewModal').style.display='flex';
@@ -12907,10 +12913,11 @@ function closeSkinPreview(){
 }
 
 function toggleSkinFromPreview(){
-  if(!_skinPreviewKey) return;
-  const count = (PROFILE.handSkins&&PROFILE.handSkins[_skinPreviewKey])||0;
-  if(!count) return;
-  PROFILE.handSkin = (PROFILE.handSkin===_skinPreviewKey) ? '' : _skinPreviewKey;
+  if(_skinPreviewKey === null) return;
+  const isDefault = _skinPreviewKey === '';
+  const count = isDefault ? 1 : ((PROFILE.handSkins&&PROFILE.handSkins[_skinPreviewKey])||0);
+  if(!isDefault && !count) return;
+  PROFILE.handSkin = (PROFILE.handSkin===_skinPreviewKey && !isDefault) ? '' : _skinPreviewKey;
   _updateHandSkinUI();
   _updateSkinBookEquipped();
   _renderSkinBookGrid();

@@ -1943,7 +1943,7 @@ body{
     <div class="friend-code-box">
       <div style="font-size:.55rem;color:#5a7a6a;margin-bottom:4px;">このコードを相手に教えてください</div>
       <div class="friend-code-val" id="myFriendCode" onclick="copyFriendCode()" title="タップでコピー">------</div>
-      <div style="font-size:.5rem;color:#3a5a4a;margin-top:3px;">タップでコピー</div>
+      <div style="font-size:.5rem;color:#3a5a4a;margin-top:3px;" id="myFriendCodeHint">タップでコピー</div>
     </div>
   </div>
 
@@ -2210,8 +2210,13 @@ body{
       transition:all .15s;align-self:stretch;" title="設定">⚙️</button>
     <button onclick="openFriendScreen()" style="
       background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
-      color:#5a8a6a;font-size:1rem;padding:6px 10px;cursor:pointer;
-      transition:all .15s;align-self:stretch;position:relative;" title="フレンド" id="friendLobbyBtn">👥<span id="friendBadge" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ff4444;"></span></button>
+      color:#5a8a6a;font-size:.65rem;padding:6px 10px;cursor:pointer;
+      transition:all .15s;align-self:stretch;position:relative;
+      display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;" title="フレンド" id="friendLobbyBtn">
+      <span style="font-size:1rem;">👥</span>
+      <span>フレンド</span>
+      <span id="friendBadge" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ff4444;"></span>
+    </button>
   </div>
 
   <!-- タイトル設定パネル -->
@@ -13733,14 +13738,26 @@ function closeFriendScreen(){
 function loadFriendCode(){
   const el = document.getElementById('myFriendCode');
   if(!el) return;
+  // ログインしていなければ案内を表示
+  const token = localStorage.getItem('jwt_token');
+  if(!token){
+    el.textContent = '------';
+    const hint = document.getElementById('myFriendCodeHint');
+    if(hint) hint.textContent = 'ログインするとコードが表示されます';
+    return;
+  }
   const cached = localStorage.getItem('myFriendCode');
   if(cached){ el.textContent = cached; }
   authFetch('/api/friend-code').then(r=>r.json()).then(d=>{
     if(d.ok && d.friendCode){
       el.textContent = d.friendCode;
       localStorage.setItem('myFriendCode', d.friendCode);
+      const hint = document.getElementById('myFriendCodeHint');
+      if(hint) hint.textContent = 'タップでコピー';
     }
-  }).catch(()=>{});
+  }).catch(()=>{
+    if(!cached) el.textContent = 'エラー';
+  });
 }
 
 function copyFriendCode(){

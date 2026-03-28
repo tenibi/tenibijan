@@ -2133,16 +2133,13 @@ body{
     <!-- 手のスキン（刺青） -->
     <div style="margin-top:14px;">
       <h3 style="margin-bottom:6px;">💉 手のスキン</h3>
-      <div id="handSkinDisplay" onclick="toggleHandSkin()" style="
-        display:flex;align-items:center;gap:10px;
-        background:#040c12;border:2px solid #2a5a3a;border-radius:10px;
-        padding:8px 12px;cursor:pointer;transition:border-color .15s;
-      " onmouseover="this.style.borderColor='#3a7a5a'" onmouseout="this.style.borderColor='#2a5a3a'">
+      <div style="display:flex;align-items:center;gap:10px;background:#040c12;border:2px solid #2a5a3a;border-radius:10px;padding:8px 12px;">
         <span style="font-size:1.6rem;flex-shrink:0;">🖊️</span>
-        <div style="min-width:0;">
+        <div style="flex:1;min-width:0;">
           <div id="handSkinName" style="font-size:.68rem;font-weight:700;color:#c0d8c0;">刺青なし</div>
-          <div style="font-size:.5rem;color:#4a7a5a;margin-top:2px;">タップで刺青01を切替</div>
+          <div style="font-size:.5rem;color:#4a7a5a;margin-top:2px;">スキン図鑑で装備を変更できます</div>
         </div>
+        <button onclick="openSkinBook()" style="background:#0a1820;border:1.5px solid #2a6a8a;border-radius:7px;color:#5aaacc;font-size:.62rem;padding:5px 10px;cursor:pointer;flex-shrink:0;white-space:nowrap;">📖 図鑑を開く</button>
       </div>
     </div>
 
@@ -12830,11 +12827,100 @@ function _updateHandSkinUI(){
 
 function toggleHandSkin(){
   const count = (PROFILE.handSkins && PROFILE.handSkins.tattoo01) || 0;
-  if(count === 0) return; // 未所持なら切替不可
+  if(count === 0) return;
   PROFILE.handSkin = (PROFILE.handSkin === 'tattoo01') ? '' : 'tattoo01';
   _updateHandSkinUI();
   saveProfileSilent();
 }
+
+// ── スキン図鑑 ────────────────────────────────────────────────
+const _SKIN_CATALOG = [
+  { key:'tattoo01', name:'刺青01', icon:'🖊️', desc:'牌を切る手に刺青が入る',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tete2.webm' },
+];
+
+let _skinPreviewKey = null;
+
+function openSkinBook(){
+  document.getElementById('profileScreen').classList.remove('active');
+  document.getElementById('skinBookScreen').style.display='flex';
+  _renderSkinBookGrid();
+  _updateSkinBookEquipped();
+}
+
+function closeSkinBook(){
+  document.getElementById('skinBookScreen').style.display='none';
+  document.getElementById('profileScreen').classList.add('active');
+}
+
+function _updateSkinBookEquipped(){
+  const el = document.getElementById('skinBookEquipped');
+  if(!el) return;
+  const sk = _SKIN_CATALOG.find(s=>s.key===PROFILE.handSkin);
+  el.textContent = sk ? `${sk.icon} ${sk.name}` : 'なし';
+}
+
+function _renderSkinBookGrid(){
+  const grid = document.getElementById('skinBookGrid');
+  if(!grid) return;
+  const hs = PROFILE.handSkins || {};
+  grid.innerHTML = _SKIN_CATALOG.map(sk=>{
+    const count = hs[sk.key] || 0;
+    const equipped = PROFILE.handSkin === sk.key;
+    const owned = count > 0;
+    return `<div onclick="${owned?`openSkinPreview('${sk.key}')`:''}" style="
+      background:${owned?'#120820':'#080510'};
+      border:1.5px solid ${equipped?'#ffd700':owned?'#6a3a9a':'#2a1a3a'};
+      border-radius:10px;padding:8px 6px;text-align:center;cursor:${owned?'pointer':'default'};
+      opacity:${owned?1:.45};transition:border-color .15s;position:relative;overflow:hidden;">
+      ${equipped?'<div style="position:absolute;top:4px;right:5px;font-size:.45rem;color:#ffd700;font-weight:700;">装備中</div>':''}
+      <video src="${sk.videoUrl}" muted loop autoplay playsinline
+        style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;display:block;background:#000;pointer-events:none;"></video>
+      <div style="font-size:.58rem;font-weight:700;color:${owned?'#cc88ff':'#4a2a5a'};margin-top:4px;">${sk.icon} ${sk.name}</div>
+      <div style="font-size:.48rem;color:${owned?'#7a5a9a':'#2a1a3a'};margin-top:1px;">${owned?`×${count} 所持`:'未入手'}</div>
+    </div>`;
+  }).join('');
+}
+
+function openSkinPreview(key){
+  const sk = _SKIN_CATALOG.find(s=>s.key===key);
+  if(!sk) return;
+  _skinPreviewKey = key;
+  const vid = document.getElementById('skinPreviewVideo');
+  const nameEl = document.getElementById('skinPreviewName');
+  const countEl = document.getElementById('skinPreviewCount');
+  const btn = document.getElementById('skinPreviewEquipBtn');
+  if(vid){ vid.src=sk.videoUrl; vid.play().catch(()=>{}); }
+  if(nameEl) nameEl.textContent = `${sk.icon} ${sk.name}`;
+  const count = (PROFILE.handSkins&&PROFILE.handSkins[key])||0;
+  if(countEl) countEl.textContent = `×${count} 所持`;
+  const equipped = PROFILE.handSkin === key;
+  if(btn){ btn.textContent = equipped?'装備を外す':'装備する'; btn.style.background=equipped?'#1a0505':'#1a0830'; btn.style.borderColor=equipped?'#cc4444':'#8844cc'; btn.style.color=equipped?'#ff7777':'#cc88ff'; }
+  document.getElementById('skinPreviewModal').style.display='flex';
+}
+
+function closeSkinPreview(){
+  const vid = document.getElementById('skinPreviewVideo');
+  if(vid){ vid.pause(); vid.src=''; }
+  document.getElementById('skinPreviewModal').style.display='none';
+  _skinPreviewKey = null;
+}
+
+function toggleSkinFromPreview(){
+  if(!_skinPreviewKey) return;
+  const count = (PROFILE.handSkins&&PROFILE.handSkins[_skinPreviewKey])||0;
+  if(!count) return;
+  PROFILE.handSkin = (PROFILE.handSkin===_skinPreviewKey) ? '' : _skinPreviewKey;
+  _updateHandSkinUI();
+  _updateSkinBookEquipped();
+  _renderSkinBookGrid();
+  saveProfileSilent();
+  // ボタン更新
+  const btn = document.getElementById('skinPreviewEquipBtn');
+  const equipped = PROFILE.handSkin === _skinPreviewKey;
+  if(btn){ btn.textContent=equipped?'装備を外す':'装備する'; btn.style.background=equipped?'#1a0505':'#1a0830'; btn.style.borderColor=equipped?'#cc4444':'#8844cc'; btn.style.color=equipped?'#ff7777':'#cc88ff'; }
+}
+
 
 function loadProfile(){
   // まずlocalStorageから読み込んで即時反映
@@ -13629,7 +13715,7 @@ function doPullTbb(){
       PROFILE.handSkins = PROFILE.handSkins || {};
       PROFILE.handSkins.tattoo01 = (PROFILE.handSkins.tattoo01 || 0) + 1;
     }
-    PROFILE.handSkin = 'tattoo01'; // 自動装備
+    // 自動装備しない（スキン図鑑から手動で装備）
     saveProfileSilent();
     _updateHandSkinUI();
     updateGachaTbbDisplay();
@@ -14096,7 +14182,7 @@ async function claimGift(giftId, btn){
     } else if(d.type==='skin'){
       if(d.handSkins) PROFILE.handSkins = d.handSkins;
       else { PROFILE.handSkins=PROFILE.handSkins||{}; PROFILE.handSkins[d.skinKey]=(PROFILE.handSkins[d.skinKey]||0)+1; }
-      PROFILE.handSkin = d.skinKey;
+      // 自動装備しない
       _updateHandSkinUI();
     }
     updateProfileBadge();
@@ -15908,6 +15994,59 @@ function plantMineRinshan(ri){
     color:#3a6a5a;font-size:.6rem;padding:5px 9px;cursor:pointer;
     transition:all .2s;letter-spacing:.04em;white-space:nowrap;text-align:left;
   ">🀫 自動理牌</button>
+</div>
+
+<!-- ===== スキン図鑑 ===== -->
+<div id="skinBookScreen" style="
+  position:fixed;inset:0;z-index:15;
+  display:none;flex-direction:column;align-items:center;
+  background:#0b1520;overflow-y:auto;padding:50px 20px 80px;
+">
+  <button onclick="closeSkinBook()" style="
+    position:fixed;top:14px;left:14px;z-index:20;
+    background:#030a10;border:1px solid #2a4a3a;border-radius:8px;
+    color:#5a9a7a;font-size:.72rem;padding:7px 13px;cursor:pointer;">◀ 戻る</button>
+
+  <div style="margin-top:10px;text-align:center;margin-bottom:20px;">
+    <div style="font-size:clamp(1.2rem,4vw,1.8rem);font-weight:900;color:#cc88ff;letter-spacing:.15em;">💉 手のスキン図鑑</div>
+    <div style="font-size:.58rem;color:#7a5a9a;margin-top:4px;">スキンをタップして装備・解除</div>
+  </div>
+
+  <!-- 装備中スキン表示 -->
+  <div style="width:100%;max-width:480px;margin-bottom:16px;
+    background:#0a0515;border:1.5px solid #6a3a9a;border-radius:12px;padding:12px 16px;
+    display:flex;align-items:center;gap:10px;">
+    <span style="font-size:1.2rem;">✨</span>
+    <div>
+      <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.08em;">装備中</div>
+      <div id="skinBookEquipped" style="font-size:.78rem;font-weight:700;color:#cc88ff;">なし</div>
+    </div>
+  </div>
+
+  <!-- スキン一覧グリッド -->
+  <div id="skinBookGrid" style="width:100%;max-width:480px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
+</div>
+
+<!-- スキン動画プレビューモーダル -->
+<div id="skinPreviewModal" style="
+  position:fixed;inset:0;z-index:200;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.85);
+" onclick="closeSkinPreview()">
+  <div style="position:relative;max-width:320px;width:90%;" onclick="event.stopPropagation()">
+    <video id="skinPreviewVideo" autoplay loop muted playsinline
+      style="width:100%;border-radius:12px;border:1.5px solid #8844cc;display:block;background:#000;"></video>
+    <div id="skinPreviewName" style="text-align:center;color:#cc88ff;font-size:.75rem;font-weight:700;margin-top:8px;letter-spacing:.1em;"></div>
+    <div id="skinPreviewCount" style="text-align:center;color:#7a5a9a;font-size:.58rem;margin-top:2px;"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;">
+      <button id="skinPreviewEquipBtn" onclick="toggleSkinFromPreview()" style="
+        padding:8px 20px;border-radius:8px;font-size:.7rem;font-weight:700;cursor:pointer;
+        border:1.5px solid #8844cc;background:#1a0830;color:#cc88ff;transition:all .15s;"></button>
+      <button onclick="closeSkinPreview()" style="
+        padding:8px 16px;border-radius:8px;font-size:.7rem;cursor:pointer;
+        border:1px solid #2a4a3a;background:#030a10;color:#5a9a7a;">閉じる</button>
+    </div>
+  </div>
 </div>
 </body>
 </html>

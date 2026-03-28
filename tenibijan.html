@@ -4160,6 +4160,22 @@ let _handAnimTatBlobUrl = null; // 刺青01用BlobURL
     .then(b=>{ if(b.type&&b.type.includes('video')) _handAnimTatBlobUrl = URL.createObjectURL(b); })
     .catch(()=>{});
 })();
+
+// 指輪動画Blobキャッシュ: key→BlobURL
+const _ringBlobCache = {};
+function _preloadRingVideo(key, url){
+  if(_ringBlobCache[key]) return; // 既にキャッシュ済み
+  fetch(url)
+    .then(r=>{ if(!r.ok) throw new Error(); return r.blob(); })
+    .then(b=>{ if(b.type&&b.type.includes('video')) _ringBlobCache[key] = URL.createObjectURL(b); })
+    .catch(()=>{});
+}
+// ページ読み込み時に全指輪動画をプリロード（_RING_CATALOGはこの後定義されるので遅延実行）
+setTimeout(()=>{
+  if(typeof _RING_CATALOG !== 'undefined'){
+    _RING_CATALOG.forEach(r=>_preloadRingVideo(r.key, r.videoUrl));
+  }
+}, 0);
 let playerAFK=false;
 let noMeldEnabled=false;          // 離席モード
 let numPlayers=3;
@@ -12397,7 +12413,6 @@ function _playDiscardHandAnim(si, pidx){
   setTimeout(cleanup, 5000); // フォールバック
 
   wrapper.appendChild(vid);
-  vid.play().catch(cleanup);
 
   // ★ 指輪オーバーレイ: 自分の指輪だけ重ねる（自分の席のみ）
   let useRing = '';
@@ -12410,8 +12425,7 @@ function _playDiscardHandAnim(si, pidx){
     if(ringDef){
       const ringVid = document.createElement('video');
       ringVid.className = 'discard-hand-vid';
-      ringVid.src = ringDef.videoUrl;
-      ringVid.autoplay = true;
+      ringVid.src = _ringBlobCache[ringDef.key] || ringDef.videoUrl;
       ringVid.playsInline = true;
       ringVid.muted = true;
       ringVid.style.cssText = [
@@ -12431,10 +12445,25 @@ function _playDiscardHandAnim(si, pidx){
       ringVid.onerror = ringCleanup;
       setTimeout(ringCleanup, 5000);
       wrapper.appendChild(ringVid);
-      ringVid.play().catch(ringCleanup);
+
+      // 両方canplayになったら同時再生
+      let skinReady = false, ringReady = false;
+      const tryPlayBoth = () => {
+        if(!skinReady || !ringReady) return;
+        vid.currentTime = 0;
+        ringVid.currentTime = 0;
+        Promise.all([vid.play().catch(cleanup), ringVid.play().catch(ringCleanup)]);
+      };
+      vid.oncanplay = () => { vid.oncanplay = null; skinReady = true; tryPlayBoth(); };
+      ringVid.oncanplay = () => { ringVid.oncanplay = null; ringReady = true; tryPlayBoth(); };
+      vid.load();
+      ringVid.load();
+      return; // 以降の単独 vid.play() をスキップ
     }
   }
-}
+
+  // 指輪なし: 手動画のみ再生
+  vid.play().catch(cleanup);
 
 function _positionDiscards(table){
   const tc=document.getElementById('tableCenter');
@@ -12944,6 +12973,8 @@ const _RING_CATALOG = [
   { key:'ring04', name:'指輪04', icon:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring04.png',
     videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ring/yubiwa04.webm' },
 ];
+// 定義直後にBlobキャッシュへプリロード開始
+_RING_CATALOG.forEach(r=>_preloadRingVideo(r.key, r.videoUrl));
 
 // ── TBBガチャ排出プール ──────────────────────────────────────
 const _TBB_POOL = [
@@ -14266,32 +14297,71 @@ function _fpmRender(u){
     }).join('');
   }
 
-  // 手のスキン
+  // 手のスキン＋指輪オーバーレイ動画（同期再生）
   const vid = document.getElementById('fpm-skin-video');
+  const ringVid = document.getElementById('fpm-ring-video');
   const skinNameEl = document.getElementById('fpm-skin-name');
   const sk = _SKIN_CATALOG.find(s=>s.key===(u.handSkin||'')) || _SKIN_CATALOG[0];
-  if(vid && vid.getAttribute('src') !== sk.videoUrl){ vid.src = sk.videoUrl; vid.play().catch(()=>{}); }
-
-  // 指輪オーバーレイ動画
-  const ringVid = document.getElementById('fpm-ring-video');
   const rk = u.ring || '';
   const rd = _RING_CATALOG ? _RING_CATALOG.find(r=>r.key===rk) : null;
-  if(ringVid){
-    if(rd){
-      if(ringVid.getAttribute('src') !== rd.videoUrl){ ringVid.src = rd.videoUrl; }
-      ringVid.style.display = 'block';
-      ringVid.play().catch(()=>{});
-    } else {
-      ringVid.style.display = 'none';
-      ringVid.pause();
-      ringVid.src = '';
-    }
-  }
 
-  // スキン名ラベル（指輪装備中は名前を付記）
+  // スキン名ラベル
   if(skinNameEl){
     const ringLabel = rd ? `　💍${rd.name}` : '';
     skinNameEl.textContent = `${sk.icon} ${sk.name}${ringLabel}`;
+  }
+
+  // 両動画を同時ロード→同時再生
+  if(vid && ringVid){
+    const skinChanged = vid.getAttribute('data-fpm-src') !== sk.videoUrl;
+    const ringChanged = rd
+      ? ringVid.getAttribute('data-fpm-src') !== rd.videoUrl
+      : ringVid.getAttribute('data-fpm-src') !== '';
+
+    // 指輪表示制御
+    if(rd){
+      ringVid.style.display = 'block';
+    } else {
+      ringVid.style.display = 'none';
+      ringVid.pause();
+      ringVid.removeAttribute('src');
+      ringVid.setAttribute('data-fpm-src', '');
+      ringVid.load();
+    }
+
+    if(skinChanged || (rd && ringChanged)){
+      // 両方止めてsrcをセット
+      vid.pause();
+      if(rd) ringVid.pause();
+
+      vid.src = sk.videoUrl;
+      vid.setAttribute('data-fpm-src', sk.videoUrl);
+      if(rd){
+        ringVid.src = rd.videoUrl;
+        ringVid.setAttribute('data-fpm-src', rd.videoUrl);
+      }
+
+      // 両方canplayableになったら同時再生
+      if(rd){
+        let skinReady = false, ringReady = false;
+        const tryPlay = () => {
+          if(!skinReady || !ringReady) return;
+          vid.currentTime = 0;
+          ringVid.currentTime = 0;
+          Promise.all([vid.play(), ringVid.play()]).catch(()=>{});
+        };
+        vid.oncanplay = () => { skinReady = true; vid.oncanplay = null; tryPlay(); };
+        ringVid.oncanplay = () => { ringReady = true; ringVid.oncanplay = null; tryPlay(); };
+        vid.load();
+        ringVid.load();
+      } else {
+        vid.oncanplay = () => { vid.oncanplay = null; vid.play().catch(()=>{}); };
+        vid.load();
+      }
+    } else if(!skinChanged && rd && !ringChanged){
+      // srcが同じでも再生位置を合わせる
+      ringVid.currentTime = vid.currentTime;
+    }
   }
 }
 

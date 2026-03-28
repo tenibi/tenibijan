@@ -14229,7 +14229,10 @@ function openFriendProfileModal(friendId){
 
   authFetch('/api/friends/' + encodeURIComponent(friendId) + '/profile')
     .then(r=>{ if(!r.ok) throw new Error(); return r.json(); })
-    .then(data=>{ if(data && data.ok !== false) _fpmRender(Object.assign({}, u, data)); })
+    .then(data=>{
+      console.log('[fpm] API response:', JSON.stringify(data));
+      if(data && data.ok !== false) _fpmRender(Object.assign({}, u, data));
+    })
     .catch(()=>{
       // エンドポイントがなければ友達リストのデータで再描画（エモートは空欄）
       _fpmRender(u);
@@ -14237,7 +14240,7 @@ function openFriendProfileModal(friendId){
 }
 
 function _fpmRender(u){
-  // アイコン
+  console.log('[fpmRender] u.emotes:', u.emotes, 'u.emoteSets:', u.emoteSets, 'u.ring:', u.ring);
   const iconEl = document.getElementById('fpm-icon');
   if(iconEl){
     iconEl.innerHTML = u.iconId
@@ -15167,6 +15170,7 @@ function equipEmoteSet(setId){
   _syncEmotesCompat();
   _renderEquippedPreview();
   _renderEmoteCollectionList();
+  saveProfileSilent();
 }
 
 // セットを外す
@@ -15176,6 +15180,7 @@ function unequipEmoteSet(){
   _syncEmotesCompat();
   _renderEquippedPreview();
   _renderEmoteCollectionList();
+  saveProfileSilent();
 }
 
 function openEmoteSlotPicker(slot){ /* 図鑑方式に移行のため無効 */ }

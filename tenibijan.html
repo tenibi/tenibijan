@@ -13575,6 +13575,14 @@ function updateGachaTbbDisplay(){
   if(el) el.textContent=(PROFILE.tbbCoins||0).toLocaleString();
 }
 
+function _showTbbMsg(msg){
+  const el=document.getElementById('tbbGachaStat');
+  if(!el) return;
+  const prev=el.textContent, prevColor=el.style.color;
+  el.textContent=msg; el.style.color='#ff6666';
+  setTimeout(()=>{ el.textContent=prev; el.style.color=prevColor; updateTbbGachaStat(); },2500);
+}
+
 function updateTbbGachaStat(){
   const el=document.getElementById('tbbGachaStat');
   if(!el) return;
@@ -13591,19 +13599,23 @@ function updateTbbGachaStat(){
 // TBBガチャ: 150TBBで1回、刺青01が確定排出
 function doPullTbb(){
   const cost = 150;
+  const btn=document.getElementById('tbbPullBtn');
   if((PROFILE.tbbCoins||0) < cost){
     const el=document.getElementById('gachaTbbDisplay');
     if(el){el.style.color='#ff4444';setTimeout(()=>{el.style.color='#88ddff';},600);}
-    const btn=document.getElementById('tbbPullBtn');
     if(btn){btn.style.boxShadow='0 0 14px #ff444488';setTimeout(()=>{btn.style.boxShadow='0 0 10px #8844cc33';},600);}
+    _showTbbMsg('TBBコインが不足しています（150枚必要）');
     return;
   }
+  if(btn){ btn.disabled=true; btn.textContent='引いています…'; }
   authFetch('/api/gacha-tbb',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({pullType:'pull1'})})
   .then(r=>r.json()).then(d=>{
+    if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">150枚）'; }
     if(!d.ok){
       const el=document.getElementById('gachaTbbDisplay');
       if(el){el.style.color='#ff4444';setTimeout(()=>{el.style.color='#88ddff';},600);}
+      _showTbbMsg(d.error || 'エラーが発生しました');
       return;
     }
     // サーバーの最新TBBコイン残高で更新
@@ -13623,19 +13635,9 @@ function doPullTbb(){
     updateTbbGachaStat();
     // 演出
     _showTbbGachaAnim(isNew);
-  }).catch(()=>{
-    // サーバーエンドポイント未実装時: クライアント側でコイン消費してスキン付与
-    if((PROFILE.tbbCoins||0) < cost) return;
-    PROFILE.tbbCoins = (PROFILE.tbbCoins||0) - cost;
-    const isNew = !((PROFILE.handSkins && PROFILE.handSkins.tattoo01) > 0);
-    PROFILE.handSkins = PROFILE.handSkins || {};
-    PROFILE.handSkins.tattoo01 = (PROFILE.handSkins.tattoo01 || 0) + 1;
-    PROFILE.handSkin = 'tattoo01'; // 自動装備
-    saveProfileSilent();
-    _updateHandSkinUI();
-    updateGachaTbbDisplay();
-    updateTbbGachaStat();
-    _showTbbGachaAnim(isNew);
+  }).catch((e)=>{
+    if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">150枚）'; }
+    _showTbbMsg('通信エラーが発生しました。再度お試しください');
   });
 }
 

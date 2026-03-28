@@ -12974,6 +12974,7 @@ function loadProfile(){
         equippedTitle: data.equippedTitle ?? PROFILE.equippedTitle ?? '',
         handSkin:      data.handSkin      ?? PROFILE.handSkin      ?? '',
         handSkins:     data.handSkins     ?? PROFILE.handSkins     ?? {},
+        emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
         cpuUnlocks: Array.from(new Set([
           ...(Array.isArray(data.cpuUnlocks)      ? data.cpuUnlocks      : []),
           ...(Array.isArray(PROFILE.cpuUnlocks)   ? PROFILE.cpuUnlocks   : []),
@@ -13905,7 +13906,7 @@ function renderFriendList(){
     listEl.innerHTML = '<div style="text-align:center;font-size:.6rem;color:#3a5a4a;padding:12px 0;">フレンドがいません</div>';
   } else {
     listEl.innerHTML = _friendData.friends.map(u=>`
-      <div class="friend-row" style="cursor:pointer;" onclick="openFriendProfileModal(${JSON.stringify(u).replace(/"/g,'&quot;')})">
+      <div class="friend-row" style="cursor:pointer;" onclick="openFriendProfileModal('${u.id}')">
         ${_friendIconHTML(u.iconId)}
         <div class="friend-row-info">
           <div class="friend-row-name">${_esc(u.name||'プレイヤー')}</div>
@@ -14002,7 +14003,28 @@ function deleteFriend(friendId, name){
 }
 
 // ── フレンドプロフィールモーダル ──────────────────────────────
-function openFriendProfileModal(u){
+function openFriendProfileModal(friendId){
+  const u = _friendData.friends.find(f=>f.id===friendId) || {};
+  const modal = document.getElementById('friendProfileModal');
+
+  // まず基本情報を即時表示
+  _fpmRender(u);
+  modal.style.display = 'flex';
+
+  // エモート・スキンはAPIから取得して更新
+  const emoteEl = document.getElementById('fpm-emotes');
+  if(emoteEl) emoteEl.innerHTML = '<div style="grid-column:1/-1;font-size:.52rem;color:#3a5a4a;text-align:center;">読み込み中…</div>';
+
+  authFetch('/api/friends/' + encodeURIComponent(friendId) + '/profile')
+    .then(r=>{ if(!r.ok) throw new Error(); return r.json(); })
+    .then(data=>{ if(data && data.ok !== false) _fpmRender(Object.assign({}, u, data)); })
+    .catch(()=>{
+      // エンドポイントがなければ友達リストのデータで再描画（エモートは空欄）
+      _fpmRender(u);
+    });
+}
+
+function _fpmRender(u){
   // アイコン
   const iconEl = document.getElementById('fpm-icon');
   if(iconEl){
@@ -14016,7 +14038,7 @@ function openFriendProfileModal(u){
   const abilityEl = document.getElementById('fpm-ability');
   if(abilityEl) abilityEl.textContent = _abilityLabel(u.ability);
 
-  // エモート
+  // エモート（emoteSets[0] → emotes → 空）
   const emoteEl = document.getElementById('fpm-emotes');
   if(emoteEl){
     const slots = (Array.isArray(u.emoteSets) && Array.isArray(u.emoteSets[0]))
@@ -14033,10 +14055,8 @@ function openFriendProfileModal(u){
   const vid = document.getElementById('fpm-skin-video');
   const skinNameEl = document.getElementById('fpm-skin-name');
   const sk = _SKIN_CATALOG.find(s=>s.key===(u.handSkin||'')) || _SKIN_CATALOG[0];
-  if(vid){ vid.src = sk.videoUrl; vid.play().catch(()=>{}); }
+  if(vid && vid.src !== sk.videoUrl){ vid.src = sk.videoUrl; vid.play().catch(()=>{}); }
   if(skinNameEl) skinNameEl.textContent = `${sk.icon} ${sk.name}`;
-
-  document.getElementById('friendProfileModal').style.display = 'flex';
 }
 
 function closeFriendProfileModal(){
@@ -14268,6 +14288,7 @@ function saveProfileSilent(){
       bombBestScore:   PROFILE.bombBestScore ??0,
       handSkin:        PROFILE.handSkin      ||'',
       handSkins:       PROFILE.handSkins     ||{},
+      emoteSets:       PROFILE.emoteSets     ||[['','','','']],
     }),
   }).catch(()=>{});
 }

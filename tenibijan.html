@@ -5731,6 +5731,7 @@ function onNetData(msg, senderIdx){
       }
       // 自分のプロフィール名・アイコン・PeerIDをホストに送信
       if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||''});
+      if(isReconnecting){
         // 再接続完了：ゲーム状態は次の stateUpdate で同期される
         addLog('🔄 新ホストと同期中…','log-new');
       } else if(NET.isRankMatch){

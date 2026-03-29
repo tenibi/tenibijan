@@ -13384,6 +13384,7 @@ function loadProfile(){
         ring:          data.ring          ?? PROFILE.ring          ?? '',
         rings:         data.rings         ?? PROFILE.rings         ?? {},
         emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
+        uid:           data.uid           || PROFILE.uid           || '',
         cpuUnlocks: Array.from(new Set([
           ...(Array.isArray(data.cpuUnlocks)      ? data.cpuUnlocks      : []),
           ...(Array.isArray(PROFILE.cpuUnlocks)   ? PROFILE.cpuUnlocks   : []),
@@ -14419,6 +14420,8 @@ function openOpponentFriendModal(pidx){
   const targetUid = p.uid || '';
 
   // friendProfileModal を流用（エモート・スキン・指輪も表示）
+  // P2P で受け取った emotes を使う（フレンド外でも表示できる）
+  const _p2pEmotes = (NET.guestEmotesSlots && NET.guestEmotesSlots[pidx]) || ['','','',''];
   const u = {
     id: targetUid,
     name: p.name || 'プレイヤー',
@@ -14426,7 +14429,7 @@ function openOpponentFriendModal(pidx){
     iconId: p.iconId || '',
     handSkin: p.handSkin || '',
     ring: p.ring || '',
-    emotes: ['','','',''],
+    emotes: _p2pEmotes,
     rating: null,
     bombBestStage: 0,
     bombBestScore: 0,
@@ -14435,26 +14438,25 @@ function openOpponentFriendModal(pidx){
   _fpmRender(u);
 
   const actionEl = document.getElementById('fpm-friend-action');
-  if(actionEl){
-    actionEl.style.display = 'flex';
-    actionEl.innerHTML = '<span style="font-size:.6rem;color:#4a7a5a;">読み込み中…</span>';
-  }
-
   const modal = document.getElementById('friendProfileModal');
   modal.style.display = 'flex';
-  // 閉じる動作を上書き（対戦中はfriendProfileModalをcloseするだけ）
   modal._fromGame = true;
 
-  if(!targetUid){
-    if(actionEl) actionEl.innerHTML = '<span style="font-size:.58rem;color:#5a5a5a;">情報なし</span>';
-    return;
-  }
-  if(targetUid === (PROFILE.uid||'')){
-    if(actionEl) actionEl.style.display = 'none';
-    return;
+  // ★ まずフレンド申請ボタンを即時表示（APIを待たない）
+  if(actionEl){
+    actionEl.style.display = 'flex';
+    if(!targetUid){
+      actionEl.innerHTML = '<span style="font-size:.58rem;color:#5a5a5a;">（情報読み込み中）</span>';
+    } else if(targetUid === (PROFILE.uid||'')){
+      actionEl.style.display = 'none';
+    } else {
+      actionEl.innerHTML = '<button id="ofm-req-btn" onclick="ofmSendRequest(\''+targetUid+'\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
+    }
   }
 
-  // フレンドAPIで状態確認 + stats取得
+  if(!targetUid || targetUid === (PROFILE.uid||'')) return;
+
+  // フレンドAPIで状態確認 + stats取得（結果でボタンを上書き）
   authFetch('/api/friends').then(r=>r.json()).then(friendsData=>{
     const friends = friendsData.friends||[];
     const pending = friendsData.pendingRequests||[];
@@ -14469,7 +14471,13 @@ function openOpponentFriendModal(pidx){
       }));
       // スキン/エモートをAPIで追加取得
       authFetch('/api/friends/'+encodeURIComponent(targetUid)+'/profile')
-        .then(r=>r.json()).then(data=>{ if(data.ok!==false) _fpmRender(Object.assign({},u,friendEntry,data)); })
+        .then(r=>r.json()).then(data=>{
+          if(data.ok!==false){
+            const merged = Object.assign({}, u, friendEntry, data);
+            if(!merged.emotes || !merged.emotes.some(e=>e)) merged.emotes = _p2pEmotes;
+            _fpmRender(merged);
+          }
+        })
         .catch(()=>{});
     }
 
@@ -14482,15 +14490,10 @@ function openOpponentFriendModal(pidx){
       actionEl2.innerHTML = '<span style="font-size:.72rem;color:#55cc55;font-weight:700;">✓ フレンド</span>';
     } else if(isPending){
       actionEl2.innerHTML = '<span style="font-size:.68rem;color:#aaaaff;">申請受信中</span>';
-    } else {
-      actionEl2.innerHTML = '<button onclick="ofmSendRequest(\''+targetUid+'\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
     }
+    // 未フレンドはすでにボタン表示済みなので何もしない
   }).catch(()=>{
-    const actionEl2 = document.getElementById('fpm-friend-action');
-    if(actionEl2){
-      actionEl2.style.display = 'flex';
-      actionEl2.innerHTML = '<button onclick="ofmSendRequest(\''+targetUid+'\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
-    }
+    // API失敗時もボタンはそのまま残す
   });
 }
 

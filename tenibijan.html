@@ -14416,63 +14416,88 @@ function searchFriend(){
 function openOpponentFriendModal(pidx){
   const p = G && G.players && G.players[pidx];
   if(!p) return;
-  const modal = document.getElementById('opponentFriendModal');
-  const iconEl = document.getElementById('ofm-icon');
-  const nameEl = document.getElementById('ofm-name');
-  const abilityEl = document.getElementById('ofm-ability');
-  const statsEl = document.getElementById('ofm-stats');
-  const actionEl = document.getElementById('ofm-action');
-
-  if(p.iconId){
-    iconEl.innerHTML = '<img src="'+gachaIconUrl(p.iconId)+'" style="width:100%;height:100%;object-fit:contain;background:#040c12;">';
-  } else {
-    iconEl.textContent = '👤';
-  }
-  nameEl.textContent = p.name || 'プレイヤー';
-  abilityEl.textContent = _abilityLabel(p.ability||'');
-  statsEl.innerHTML = '';
-  actionEl.innerHTML = '<span style="font-size:.6rem;color:#4a7a5a;">読み込み中…</span>';
-  modal.style.display = 'flex';
-
   const targetUid = p.uid || '';
+
+  // friendProfileModal を流用（エモート・スキン・指輪も表示）
+  const u = {
+    id: targetUid,
+    name: p.name || 'プレイヤー',
+    ability: p.ability || '',
+    iconId: p.iconId || '',
+    handSkin: p.handSkin || '',
+    ring: p.ring || '',
+    emotes: ['','','',''],
+    rating: null,
+    bombBestStage: 0,
+    bombBestScore: 0,
+  };
+
+  _fpmRender(u);
+
+  const actionEl = document.getElementById('fpm-friend-action');
+  if(actionEl){
+    actionEl.style.display = 'flex';
+    actionEl.innerHTML = '<span style="font-size:.6rem;color:#4a7a5a;">読み込み中…</span>';
+  }
+
+  const modal = document.getElementById('friendProfileModal');
+  modal.style.display = 'flex';
+  // 閉じる動作を上書き（対戦中はfriendProfileModalをcloseするだけ）
+  modal._fromGame = true;
+
   if(!targetUid){
-    actionEl.innerHTML = '<span style="font-size:.58rem;color:#5a5a5a;">情報なし</span>';
+    if(actionEl) actionEl.innerHTML = '<span style="font-size:.58rem;color:#5a5a5a;">情報なし</span>';
     return;
   }
   if(targetUid === (PROFILE.uid||'')){
-    actionEl.innerHTML = '<span style="font-size:.58rem;color:#5a5a5a;">自分です</span>';
+    if(actionEl) actionEl.style.display = 'none';
     return;
   }
 
+  // フレンドAPIで状態確認 + stats取得
   authFetch('/api/friends').then(r=>r.json()).then(friendsData=>{
     const friends = friendsData.friends||[];
     const pending = friendsData.pendingRequests||[];
-
     const friendEntry = friends.find(f=>f.id===targetUid);
+
+    // フレンドならstatsも更新
     if(friendEntry){
-      let html = '';
-      if(friendEntry.rating!=null) html += '<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:.5rem;color:#7a6aaa;">\u2694\uFE0F ランク</span><span style="font-size:.65rem;font-weight:700;color:#cc99ff;">'+friendEntry.rating+'</span></div>';
-      if(friendEntry.bombBestStage) html += '<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:.5rem;color:#7a6aaa;">\uD83D\uDCA3 手にボム</span><span style="font-size:.65rem;font-weight:700;color:#ffcc55;">Lv'+friendEntry.bombBestStage+'</span>'+(friendEntry.bombBestScore?'<span style="font-size:.56rem;color:#aa8833;">'+Number(friendEntry.bombBestScore).toLocaleString()+'点</span>':'')+'</div>';
-      statsEl.innerHTML = html;
+      _fpmRender(Object.assign({}, u, {
+        rating: friendEntry.rating ?? null,
+        bombBestStage: friendEntry.bombBestStage || 0,
+        bombBestScore: friendEntry.bombBestScore || 0,
+      }));
+      // スキン/エモートをAPIで追加取得
+      authFetch('/api/friends/'+encodeURIComponent(targetUid)+'/profile')
+        .then(r=>r.json()).then(data=>{ if(data.ok!==false) _fpmRender(Object.assign({},u,friendEntry,data)); })
+        .catch(()=>{});
     }
 
     const isFriend = friends.some(f=>f.id===targetUid);
     const isPending = pending.some(f=>f.id===targetUid);
-
+    const actionEl2 = document.getElementById('fpm-friend-action');
+    if(!actionEl2) return;
+    actionEl2.style.display = 'flex';
     if(isFriend){
-      actionEl.innerHTML = '<span style="font-size:.68rem;color:#55cc55;font-weight:700;">\u2713 フレンド</span>';
+      actionEl2.innerHTML = '<span style="font-size:.72rem;color:#55cc55;font-weight:700;">✓ フレンド</span>';
     } else if(isPending){
-      actionEl.innerHTML = '<span style="font-size:.62rem;color:#aaaaff;">申請受信中</span>';
+      actionEl2.innerHTML = '<span style="font-size:.68rem;color:#aaaaff;">申請受信中</span>';
     } else {
-      actionEl.innerHTML = '<button onclick="ofmSendRequest(\'' + targetUid + '\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
+      actionEl2.innerHTML = '<button onclick="ofmSendRequest(\''+targetUid+'\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
     }
   }).catch(()=>{
-    const targetUid2 = p.uid||'';
-    actionEl.innerHTML = '<button onclick="ofmSendRequest(\'' + targetUid2 + '\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
+    const actionEl2 = document.getElementById('fpm-friend-action');
+    if(actionEl2){
+      actionEl2.style.display = 'flex';
+      actionEl2.innerHTML = '<button onclick="ofmSendRequest(\''+targetUid+'\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
+    }
   });
 }
 
 function closeOpponentFriendModal(){
+  // 対戦中に friendProfileModal を開いた場合もここで閉じる
+  const fpm = document.getElementById('friendProfileModal');
+  if(fpm && fpm._fromGame){ fpm.style.display='none'; fpm._fromGame=false; return; }
   const modal = document.getElementById('opponentFriendModal');
   if(modal) modal.style.display = 'none';
 }
@@ -14482,16 +14507,16 @@ function ofmSendRequest(targetUid, btn){
   if(btn){ btn.disabled=true; btn.textContent='送信中…'; }
   authFetch('/api/friends/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetId:targetUid})})
     .then(r=>r.json()).then(d=>{
-      const actionEl = document.getElementById('ofm-action');
+      const actionEl = document.getElementById('fpm-friend-action');
       if(d.ok){
-        if(actionEl) actionEl.innerHTML = '<span style="font-size:.68rem;color:#55cc55;font-weight:700;">\u2713 申請を送りました！</span>';
+        if(actionEl) actionEl.innerHTML = '<span style="font-size:.72rem;color:#55cc55;font-weight:700;">✓ 申請を送りました！</span>';
       } else {
         const msg = d.error||'エラー';
-        if(actionEl) actionEl.innerHTML = '<span style="font-size:.6rem;color:#ff7777;">'+msg+'</span>';
-        if(btn){ btn.disabled=false; btn.textContent='\u2795 フレンド申請'; }
+        if(actionEl) actionEl.innerHTML = '<span style="font-size:.6rem;color:#ff7777;">'+_esc(msg)+'</span>';
+        if(btn){ btn.disabled=false; btn.textContent='➕ フレンド申請'; }
       }
     }).catch(()=>{
-      if(btn){ btn.disabled=false; btn.textContent='\u2795 フレンド申請'; }
+      if(btn){ btn.disabled=false; btn.textContent='➕ フレンド申請'; }
     });
 }
 
@@ -14532,7 +14557,11 @@ function openFriendProfileModal(friendId){
 
   // まず基本情報を即時表示
   _fpmRender(u);
+  // フレンドリストから開く場合は申請エリアを隠す
+  const _fpmAction = document.getElementById('fpm-friend-action');
+  if(_fpmAction){ _fpmAction.style.display='none'; }
   modal.style.display = 'flex';
+  modal._fromGame = false;
 
   // エモート・スキンはAPIから取得して更新
   const emoteEl = document.getElementById('fpm-emotes');
@@ -14564,7 +14593,16 @@ function _fpmRender(u){
   const abilityEl = document.getElementById('fpm-ability');
   if(abilityEl) abilityEl.textContent = _abilityLabel(u.ability);
 
-  // レート・爆弾stats
+  // インラインstats（フレンドモーダル内のアイコン横）
+  const inlineStats = document.getElementById('fpm-inline-stats');
+  if(inlineStats){
+    let html = '';
+    if(u.rating != null) html += `<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:.5rem;color:#7a6aaa;">⚔️ ランク</span><span style="font-size:.65rem;font-weight:700;color:#cc99ff;">${u.rating}</span></div>`;
+    if(u.bombBestStage) html += `<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:.5rem;color:#7a6aaa;">💣 手にボム</span><span style="font-size:.65rem;font-weight:700;color:#ffcc55;">Lv${u.bombBestStage}</span>${u.bombBestScore?`<span style="font-size:.56rem;color:#aa8833;">${Number(u.bombBestScore).toLocaleString()}点</span>`:''}</div>`;
+    inlineStats.innerHTML = html;
+  }
+
+  // レート・爆弾stats（自分のプロフィール画面内の別エリア）
   const statRate  = document.getElementById('fpm-stat-rate');
   const statStage = document.getElementById('fpm-stat-stage');
   const statScore = document.getElementById('fpm-stat-score');
@@ -14663,7 +14701,9 @@ function _fpmRender(u){
 }
 
 function closeFriendProfileModal(){
-  document.getElementById('friendProfileModal').style.display = 'none';
+  const modal = document.getElementById('friendProfileModal');
+  modal.style.display = 'none';
+  modal._fromGame = false;
   const vid = document.getElementById('fpm-skin-video');
   if(vid){ vid.pause(); vid.src=''; }
   const ringVid = document.getElementById('fpm-ring-video');
@@ -16845,8 +16885,12 @@ function plantMineRinshan(ri){
       <div style="min-width:0;">
         <div id="fpm-name" style="font-size:.95rem;font-weight:700;color:var(--gold);letter-spacing:.05em;"></div>
         <div id="fpm-ability" style="font-size:.58rem;color:#5a8a7a;margin-top:3px;"></div>
+        <div id="fpm-inline-stats" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
       </div>
     </div>
+
+    <!-- フレンド申請エリア（対戦中アイコンクリック時のみ表示） -->
+    <div id="fpm-friend-action" style="display:none;text-align:center;margin-bottom:12px;min-height:32px;display:none;align-items:center;justify-content:center;gap:8px;"></div>
 
     <!-- エモート -->
     <div style="margin-bottom:14px;">

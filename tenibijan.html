@@ -2113,6 +2113,41 @@ body{
   </div>
 </div>
 
+<!-- ===== 戦績スクリーン ===== -->
+<div id="recordScreen" style="
+  display:none;position:fixed;inset:0;z-index:200;
+  flex-direction:column;align-items:center;
+  background:#0b1520;overflow-y:auto;padding:60px 16px 80px;
+">
+  <button onclick="closeRecordScreen()" style="
+    position:fixed;top:14px;left:14px;z-index:20;
+    background:#030a10;border:1px solid #2a4a3a;border-radius:8px;
+    color:#5a9a7a;font-size:.72rem;padding:7px 13px;cursor:pointer;">◀ 戻る</button>
+
+  <div style="text-align:center;margin-bottom:20px;">
+    <div style="font-size:clamp(1.2rem,4vw,1.8rem);font-weight:900;color:#8888cc;letter-spacing:.15em;">📋 戦績</div>
+    <div style="font-size:.58rem;color:#4a4a7a;margin-top:4px;">直近20試合</div>
+  </div>
+
+  <!-- タブ -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;width:100%;max-width:480px;">
+    <button id="recordTabRoom" onclick="switchRecordTab('room')" style="
+      flex:1;padding:8px 0;border-radius:8px 8px 0 0;font-size:.68rem;font-weight:700;cursor:pointer;
+      border:1px solid #3a5a8a;border-bottom:none;background:#0a1428;color:#88aacc;letter-spacing:.05em;">
+      🏠 ルームマッチ
+    </button>
+    <button id="recordTabRank" onclick="switchRecordTab('rank')" style="
+      flex:1;padding:8px 0;border-radius:8px 8px 0 0;font-size:.68rem;font-weight:700;cursor:pointer;
+      border:1px solid #1a3a2a;border-bottom:none;background:#030a10;color:#4a7a5a;letter-spacing:.05em;">
+      ⚔️ ランクマッチ
+    </button>
+  </div>
+
+  <!-- 戦績リスト -->
+  <div id="recordList" style="width:100%;max-width:480px;display:flex;flex-direction:column;gap:8px;
+    border-top:1px solid #2a3a5a;padding-top:12px;"></div>
+</div>
+
 <div id="profileScreen">
   <button onclick="document.getElementById('profileScreen').classList.remove('active');document.getElementById('lobby').style.display='';" style="
     position:absolute;top:14px;left:14px;z-index:10;
@@ -2530,6 +2565,12 @@ body{
       </button>
       <button class="pcnt-btn" onclick="startTitleBgmOnce();openProfile()" style="padding:4px;text-align:center;border-color:#2a5a3a;background:#030a10;" style="grid-column:2;">
         <img src="https://raw.githubusercontent.com/teddybeerbear/teddybeerbear/main/tbotan/purofi.png" alt="プロフィール" style="width:100%;max-width:100px;height:auto;display:block;margin:0 auto;border-radius:6px;">
+      </button>
+      <button class="pcnt-btn" onclick="startTitleBgmOnce();openRecordScreen()" style="padding:4px;text-align:center;border-color:#3a3a6a;background:linear-gradient(135deg,#080818,#04040e);">
+        <div style="width:100%;max-width:100px;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto;border-radius:6px;background:linear-gradient(135deg,#0a0a20,#060614);padding:10px 0;gap:4px;">
+          <span style="font-size:1.6rem;">📋</span>
+          <span style="font-size:.6rem;color:#8888cc;letter-spacing:.04em;">戦績</span>
+        </div>
       </button>
     </div>
   </div>
@@ -10074,6 +10115,15 @@ function showFinalResult(){
   document.getElementById('resultOverlay').classList.add('show');
   _setResultBtn();
   broadcastState({finalResult:sorted.map(p=>({name:p.name,wind:p.wind,score:p.score}))});
+
+  // ── 戦績保存（ルームマッチ・ランクマッチのみ） ──
+  if(NET.online){
+    const recPlayer2 = G.players[NET.myIdx];
+    const recName2 = recPlayer2 ? recPlayer2.name : (PROFILE.name||'プレイヤー');
+    const recRank2 = sorted.findIndex(p=>p===recPlayer2)+1;
+    const recordType = NET.isRankMatch ? 'rank' : 'room';
+    _saveMatchRecord(recordType, sorted, recName2, recRank2, numPlayers);
+  }
 }
 
 // 手にビチャレンジ中フラグ
@@ -10104,6 +10154,12 @@ function _showRatingChanges(changes){
     </div>`;
   }).join('');
   box.style.display='';
+
+  // ── 戦績レコードにレート変動を書き込む ──
+  if(myName){
+    const myChange = changes.find(c=>c.name===myName);
+    if(myChange) _updateLastRankRecordRating(myName, myChange.change, myChange.before, myChange.after);
+  }
 }
 function showFinalResultData(sorted){
   clearRejoinSession(); // 対局正常終了 → 復帰セッション不要
@@ -10139,6 +10195,15 @@ function showFinalResultData(sorted){
 
   document.getElementById('resultOverlay').classList.add('show');
   _setResultBtn();
+
+  // ── 戦績保存（ゲスト側: ルームマッチ・ランクマッチのみ） ──
+  if(NET.online){
+    const recPlayer = G && G.players ? G.players[NET.myIdx] : null;
+    const recName = recPlayer ? recPlayer.name : (PROFILE.name||'プレイヤー');
+    const recRank = sorted.findIndex(p=>p.name===recName)+1 || myRankIdx+1;
+    const recordTypeG = NET.isRankMatch ? 'rank' : 'room';
+    _saveMatchRecord(recordTypeG, sorted, recName, recRank > 0 ? recRank : myRankIdx+1, numPlayers);
+  }
 }
 
 
@@ -10337,6 +10402,148 @@ async function backToRoom(){
     }, 400);
     showRoomLobby();
   }
+}
+
+// ============================================================
+// 戦績ページ（直近20試合 ルームマッチ / ランクマッチ）
+// ============================================================
+const MJ_ROOM_RECORD_KEY = 'mjRoomRecord';
+const MJ_RANK_RECORD_KEY = 'mjRankRecord';
+
+function _saveMatchRecord(type, sortedPlayers, myName, myRank, numPlayers){
+  // type: 'room' | 'rank'
+  const key = type === 'rank' ? MJ_RANK_RECORD_KEY : MJ_ROOM_RECORD_KEY;
+  let list = [];
+  try{ list = JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){}
+  const entry = {
+    date: Date.now(),
+    myName: myName || 'プレイヤー',
+    myRank: myRank,
+    numPlayers: numPlayers,
+    players: sortedPlayers.map(p=>({name:p.name||p, wind:p.wind||'', score:p.score??0})),
+    ratingChange: null, // ランクマッチは _updateLastRankRecordRating() で後から更新
+  };
+  list.unshift(entry);
+  if(list.length > 20) list = list.slice(0, 20);
+  try{ localStorage.setItem(key, JSON.stringify(list)); }catch(e){}
+}
+
+function _updateLastRankRecordRating(myName, change, before, after){
+  // _showRatingChanges から呼ばれ、直近のランクレコードにレート変動を書き込む
+  try{
+    let list = JSON.parse(localStorage.getItem(MJ_RANK_RECORD_KEY)||'[]');
+    if(list.length === 0) return;
+    const me = list[0]; // 直近エントリ
+    if(me.myName === myName){
+      me.ratingChange = { change, before, after };
+      localStorage.setItem(MJ_RANK_RECORD_KEY, JSON.stringify(list));
+    }
+  }catch(e){}
+}
+
+let _recordCurrentTab = 'room';
+
+function openRecordScreen(){
+  _recordCurrentTab = 'room';
+  document.getElementById('lobby').style.display = 'none';
+  const sc = document.getElementById('recordScreen');
+  sc.style.display = 'flex';
+  _renderRecordList();
+}
+
+function closeRecordScreen(){
+  document.getElementById('recordScreen').style.display = 'none';
+  document.getElementById('lobby').style.display = 'block';
+}
+
+function switchRecordTab(tab){
+  _recordCurrentTab = tab;
+  // タブのスタイル切替
+  const roomTab = document.getElementById('recordTabRoom');
+  const rankTab = document.getElementById('recordTabRank');
+  if(tab === 'room'){
+    roomTab.style.background = '#0a1428'; roomTab.style.color = '#88aacc'; roomTab.style.borderColor = '#3a5a8a';
+    rankTab.style.background = '#030a10'; rankTab.style.color = '#4a7a5a'; rankTab.style.borderColor = '#1a3a2a';
+  } else {
+    rankTab.style.background = '#0a1a12'; rankTab.style.color = '#5adb9a'; rankTab.style.borderColor = '#2a6a4a';
+    roomTab.style.background = '#030a10'; roomTab.style.color = '#4a5a7a'; roomTab.style.borderColor = '#1a2a4a';
+  }
+  _renderRecordList();
+}
+
+function _renderRecordList(){
+  const key = _recordCurrentTab === 'rank' ? MJ_RANK_RECORD_KEY : MJ_ROOM_RECORD_KEY;
+  let list = [];
+  try{ list = JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){}
+
+  const container = document.getElementById('recordList');
+  if(!container) return;
+
+  // タブ初期スタイル適用
+  switchRecordTab(_recordCurrentTab);
+
+  if(list.length === 0){
+    container.innerHTML = `<div style="text-align:center;color:#3a4a5a;font-size:.72rem;padding:30px 0;">まだ対局履歴がありません</div>`;
+    return;
+  }
+
+  container.innerHTML = list.map((entry, idx) => {
+    const rankEmoji = ['🥇','🥈','🥉','🏅'][entry.myRank-1] || entry.myRank+'位';
+    const rankColor = entry.myRank===1 ? '#f0c040' : entry.myRank===2 ? '#c0c8d8' : entry.myRank===3 ? '#c09060' : '#6a7a6a';
+    const dateStr = _formatRecordDate(entry.date);
+    const myPlayerRow = entry.players.find(p=>p.name===entry.myName) || entry.players[entry.myRank-1];
+    const myScore = myPlayerRow ? myPlayerRow.score : 0;
+    const scoreColor = myScore >= 0 ? '#5adb9a' : '#ff7a7a';
+
+    // ランクレート変動（ランクマッチのみ）
+    let ratingHtml = '';
+    if(_recordCurrentTab === 'rank' && entry.ratingChange){
+      const rc = entry.ratingChange;
+      const sign = rc.change >= 0 ? '+' : '';
+      const col = rc.change >= 0 ? '#5adb9a' : '#ff7a7a';
+      ratingHtml = `<div style="font-size:.58rem;margin-top:3px;color:#5a8a7a;">
+        レート: <span style="color:#7a9a8a;">${rc.before}</span> → <strong style="color:${col};">${rc.after}</strong>
+        <span style="color:${col};">(${sign}${rc.change})</span>
+      </div>`;
+    }
+
+    // 全プレイヤーリスト
+    const playersHtml = entry.players.map((p, pi) => {
+      const isMe = p.name === entry.myName;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-radius:4px;
+        ${isMe?'background:#0a1a10;border:1px solid #1a3a2a;':'border:1px solid transparent;'}">
+        <span style="font-size:.58rem;color:${isMe?'var(--gold2)':'#7a9a8a'};font-weight:${isMe?700:400};">${pi+1}位 ${p.name}${p.wind?(' ('+p.wind+')'):''}${isMe?' 👈':''}</span>
+        <span style="font-size:.6rem;color:${p.score>=25000?'#5adb9a':p.score<0?'#ff7a7a':'#8aaa8a'};font-weight:700;">${p.score.toLocaleString()}点</span>
+      </div>`;
+    }).join('');
+
+    return `<div style="
+      background:#060e18;border:1px solid #1a2a3a;border-radius:10px;padding:10px 12px;
+      ${entry.myRank===1?'border-color:#3a3a1a;background:linear-gradient(135deg,#0a0e08,#06100a);':''}
+    ">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div>
+          <span style="font-size:1.1rem;">${rankEmoji}</span>
+          <span style="font-size:.78rem;font-weight:700;color:${rankColor};margin-left:4px;">${entry.myRank}位 / ${entry.numPlayers}人</span>
+          ${ratingHtml}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:.7rem;font-weight:700;color:${scoreColor};">${myScore>=0?'+':''}${myScore.toLocaleString()}点</div>
+          <div style="font-size:.52rem;color:#3a5a4a;margin-top:2px;">${dateStr}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;">${playersHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function _formatRecordDate(ts){
+  const d = new Date(ts);
+  const mo = d.getMonth()+1;
+  const da = d.getDate();
+  const ho = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  return `${mo}/${da} ${ho}:${mi}`;
 }
 
 function backToLobby(){

@@ -69,8 +69,9 @@ function scaleTable(){
       '.seat-bottom .hand-wrap { height: 160px !important; gap: 6px !important; padding: 10px 15px !important; }' +
       '.seat-bottom .drawn-sep { width: 12px !important; }' +
       /* 左右のUI（鳴き・北出し）を牌に被らないよう外側に逃がす */
-      '.seat-bottom .melds-wrap { margin-bottom: 20px !important; }' +
-      '#meldKitaArea { margin-bottom: 160px !important; }'+
+      '.seat-bottom .melds-wrap { gap: 6px !important; }' +
+      '.seat-bottom .meld-group .tile { width: 80px !important; height: 106px !important; font-size: 5.5rem !important; border-width: 3px !important; border-radius: 8px !important; }' +
+      '.seat-bottom .kita-wrap .tile { width: 80px !important; height: 106px !important; font-size: 5.5rem !important; border-width: 3px !important; border-radius: 8px !important; }'+
       /* 字風点数パネルを手牌に被らないよう右端に絶対配置 */
       '.player-score-panel { transform: scale(2.3) !important; transform-origin: left center !important; }'+
       /* 縦画面: アイコン+名前を2倍（席ごとに回転維持）*/
@@ -11877,6 +11878,7 @@ function renderDpCell(cell){
 
 function renderTable(){
   const table=document.getElementById('mahjongTable');
+  let _humanMeldWrap = null;
   // Remove old seats and discard-abs
   ['seat-bottom','seat-top','seat-left','seat-right'].forEach(cls=>{
     const el=table.querySelector('.'+cls);if(el)el.remove();
@@ -11972,29 +11974,11 @@ function renderTable(){
         kw.innerHTML=Array(p.kitaCount).fill(`<div class="tile honor kita-tile">${emj({suit:'honor',num:'北'})}</div>`).join('');
         mw.appendChild(kw);
       }
-      // 自分の席はmeldKitaArea(マット右)のみ表示、innerには追加しない
+      // CPU席はseat-inner内にそのまま追加、自分の席は手牌下に後付けするため一時保持
       if(!isHuman) inner.appendChild(mw);
-      if(isHuman){
-        const mka=document.getElementById('meldKitaArea');
-        if(mka){
-          mka.innerHTML='';
-          if(p.melds.length>0){
-            const meld2=document.createElement('div');
-            meld2.style.cssText='display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end;';
-            meld2.innerHTML=p.melds.map(m=>`<div class="meld-group" style="transform:scale(.85);transform-origin:right center;">${m.tiles.map(t=>`<div class="tile ${tc(t)}">${emj(t)}</div>`).join('')}</div>`).join('');
-            mka.appendChild(meld2);
-          }
-          if(p.kitaCount>0){
-            const kw2=document.createElement('div');
-            kw2.style.cssText='display:flex;gap:1px;flex-wrap:wrap;justify-content:flex-end;';
-            kw2.innerHTML=Array(p.kitaCount).fill(`<div class="tile honor kita-tile" style="transform:scale(.8);transform-origin:right center;">${emj({suit:'honor',num:'北'})}</div>`).join('');
-            mka.appendChild(kw2);
-          }
-        }
-      }
+      if(isHuman) _humanMeldWrap = mw;
     } else if(isHuman){
-      const mka=document.getElementById('meldKitaArea');
-      if(mka) mka.innerHTML=''; // クリア
+      _humanMeldWrap = null;
     }
 
     // Hand — use data-idx attributes; event listeners added after insert (no inline onclick on rotated elements)
@@ -12295,6 +12279,14 @@ function renderTable(){
     }
 
     // 全員 handOuter を seat-inner に追加
+    // 自分の副露・北抜きを手牌の下に挿入（meldKitaAreaは使用しない）
+    if(isHuman){
+      const mka=document.getElementById('meldKitaArea'); if(mka) mka.innerHTML='';
+      if(typeof _humanMeldWrap!=='undefined'&&_humanMeldWrap){
+        _humanMeldWrap.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:8px;';
+        inner.appendChild(_humanMeldWrap);
+      }
+    }
     inner.appendChild(handOuter);
     // 捨て牌配置
     const _si=si;

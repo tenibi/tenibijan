@@ -90,7 +90,7 @@ function scaleTable(){
       /* 縦画面: リーチ・オープンリーチボタンだけ2倍（action-areaの1.667倍に対し追加で×1.2） */
       '.btn-riichi, .btn-open-riichi { transform: scale(1.2) !important; transform-origin: center center !important; margin: 0 12px !important; }'+
       /* 縦画面: 手牌上リーチ・離席ラベルを2.5倍スケール・位置調整 */
-      '.seat-bottom .hand-outer-riichi-label { font-size: 3.4375rem !important; top: -90px !important; }'+
+      '.seat-bottom .hand-outer-riichi-label { font-size: 3.4375rem !important; top: -90px !important; left: calc(700px - 211px) !important; transform: translateX(-50%) !important; }'+
       '.seat-bottom .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; left: 570px !important; }'+
       '.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label { font-size: 3.4375rem !important; top: -90px !important; }'+
       '.seat-top .hand-outer-afk-label,.seat-left .hand-outer-afk-label,.seat-right .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; }'+
@@ -1299,7 +1299,7 @@ body{
   background:#030a10;border:1px solid #1a3a2a;margin-bottom:6px;
 }
 .friend-row-icon{width:32px;height:32px;border-radius:50%;overflow:hidden;background:#0a1a10;border:1px solid #2a4a3a;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-.friend-row-icon img{width:100%;height:100%;object-fit:cover;}
+.friend-row-icon img{width:100%;height:100%;object-fit:contain;background:#040c12;}
 .friend-row-info{flex:1;min-width:0;}
 .friend-row-name{font-size:.72rem;font-weight:700;color:#c0d8c0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .friend-row-sub{font-size:.55rem;color:#4a7a5a;}
@@ -2195,7 +2195,23 @@ body{
             </div>
           </div>
         </div>
-        <!-- エモート -->
+        <!-- レート・爆弾stats -->
+    <div id="fpm-stats" style="display:none;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <div id="fpm-stat-rate" style="display:none;background:#0a1a10;border:1px solid #1a4a2a;border-radius:7px;padding:5px 10px;font-size:.62rem;color:#7acc88;">
+        <span style="color:#4a7a5a;font-size:.52rem;">⚔️ ランクレート</span><br>
+        <span id="fpm-stat-rate-val" style="font-size:.85rem;font-weight:700;color:#5adb9a;"></span>
+      </div>
+      <div id="fpm-stat-stage" style="display:none;background:#0a1a10;border:1px solid #1a3a4a;border-radius:7px;padding:5px 10px;font-size:.62rem;color:#88aacc;">
+        <span style="color:#4a6a7a;font-size:.52rem;">💣 爆弾ステージ</span><br>
+        <span id="fpm-stat-stage-val" style="font-size:.85rem;font-weight:700;color:#88ccff;"></span>
+      </div>
+      <div id="fpm-stat-score" style="display:none;background:#0a1a10;border:1px solid #3a3a1a;border-radius:7px;padding:5px 10px;font-size:.62rem;color:#ccaa55;">
+        <span style="color:#6a5a2a;font-size:.52rem;">🏆 爆弾スコア</span><br>
+        <span id="fpm-stat-score-val" style="font-size:.85rem;font-weight:700;color:#f0c040;"></span>
+      </div>
+    </div>
+
+    <!-- エモート -->
         <div>
           <h3 style="margin-bottom:6px;">エモート</h3>
           <div id="emoteEquippedPreview" onclick="openEmoteCollection()" style="
@@ -6998,6 +7014,11 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
       if(i !== NET.myIdx && _prevPlayers[i].equippedTitle !== undefined) p.equippedTitle = _prevPlayers[i].equippedTitle;
       if(i !== NET.myIdx && _prevPlayers[i].handSkin !== undefined) p.handSkin = _prevPlayers[i].handSkin;
       if(i !== NET.myIdx && _prevPlayers[i].ring !== undefined) p.ring = _prevPlayers[i].ring;
+    }
+    // ★ 自分（ホスト）の ring・handSkin を PROFILE から確実にセット
+    if(i === NET.myIdx){
+      p.ring = PROFILE.ring || '';
+      p.handSkin = PROFILE.handSkin || '';
     }
     // ★ オンライン: NET.guestIconIds から iconId を確実に反映（初回・再局問わず）
     if(NET.online && i !== NET.myIdx && NET.guestIconIds[i-1]) p.iconId = NET.guestIconIds[i-1];
@@ -14314,6 +14335,11 @@ function renderFriendList(){
         <div class="friend-row-info">
           <div class="friend-row-name">${_esc(u.name||'プレイヤー')}</div>
           <div class="friend-row-sub">${_abilityLabel(u.ability)}</div>
+          <div class="friend-row-sub" style="margin-top:2px;display:flex;flex-wrap:wrap;gap:6px;">
+            ${u.rating!=null?`<span>⚔️ ${u.rating}</span>`:''}
+            ${u.bombBestStage?`<span>💣 Lv${u.bombBestStage}</span>`:''}
+            ${u.bombBestScore?`<span>🏆 ${Number(u.bombBestScore).toLocaleString()}</span>`:''}
+          </div>
         </div>
         <div class="friend-row-btns" onclick="event.stopPropagation()">
           <button class="friend-btn friend-btn-ok" style="background:#0a1520;border-color:#2a4a6a;color:#88ccff;" onclick="openGiftModal('${u.id}','${_esc(u.name||'プレイヤー')}')">🎁</button>
@@ -14443,6 +14469,23 @@ function _fpmRender(u){
   if(nameEl) nameEl.textContent = u.name || 'プレイヤー';
   const abilityEl = document.getElementById('fpm-ability');
   if(abilityEl) abilityEl.textContent = _abilityLabel(u.ability);
+
+  // レート・爆弾stats
+  const statRate  = document.getElementById('fpm-stat-rate');
+  const statStage = document.getElementById('fpm-stat-stage');
+  const statScore = document.getElementById('fpm-stat-score');
+  if(statRate){
+    if(u.rating != null){ statRate.style.display=''; document.getElementById('fpm-stat-rate-val').textContent = u.rating; }
+    else statRate.style.display='none';
+  }
+  if(statStage){
+    if(u.bombBestStage){ statStage.style.display=''; document.getElementById('fpm-stat-stage-val').textContent = 'Lv' + u.bombBestStage; }
+    else statStage.style.display='none';
+  }
+  if(statScore){
+    if(u.bombBestScore){ statScore.style.display=''; document.getElementById('fpm-stat-score-val').textContent = Number(u.bombBestScore).toLocaleString(); }
+    else statScore.style.display='none';
+  }
 
   // エモート（emoteSets[0] → emotes → 空）
   const emoteEl = document.getElementById('fpm-emotes');
@@ -16701,7 +16744,7 @@ function plantMineRinshan(ri){
     <!-- アイコン + 名前 -->
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
       <div id="fpm-icon" style="
-        width:64px;height:86px;flex-shrink:0;border-radius:10px;
+        width:80px;height:106px;flex-shrink:0;border-radius:10px;
         overflow:hidden;border:2px solid #3a5a3a;background:#040c12;
         display:flex;align-items:center;justify-content:center;font-size:1.6rem;
       ">👤</div>

@@ -1298,7 +1298,7 @@ body{
   padding:8px 10px;border-radius:8px;
   background:#030a10;border:1px solid #1a3a2a;margin-bottom:6px;
 }
-.friend-row-icon{width:32px;height:32px;border-radius:50%;overflow:hidden;background:#0a1a10;border:1px solid #2a4a3a;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.friend-row-icon{width:64px;height:64px;border-radius:10px;overflow:hidden;background:#0a1a10;border:1px solid #2a4a3a;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .friend-row-icon img{width:100%;height:100%;object-fit:contain;background:#040c12;}
 .friend-row-info{flex:1;min-width:0;}
 .friend-row-name{font-size:.72rem;font-weight:700;color:#c0d8c0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -4271,6 +4271,7 @@ let NET={
   guestReady:[],    // ゲストの準備状態 [idx1:bool, idx2:bool, idx3:bool]
   guestIsCpu:[],  // ゲストスロットがCPUか [idx1:bool, idx2:bool, idx3:bool]
   guestPeerIds:[],  // ゲストのPeerID [idx1のPeerID, idx2のPeerID, idx3のPeerID]
+  guestUids:[],     // ゲストのgoogleId [idx1, idx2, idx3]
   _memberDataCache:[], // ゲスト側: ホストから受け取ったメンバーデータのキャッシュ
   // ── P2P分散アーキテクチャ ──
   peerRegistry:[],  // [{peerId, playerIdx, conn}] 全接続ピアの一覧（全員が持つ）
@@ -5018,7 +5019,7 @@ function _reconnectToNewHost(newHostPeerId, retryCount=0){
     NET._promotingToHost = false;
     if(conn.peer) peerRegistryAdd(conn.peer, newHostIdx, conn);
     conn.send({type:'reconnect', originalIdx: myOriginalIdx, peerId: NET.peer?.id||''});
-    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||''});
+    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
     addLog('✅ 新ホストに再接続しました','log-new');
     hideReconnectOverlay();
   });
@@ -5866,7 +5867,7 @@ function onNetData(msg, senderIdx){
         G_ABILITY_MODE=msg.abilityMode;
       }
       // 自分のプロフィール名・アイコン・PeerIDをホストに送信
-      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||''});
+      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
       if(isReconnecting){
         // 再接続完了：ゲーム状態は次の stateUpdate で同期される
         addLog('🔄 新ホストと同期中…','log-new');
@@ -5963,7 +5964,7 @@ function onNetData(msg, senderIdx){
       setTimeout(saveRejoinSession, 600);
       // ゲスト: ホストに自分のアイコン情報とPeerIDを送信（makePlayer後に反映させるため）
       setTimeout(()=>{
-        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||''});
+        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
       }, 400);
     } else if(msg.type==='emote'){
       // ホストから転送されたエモートをゲスト側で表示
@@ -6228,7 +6229,8 @@ function handleGuestAction(msg, senderIdx){
           emotes:PROFILE.emotes||['','','',''],
           peerId:NET.peer?.id||'',
           handSkin:PROFILE.handSkin||'',
-          ring:PROFILE.ring||''
+          ring:PROFILE.ring||'',
+          uid:PROFILE.uid||''
         });
       }
       break;
@@ -6243,6 +6245,7 @@ function handleGuestAction(msg, senderIdx){
       NET.guestEquippedTitles = NET.guestEquippedTitles||[]; NET.guestEquippedTitles[senderIdx-1]=msg.equippedTitle||'';
       NET.guestHandSkins = NET.guestHandSkins||[]; NET.guestHandSkins[senderIdx-1]=msg.handSkin||'';
       NET.guestRings = NET.guestRings||[]; NET.guestRings[senderIdx-1]=msg.ring||'';
+      NET.guestUids = NET.guestUids||[]; NET.guestUids[senderIdx-1]=msg.uid||'';
       NET.guestEmotes[senderIdx-1]=msg.emote||'';
       if(msg.emotes) NET.guestEmotesSlots = NET.guestEmotesSlots||{}; if(msg.emotes) NET.guestEmotesSlots[senderIdx] = msg.emotes;
       if(msg.peerId) NET.guestPeerIds[senderIdx-1]=msg.peerId;
@@ -6253,6 +6256,7 @@ function handleGuestAction(msg, senderIdx){
         G.players[senderIdx].equippedTitle = msg.equippedTitle||'';
         G.players[senderIdx].handSkin = msg.handSkin||'';
         G.players[senderIdx].ring = msg.ring||'';
+        G.players[senderIdx].uid = msg.uid||'';
         // ★ peerId を player に紐付け（人格固定の核心）
         if(msg.peerId) G.players[senderIdx].peerId = msg.peerId;
         broadcastState();
@@ -7019,12 +7023,14 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
     if(i === NET.myIdx){
       p.ring = PROFILE.ring || '';
       p.handSkin = PROFILE.handSkin || '';
+      p.uid = PROFILE.uid || '';
     }
     // ★ オンライン: NET.guestIconIds から iconId を確実に反映（初回・再局問わず）
     if(NET.online && i !== NET.myIdx && NET.guestIconIds[i-1]) p.iconId = NET.guestIconIds[i-1];
     if(NET.online && i !== NET.myIdx && NET.guestEquippedTitles && NET.guestEquippedTitles[i-1] !== undefined) p.equippedTitle = NET.guestEquippedTitles[i-1];
     if(NET.online && i !== NET.myIdx && NET.guestHandSkins && NET.guestHandSkins[i-1] !== undefined) p.handSkin = NET.guestHandSkins[i-1];
     if(NET.online && i !== NET.myIdx && NET.guestRings && NET.guestRings[i-1] !== undefined) p.ring = NET.guestRings[i-1];
+    if(NET.online && i !== NET.myIdx && NET.guestUids && NET.guestUids[i-1]) p.uid = NET.guestUids[i-1];
     return p;
   });
 
@@ -9170,7 +9176,7 @@ function humanSelect(idx){
     if(!t._isHaku){
       // オンライン対戦でゲストの場合はホストへ通知してホスト側で変換する
       if(NET.online&&!amIHost()){
-        G.hakuSelectPlayers=(G.hakuSelectPlayers||[]).filter(i=>i!==pidx);
+        G.hakuSelectPlayers=(G.hakuSelectPlayers||[]).filter(i=>i!==NET.myIdx);
         netSend({type:'haku',pidx:NET.myIdx,tidx:idx});
         renderAll();
         return;
@@ -9179,7 +9185,7 @@ function humanSelect(idx){
       t.suit='honor';t.num='白';t._isHaku=true;
       p.hakuTileId=t._id;
       p.abilityUsed=true;
-      G.hakuSelectPlayers=(G.hakuSelectPlayers||[]).filter(i=>i!==pidx);
+      G.hakuSelectPlayers=(G.hakuSelectPlayers||[]).filter(i=>i!==NET.myIdx);
       SFX.haku();
       addLog(`🀆 白！手牌の1枚を白に変換した`,'log-dora');
       updateTenpai(p);broadcastState();renderAll();
@@ -12063,6 +12069,12 @@ function renderTable(){
     nameEl2.textContent=(p.name||'').slice(0,10);
     leftPanel.appendChild(windOrb2);
     leftPanel.appendChild(nameEl2);
+    // ★ 相手アイコンをクリックでフレンドモーダル（オンライン・人間・自分以外）
+    if(NET.online && !isHuman && !p.isCpu){
+      windOrb2.style.cursor = 'pointer';
+      windOrb2.title = 'フレンドを送る';
+      windOrb2.onclick = (e)=>{ e.stopPropagation(); openOpponentFriendModal(pidx); };
+    }
     // 称号表示（名前の下）
     const _pTitle = p.equippedTitle || '';
     if(_pTitle){
@@ -14292,7 +14304,7 @@ function copyFriendCode(){
 }
 
 function _friendIconHTML(iconId){
-  if(!iconId) return '<div class="friend-row-icon"><span style="font-size:.9rem;">👤</span></div>';
+  if(!iconId) return '<div class="friend-row-icon"><span style="font-size:1.8rem;">👤</span></div>';
   return `<div class="friend-row-icon"><img src="${gachaIconUrl(iconId)}" alt=""></div>`;
 }
 
@@ -14335,10 +14347,9 @@ function renderFriendList(){
         <div class="friend-row-info">
           <div class="friend-row-name">${_esc(u.name||'プレイヤー')}</div>
           <div class="friend-row-sub">${_abilityLabel(u.ability)}</div>
-          <div class="friend-row-sub" style="margin-top:2px;display:flex;flex-wrap:wrap;gap:6px;">
-            ${u.rating!=null?`<span>⚔️ ${u.rating}</span>`:''}
-            ${u.bombBestStage?`<span>💣 Lv${u.bombBestStage}</span>`:''}
-            ${u.bombBestScore?`<span>🏆 ${Number(u.bombBestScore).toLocaleString()}</span>`:''}
+          <div style="margin-top:5px;display:flex;flex-direction:column;gap:3px;">
+            ${u.rating!=null?`<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:.52rem;color:#7a6aaa;letter-spacing:.05em;">⚔️ ランク</span><span style="font-size:.68rem;font-weight:700;color:#cc99ff;">${u.rating}</span></div>`:''}
+            ${u.bombBestStage?`<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:.52rem;color:#7a6aaa;letter-spacing:.05em;">💣 手にボム</span><span style="font-size:.68rem;font-weight:700;color:#ffcc55;">Lv${u.bombBestStage}</span>${u.bombBestScore?`<span style="font-size:.58rem;color:#aa8833;">${Number(u.bombBestScore).toLocaleString()}点</span>`:''}</div>`:''}
           </div>
         </div>
         <div class="friend-row-btns" onclick="event.stopPropagation()">
@@ -14399,6 +14410,89 @@ function searchFriend(){
           <div class="friend-row-btns">${actionHTML}</div>
         </div>`;
     }).catch(()=>{ resEl.innerHTML='<div style="font-size:.6rem;color:#5a2a2a;">エラーが発生しました</div>'; });
+}
+
+// ── 対戦中 相手アイコンクリック → フレンドモーダル ──────────────
+function openOpponentFriendModal(pidx){
+  const p = G && G.players && G.players[pidx];
+  if(!p) return;
+  const modal = document.getElementById('opponentFriendModal');
+  const iconEl = document.getElementById('ofm-icon');
+  const nameEl = document.getElementById('ofm-name');
+  const abilityEl = document.getElementById('ofm-ability');
+  const statsEl = document.getElementById('ofm-stats');
+  const actionEl = document.getElementById('ofm-action');
+
+  if(p.iconId){
+    iconEl.innerHTML = '<img src="'+gachaIconUrl(p.iconId)+'" style="width:100%;height:100%;object-fit:contain;background:#040c12;">';
+  } else {
+    iconEl.textContent = '👤';
+  }
+  nameEl.textContent = p.name || 'プレイヤー';
+  abilityEl.textContent = _abilityLabel(p.ability||'');
+  statsEl.innerHTML = '';
+  actionEl.innerHTML = '<span style="font-size:.6rem;color:#4a7a5a;">読み込み中…</span>';
+  modal.style.display = 'flex';
+
+  const targetUid = p.uid || '';
+  if(!targetUid){
+    actionEl.innerHTML = '<span style="font-size:.58rem;color:#5a5a5a;">情報なし</span>';
+    return;
+  }
+  if(targetUid === (PROFILE.uid||'')){
+    actionEl.innerHTML = '<span style="font-size:.58rem;color:#5a5a5a;">自分です</span>';
+    return;
+  }
+
+  authFetch('/api/friends').then(r=>r.json()).then(friendsData=>{
+    const friends = friendsData.friends||[];
+    const pending = friendsData.pendingRequests||[];
+
+    const friendEntry = friends.find(f=>f.id===targetUid);
+    if(friendEntry){
+      let html = '';
+      if(friendEntry.rating!=null) html += '<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:.5rem;color:#7a6aaa;">\u2694\uFE0F ランク</span><span style="font-size:.65rem;font-weight:700;color:#cc99ff;">'+friendEntry.rating+'</span></div>';
+      if(friendEntry.bombBestStage) html += '<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:.5rem;color:#7a6aaa;">\uD83D\uDCA3 手にボム</span><span style="font-size:.65rem;font-weight:700;color:#ffcc55;">Lv'+friendEntry.bombBestStage+'</span>'+(friendEntry.bombBestScore?'<span style="font-size:.56rem;color:#aa8833;">'+Number(friendEntry.bombBestScore).toLocaleString()+'点</span>':'')+'</div>';
+      statsEl.innerHTML = html;
+    }
+
+    const isFriend = friends.some(f=>f.id===targetUid);
+    const isPending = pending.some(f=>f.id===targetUid);
+
+    if(isFriend){
+      actionEl.innerHTML = '<span style="font-size:.68rem;color:#55cc55;font-weight:700;">\u2713 フレンド</span>';
+    } else if(isPending){
+      actionEl.innerHTML = '<span style="font-size:.62rem;color:#aaaaff;">申請受信中</span>';
+    } else {
+      actionEl.innerHTML = '<button onclick="ofmSendRequest(\'' + targetUid + '\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
+    }
+  }).catch(()=>{
+    const targetUid2 = p.uid||'';
+    actionEl.innerHTML = '<button onclick="ofmSendRequest(\'' + targetUid2 + '\',this)" style="padding:8px 22px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #3a6a3a;background:#051508;color:#55cc55;transition:all .15s;">➕ フレンド申請</button>';
+  });
+}
+
+function closeOpponentFriendModal(){
+  const modal = document.getElementById('opponentFriendModal');
+  if(modal) modal.style.display = 'none';
+}
+
+function ofmSendRequest(targetUid, btn){
+  if(!targetUid) return;
+  if(btn){ btn.disabled=true; btn.textContent='送信中…'; }
+  authFetch('/api/friends/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetId:targetUid})})
+    .then(r=>r.json()).then(d=>{
+      const actionEl = document.getElementById('ofm-action');
+      if(d.ok){
+        if(actionEl) actionEl.innerHTML = '<span style="font-size:.68rem;color:#55cc55;font-weight:700;">\u2713 申請を送りました！</span>';
+      } else {
+        const msg = d.error||'エラー';
+        if(actionEl) actionEl.innerHTML = '<span style="font-size:.6rem;color:#ff7777;">'+msg+'</span>';
+        if(btn){ btn.disabled=false; btn.textContent='\u2795 フレンド申請'; }
+      }
+    }).catch(()=>{
+      if(btn){ btn.disabled=false; btn.textContent='\u2795 フレンド申請'; }
+    });
 }
 
 function sendFriendRequest(targetId, btn){
@@ -16801,6 +16895,37 @@ function plantMineRinshan(ri){
         padding:8px 16px;border-radius:8px;font-size:.7rem;cursor:pointer;
         border:1px solid #2a4a3a;background:#030a10;color:#5a9a7a;">閉じる</button>
     </div>
+  </div>
+</div>
+<!-- ===== 対戦中 相手フレンドモーダル ===== -->
+<div id="opponentFriendModal" style="
+  position:fixed;inset:0;z-index:600;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.80);backdrop-filter:blur(4px);
+" onclick="closeOpponentFriendModal()">
+  <div style="
+    position:relative;width:88%;max-width:320px;
+    background:linear-gradient(135deg,#060e18,#091422);
+    border:1px solid #3a2a5a;border-radius:16px;padding:20px 18px 18px;
+  " onclick="event.stopPropagation()">
+    <button onclick="closeOpponentFriendModal()" style="
+      position:absolute;top:10px;right:10px;
+      background:#030a10;border:1px solid #2a3a4a;border-radius:7px;
+      color:#5a7a8a;font-size:.65rem;padding:4px 9px;cursor:pointer;">&#10005;</button>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div id="ofm-icon" style="
+        width:64px;height:88px;flex-shrink:0;border-radius:10px;
+        overflow:hidden;border:2px solid #3a5a3a;background:#040c12;
+        display:flex;align-items:center;justify-content:center;font-size:1.6rem;">&#128100;</div>
+      <div style="min-width:0;">
+        <div id="ofm-name" style="font-size:.95rem;font-weight:700;color:var(--gold);letter-spacing:.05em;"></div>
+        <div id="ofm-ability" style="font-size:.58rem;color:#5a8a7a;margin-top:3px;"></div>
+        <div id="ofm-stats" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
+      </div>
+    </div>
+
+    <div id="ofm-action" style="text-align:center;min-height:34px;display:flex;align-items:center;justify-content:center;gap:8px;"></div>
   </div>
 </div>
 </body>

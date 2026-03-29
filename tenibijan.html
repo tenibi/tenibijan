@@ -93,7 +93,10 @@ function scaleTable(){
       '.seat-bottom .hand-outer-riichi-label { font-size: 3.4375rem !important; top: -90px !important; }'+
       '.seat-bottom .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; left: 570px !important; }'+
       '.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label { font-size: 3.4375rem !important; top: -90px !important; }'+
-      '.seat-top .hand-outer-afk-label,.seat-left .hand-outer-afk-label,.seat-right .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; }';
+      '.seat-top .hand-outer-afk-label,.seat-left .hand-outer-afk-label,.seat-right .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; }'+
+      '#humanMeldArea { left: calc(391px - 180px) !important; bottom: 8px !important; }'+
+      '#humanMeldArea .meld-group .tile { width: 80px !important; height: 106px !important; font-size: 5.5rem !important; border-width: 3px !important; border-radius: 8px !important; }'+
+      '#humanMeldArea .kita-wrap .tile { width: 80px !important; height: 106px !important; font-size: 5.5rem !important; border-width: 3px !important; border-radius: 8px !important; }';
   } else {
     if(ps) ps.textContent='';
     // 横画面: 能力ボタン(右下)と左下ボタンを2倍スケール
@@ -612,7 +615,7 @@ body{
   position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
   display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
   padding:5px 10px;align-items:center;
-  z-index:25;pointer-events:auto;
+  z-index:32;pointer-events:auto;
   background:rgba(2,8,6,.82);border:1px solid #1a4a2a;
   border-radius:10px;backdrop-filter:blur(4px);
   max-width:calc(100% - 160px);
@@ -2857,6 +2860,11 @@ body{
     <div id="meldKitaArea" style="
       position:absolute;right:8px;bottom:130px;z-index:25;
       display:flex;flex-direction:column;gap:4px;align-items:flex-end;
+    "></div>
+    <!-- 自分の副露・北抜き: 手牌の直下に固定表示 -->
+    <div id="humanMeldArea" style="
+      position:absolute;left:391px;bottom:8px;z-index:24;
+      display:flex;gap:4px;flex-wrap:wrap;align-items:flex-end;
     "></div>
     <!-- 右下: ペン + 能力 -->
     <div id="tableCornerRight" style="
@@ -6426,8 +6434,8 @@ function remoteWallPick(pidx,slotIdx){
   G.phase='discard';
   // 天和: 親 かつ 1巡目 かつ 自分がまだ一度も捨てていない
   if(p.isDealer&&G.firstRound&&(p.turnCount||0)===0&&canWin(p.hand))p.isTenhou=true;
-  // 地和: 非親 かつ 1巡目 かつ 全員が未捨て
-  if(!p.isDealer&&G.firstRound&&(p.turnCount||0)===0&&G.players.every(pl=>(pl.turnCount||0)===0)&&canWin(p.hand))p.isChiihou=true;
+  // 地和: 非親 かつ 1巡目 かつ 自分がまだ捨てていない かつ 誰も鳴いていない
+  if(!p.isDealer&&G.firstRound&&(p.turnCount||0)===0&&G.players.every(pl=>(pl.melds||[]).length===0)&&canWin(p.hand))p.isChiihou=true;
   updateTenpai(p);
   if(canWin(p.hand)){
     addLog(`${emj(tile)} ツモ！上がれます`,'log-tsumo');renderAll();broadcastState();
@@ -8472,8 +8480,8 @@ function humanPickWall(slotIdx){
   // タイマーはdraw_wait開始時に起動済み → ここでは継続（restartしない）
   // 天和: 親 かつ 1巡目 かつ 自分がまだ一度も捨てていない
   if(p.isDealer&&G.firstRound&&(p.turnCount||0)===0&&canWin(p.hand))p.isTenhou=true;
-  // 地和: 非親 かつ 1巡目 かつ 自分より前の全員が未捨て（誰も鳴いていない）
-  if(!p.isDealer&&G.firstRound&&(p.turnCount||0)===0&&G.players.every(pl=>(pl.turnCount||0)===0)&&canWin(p.hand))p.isChiihou=true;
+  // 地和: 非親 かつ 1巡目 かつ 自分がまだ捨てていない かつ 誰も鳴いていない
+  if(!p.isDealer&&G.firstRound&&(p.turnCount||0)===0&&G.players.every(pl=>(pl.melds||[]).length===0)&&canWin(p.hand))p.isChiihou=true;
   if(canWin(p.hand)){addLog(`${emj(tile)} ツモ！上がれます`,'log-tsumo');renderAll();broadcastState();_triggerAutoAction(myIdx,200);return;}
   const drawnIsKita=tile.suit==='honor'&&tile.num==='北';
   if(p.riichi&&!drawnIsKita){
@@ -11974,7 +11982,7 @@ function renderTable(){
         kw.innerHTML=Array(p.kitaCount).fill(`<div class="tile honor kita-tile">${emj({suit:'honor',num:'北'})}</div>`).join('');
         mw.appendChild(kw);
       }
-      // CPU席はseat-inner内にそのまま追加、自分の席は手牌下に後付けするため一時保持
+      // CPU席はseat-inner内に追加、自分の席は#humanMeldAreaに表示
       if(!isHuman) inner.appendChild(mw);
       if(isHuman) _humanMeldWrap = mw;
     } else if(isHuman){
@@ -12278,15 +12286,18 @@ function renderTable(){
       }
     }
 
-    // 全員 handOuter を seat-inner に追加（手牌が先=上固定、副露が後=下に表示）
-    if(isHuman){
-      const mka=document.getElementById('meldKitaArea'); if(mka) mka.innerHTML='';
-    }
+    // 全員 handOuter を seat-inner に追加（手牌位置は不変）
     inner.appendChild(handOuter);
-    // 自分の副露・北抜きは手牌の後に追加 → seat-innerのcolumn+bottom固定で手牌の下に表示
-    if(isHuman && typeof _humanMeldWrap!=='undefined' && _humanMeldWrap){
-      _humanMeldWrap.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:8px;';
-      inner.appendChild(_humanMeldWrap);
+    // 自分の副露・北抜きは #humanMeldArea（手牌の直下に固定配置）に描画
+    if(isHuman){
+      const hma = document.getElementById('humanMeldArea');
+      if(hma){
+        hma.innerHTML = '';
+        if(typeof _humanMeldWrap!=='undefined' && _humanMeldWrap){
+          hma.appendChild(_humanMeldWrap);
+        }
+      }
+      const mka=document.getElementById('meldKitaArea'); if(mka) mka.innerHTML='';
     }
     // 捨て牌配置
     const _si=si;

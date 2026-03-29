@@ -2205,10 +2205,12 @@ body{
       <div id="handSkinDisplay" onclick="openSkinBook()" style="
         cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
         border-radius:10px;overflow:hidden;transition:border-color .15s;
-        max-width:160px;
+        max-width:160px;position:relative;
       " onmouseover="this.style.borderColor='#6a3a9a'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'">
         <video id="handSkinVideo" muted loop autoplay playsinline
-          style="width:100%;display:block;background:#000;pointer-events:none;aspect-ratio:1;object-fit:cover;"></video>
+          style="width:100%;display:block;background:#000;pointer-events:none;aspect-ratio:1;object-fit:cover;position:relative;z-index:1;"></video>
+        <video id="handSkinRingVideo" muted loop autoplay playsinline
+          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;z-index:2;pointer-events:none;display:none;"></video>
       </div>
     </div>
 
@@ -13077,6 +13079,20 @@ function _updateRingUI(){
     display.style.borderColor='#2a5a3a';
     display.dataset.equipped='0';
   }
+  // プロフィール画面の手のスキン動画にリングをオーバーレイ
+  const ringVid = document.getElementById('handSkinRingVideo');
+  if(ringVid){
+    if(r && r.videoUrl){
+      if(ringVid.getAttribute('src') !== r.videoUrl){
+        ringVid.src = r.videoUrl;
+        ringVid.play().catch(()=>{});
+      }
+      ringVid.style.display = '';
+    } else {
+      ringVid.style.display = 'none';
+      ringVid.removeAttribute('src');
+    }
+  }
 }
 
 function openRingBook(){
@@ -14055,11 +14071,9 @@ function _showTbbGachaAnim(item, isNew){
   flash.style.background = color;
   flash.style.animation  = 'none'; void flash.offsetWidth;
   flash.style.animation  = 'gFlash .5s ease-out forwards';
-  const iconHtml = item.videoUrl
-    ? `<div style="position:relative;width:72px;height:72px;flex-shrink:0;"><video src="${item.videoUrl}" autoplay loop muted playsinline style="width:72px;height:72px;object-fit:cover;border-radius:10px;display:block;background:#000;"></video>${item.iconUrl?`<img src="${item.iconUrl}" style="position:absolute;bottom:2px;right:2px;width:22px;height:22px;object-fit:contain;border-radius:4px;background:rgba(0,0,0,.5);" onerror="this.remove()">`:''}</div>`
-    : item.iconUrl
-      ? `<img src="${item.iconUrl}" style="width:72px;height:72px;object-fit:contain;border-radius:10px;" onerror="this.outerHTML='💍'">`
-      : `<span>${item.icon}</span>`;
+  const iconHtml = item.iconUrl
+    ? `<img src="${item.iconUrl}" style="width:72px;height:72px;object-fit:contain;border-radius:10px;" onerror="this.outerHTML='💍'">`
+    : `<span>${item.icon}</span>`;
   inner.innerHTML = `
     <div class="rarity-${item.rarity}" style="text-align:center;">
       <div class="gacha-result-card">

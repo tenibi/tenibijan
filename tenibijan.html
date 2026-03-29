@@ -12278,16 +12278,16 @@ function renderTable(){
       }
     }
 
-    // 全員 handOuter を seat-inner に追加
-    // 自分の副露・北抜きを手牌の下に挿入（meldKitaAreaは使用しない）
+    // 全員 handOuter を seat-inner に追加（手牌が先=上固定、副露が後=下に表示）
     if(isHuman){
       const mka=document.getElementById('meldKitaArea'); if(mka) mka.innerHTML='';
-      if(typeof _humanMeldWrap!=='undefined'&&_humanMeldWrap){
-        _humanMeldWrap.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:8px;';
-        inner.appendChild(_humanMeldWrap);
-      }
     }
     inner.appendChild(handOuter);
+    // 自分の副露・北抜きは手牌の後に追加 → seat-innerのcolumn+bottom固定で手牌の下に表示
+    if(isHuman && typeof _humanMeldWrap!=='undefined' && _humanMeldWrap){
+      _humanMeldWrap.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:8px;';
+      inner.appendChild(_humanMeldWrap);
+    }
     // 捨て牌配置
     const _si=si;
     const _sideNames2=['bottom','right','top','left'];

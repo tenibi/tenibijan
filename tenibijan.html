@@ -14596,25 +14596,25 @@ function renderGiftRingList(){
   const rings = PROFILE.rings || {};
   const giftable = _RING_CATALOG.filter(r => (rings[r.key]||0) > 1 || false);
   // 所持数2以上のみ送れる（自分の手元に1つ残す）
-  const sendable = _RING_CATALOG.filter(r => (rings[r.key]||0) >= 2);
+  const sendable = _RING_CATALOG.filter(r => (rings[r.key]||0) >= 1);
   if(_RING_CATALOG.filter(r=>(rings[r.key]||0)>0).length === 0){
     el.innerHTML = '<div style="font-size:.6rem;color:#4a5a6a;text-align:center;padding:12px;">所持している指輪がありません</div>';
     return;
   }
   el.innerHTML = _RING_CATALOG.filter(r=>(rings[r.key]||0)>0).map(r=>{
     const cnt = rings[r.key]||0;
-    const canSend = cnt >= 2;
+    const canSend = cnt >= 1;
     return `<div class="gift-skin-item${!canSend?' locked':''}" id="giftRingItem_${r.key}"
       style="${!canSend?'opacity:.4;cursor:default;':''}" onclick="${canSend?'selectGiftRing(\''+r.key+'\')':''}">
       <img src="${r.icon}" style="width:44px;height:44px;object-fit:contain;border-radius:6px;flex-shrink:0;" onerror="this.style.display='none'">
       <div style="flex:1;">
         <div style="font-size:.68rem;font-weight:700;color:#cc99ff;">${r.name}</div>
-        <div style="font-size:.52rem;color:#7a5a9a;">${canSend?'送れます（×'+cnt+'所持）':'×'+cnt+'所持（送るには2個以上必要）'}</div>
+        <div style="font-size:.52rem;color:#7a5a9a;">×${cnt} 所持</div>
       </div>
     </div>`;
   }).join('');
   // 最初の送れる指輪を自動選択
-  const first = _RING_CATALOG.find(r=>(rings[r.key]||0)>=2);
+  const first = _RING_CATALOG.find(r=>(rings[r.key]||0)>=1);
   if(first) selectGiftRing(first.key); else _selectedRingKey='';
 }
 
@@ -14656,7 +14656,7 @@ async function doSendGift(){
   } else if(_giftTab === 'ring'){
     if(!_selectedRingKey){ msg.textContent='指輪を選択してください'; btn.disabled=false; return; }
     const cnt = (PROFILE.rings&&PROFILE.rings[_selectedRingKey])||0;
-    if(cnt < 2){ msg.textContent='送るには2個以上所持が必要です'; btn.disabled=false; return; }
+    if(cnt < 1){ msg.textContent='その指輪の所持数が足りません'; btn.disabled=false; return; }
     body = {receiverId:_giftTarget.id, type:'ring', ringKey:_selectedRingKey};
   } else {
     if(!_selectedSkinKey){ msg.textContent='スキンを選択してください'; btn.disabled=false; return; }

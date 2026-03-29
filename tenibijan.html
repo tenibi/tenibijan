@@ -12760,24 +12760,27 @@ if(canWinNow&&!pinzuNoTsumo)html+=`<button class="btn btn-tsumo" onclick="humanT
   }
 
   area.innerHTML=html;
-  // 縦画面: action-areaの高さに応じてtableCornerRight/Leftを上に逃がす
+  // 縦画面: tableCornerRight(切るボタン)と重ならないよう action-area を上にずらす
   requestAnimationFrame(()=>{
     const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
-    const cr = document.getElementById('tableCornerRight');
-    const cl = document.getElementById('tableCornerLeft');
-    if(!isPortrait){ if(cr) cr.style.removeProperty('bottom'); if(cl) cl.style.removeProperty('bottom'); return; }
-    const s = window.innerWidth / 1400; // scaleTable と同じスケール
     const areaEl = document.getElementById('actionArea');
-    if(areaEl && areaEl.innerHTML.trim()){
-      const areaH = areaEl.getBoundingClientRect().height;
-      // action-areaのbottom(135px×s) + 高さ + 余白20px をCornerのbottomに
-      const newBottom = Math.round(135 * s + areaH + 20);
-      if(cr) cr.style.setProperty('bottom', newBottom + 'px', 'important');
-      if(cl) cl.style.setProperty('bottom', newBottom + 'px', 'important');
+    if(!isPortrait || !areaEl){ if(areaEl) areaEl.style.removeProperty('bottom'); return; }
+    if(areaEl.innerHTML.trim()){
+      // tableCornerRightのbottomは縦画面CSS固定: 55px (scale(2.5) transform-origin:bottom right)
+      // 切るボタン領域の実際の上端 = 55px + cornerRightの実際の高さ
+      const cr = document.getElementById('tableCornerRight');
+      const s = window.innerWidth / 1400;
+      let cornerTopEdge = 55; // デフォルト: cornerのbottom
+      if(cr){
+        const crRect = cr.getBoundingClientRect();
+        cornerTopEdge = window.innerHeight - crRect.top + 10; // 10px余白
+      }
+      // action-areaのbottomをcornerTopEdge以上に設定（scaleの逆算は不要、px単位で直接指定）
+      const newBottom = Math.max(135, cornerTopEdge);
+      areaEl.style.setProperty('bottom', newBottom + 'px', 'important');
     } else {
       // action-areaが空 → デフォルトに戻す
-      if(cr) cr.style.setProperty('bottom', '55px', 'important');
-      if(cl) cl.style.setProperty('bottom', '35px', 'important');
+      areaEl.style.setProperty('bottom', '135px', 'important');
     }
   });
 }

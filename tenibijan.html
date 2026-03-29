@@ -12760,6 +12760,26 @@ if(canWinNow&&!pinzuNoTsumo)html+=`<button class="btn btn-tsumo" onclick="humanT
   }
 
   area.innerHTML=html;
+  // 縦画面: action-areaの高さに応じてtableCornerRight/Leftを上に逃がす
+  requestAnimationFrame(()=>{
+    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    const cr = document.getElementById('tableCornerRight');
+    const cl = document.getElementById('tableCornerLeft');
+    if(!isPortrait){ if(cr) cr.style.removeProperty('bottom'); if(cl) cl.style.removeProperty('bottom'); return; }
+    const s = window.innerWidth / 1400; // scaleTable と同じスケール
+    const areaEl = document.getElementById('actionArea');
+    if(areaEl && areaEl.innerHTML.trim()){
+      const areaH = areaEl.getBoundingClientRect().height;
+      // action-areaのbottom(135px×s) + 高さ + 余白20px をCornerのbottomに
+      const newBottom = Math.round(135 * s + areaH + 20);
+      if(cr) cr.style.setProperty('bottom', newBottom + 'px', 'important');
+      if(cl) cl.style.setProperty('bottom', newBottom + 'px', 'important');
+    } else {
+      // action-areaが空 → デフォルトに戻す
+      if(cr) cr.style.setProperty('bottom', '55px', 'important');
+      if(cl) cl.style.setProperty('bottom', '35px', 'important');
+    }
+  });
 }
 
 selectCount(3);
@@ -14725,17 +14745,33 @@ function renderGiftInbox(gifts){
   if(badge){ badge.textContent=gifts.length; badge.style.display=''; }
   el.innerHTML = gifts.map(g=>{
     const isCoins = g.type==='tbb_coins';
-    const isRing = g.type==='ring';
-    const icon = isCoins ? '🪙' : isRing ? '💍' : '🖊️';
-    const desc = isCoins
-      ? `TBBコイン ×${g.amount} from ${_esc(g.sender_name||'プレイヤー')}`
-      : isRing ? `${_RING_CATALOG.find(r=>r.key===g.ring_key)?.name||g.ring_key} from ${_esc(g.sender_name||'プレイヤー')}`
-      : `${GIFT_SKIN_CATALOG.find(s=>s.key===g.skin_key)?.name||g.skin_key} from ${_esc(g.sender_name||'プレイヤー')}`;
+    const isRing  = g.type==='ring';
+    const isSkin  = g.type==='skin';
+    // 指輪: 画像アイコン / スキン: 動画 / コイン: 絵文字
+    let mediaHtml;
+    if(isCoins){
+      mediaHtml = '<span style="font-size:1.4rem;">🪙</span>';
+    } else if(isRing){
+      const rd = _RING_CATALOG.find(r=>r.key===g.skin_key);
+      mediaHtml = rd
+        ? `<img src="${rd.icon}" style="width:38px;height:38px;object-fit:contain;border-radius:6px;flex-shrink:0;">`
+        : '<span style="font-size:1.4rem;">💍</span>';
+    } else {
+      const sk = _SKIN_CATALOG.find(s=>s.key===g.skin_key);
+      mediaHtml = sk && sk.videoUrl
+        ? `<video src="${sk.videoUrl}" muted loop autoplay playsinline style="width:38px;height:38px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#000;"></video>`
+        : '<span style="font-size:1.4rem;">🖊️</span>';
+    }
+    const itemName = isCoins
+      ? `TBBコイン ×${g.amount}`
+      : isRing
+        ? (_RING_CATALOG.find(r=>r.key===g.skin_key)?.name || g.skin_key)
+        : (GIFT_SKIN_CATALOG.find(s=>s.key===g.skin_key)?.name || g.skin_key);
     return `<div class="gift-inbox-item" id="giftInboxItem_${g.id}">
-      <div class="gift-inbox-icon">${icon}</div>
+      <div class="gift-inbox-icon" style="display:flex;align-items:center;">${mediaHtml}</div>
       <div class="gift-inbox-info">
-        <div class="gift-inbox-sender">${_esc(g.sender_name||'プレイヤー')}</div>
-        <div class="gift-inbox-desc">${desc}</div>
+        <div class="gift-inbox-sender">${_esc(g.sender_name||'プレイヤー')} から</div>
+        <div class="gift-inbox-desc">${itemName}</div>
       </div>
       <button class="gift-claim-btn" onclick="claimGift(${g.id},this)">受け取る</button>
     </div>`;

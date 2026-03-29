@@ -2068,6 +2068,10 @@ body{
         <div style="font-size:1rem;">🖊️</div>
         <div>スキン</div>
       </div>
+      <div class="gift-type-btn" id="giftTabRing" onclick="switchGiftTab('ring')">
+        <div style="font-size:1rem;">💍</div>
+        <div>指輪</div>
+      </div>
     </div>
 
     <!-- TBBコインパネル -->
@@ -2092,6 +2096,11 @@ body{
     <!-- スキンパネル -->
     <div id="giftPanelSkin" style="display:none;">
       <div id="giftSkinList"></div>
+    </div>
+
+    <!-- 指輪パネル -->
+    <div id="giftPanelRing" style="display:none;">
+      <div id="giftRingList"></div>
     </div>
 
     <div id="giftModalMsg" style="font-size:.6rem;color:#7a3a3a;text-align:center;min-height:1.2em;margin-bottom:6px;"></div>
@@ -13157,7 +13166,8 @@ function _renderRingBookGrid(){
   const curR = _RING_CATALOG.find(r=>r.key===cur);
   if(equippedEl) equippedEl.textContent = curR ? curR.name : 'なし';
   grid.innerHTML = _RING_CATALOG.map(r=>{
-    const owned = !!(PROFILE.rings && PROFILE.rings[r.key]);
+    const cnt = (PROFILE.rings && PROFILE.rings[r.key]) || 0;
+    const owned = cnt > 0;
     const sel = r.key === cur;
     return `<div onclick="${owned?`selectRing('${r.key}')`:''}" style="
       cursor:${owned?'pointer':'default'};
@@ -13168,7 +13178,7 @@ function _renderRingBookGrid(){
       <img src="${r.icon}" style="width:54px;height:54px;object-fit:contain;border-radius:8px;${owned?'':'filter:grayscale(1) brightness(.3);'}" onerror="this.style.display='none'">
       <div style="font-size:.62rem;font-weight:700;color:${sel?'var(--gold)':owned?'#aa88ee':'#3a4a3a'};text-align:center;">${r.name}</div>
       ${sel?'<span style="font-size:.5rem;background:#2a1a4a;border:1px solid #ffd700;border-radius:4px;padding:1px 6px;color:#ffd700;">✓ 装備中</span>':''}
-      ${!owned?'<span style="font-size:.5rem;color:#3a4a3a;">🔒 未解放</span>':''}
+      <span style="font-size:.48rem;color:${owned?(cnt>1?'#ffaa44':'#7a5a9a'):'#3a4a3a'};">${owned ? '\u00d7'+cnt+' \u6240\u6301' : '\U0001f512 \u672a\u89e3\u653e'}</span>
     </div>`;
   }).join('');
 }
@@ -14541,10 +14551,13 @@ function switchGiftTab(tab){
   _giftTab = tab;
   document.getElementById('giftTabTbb').classList.toggle('active', tab==='tbb');
   document.getElementById('giftTabSkin').classList.toggle('active', tab==='skin');
+  document.getElementById('giftTabRing').classList.toggle('active', tab==='ring');
   document.getElementById('giftPanelTbb').style.display  = tab==='tbb'  ? '' : 'none';
   document.getElementById('giftPanelSkin').style.display = tab==='skin' ? '' : 'none';
+  document.getElementById('giftPanelRing').style.display = tab==='ring' ? '' : 'none';
   document.getElementById('giftModalMsg').textContent = '';
   if(tab==='skin') renderGiftSkinList();
+  if(tab==='ring') renderGiftRingList();
 }
 
 function renderGiftSkinList(){
@@ -14557,9 +14570,13 @@ function renderGiftSkinList(){
   el.innerHTML = GIFT_SKIN_CATALOG.map(s=>{
     const cnt = hs[s.key]||0;
     const disabled = cnt < 1;
+    const sk = _SKIN_CATALOG.find(x=>x.key===s.key);
+    const videoUrl = sk ? sk.videoUrl : '';
     return `<div class="gift-skin-item${disabled?' locked':''}${!disabled?' selected':''}" id="giftSkinItem_${s.key}"
       style="${disabled?'opacity:.4;cursor:default;':''}" onclick="${disabled?'':'selectGiftSkin(\''+s.key+'\')'}">
-      <span style="font-size:1.8rem;">${s.icon}</span>
+      ${videoUrl
+        ? `<video src="${videoUrl}" muted loop autoplay playsinline style="width:52px;height:52px;object-fit:cover;border-radius:6px;background:#000;flex-shrink:0;"></video>`
+        : `<span style="font-size:1.8rem;">${s.icon}</span>`}
       <div style="flex:1;">
         <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">${s.name}</div>
         <div style="font-size:.52rem;color:#7a5a9a;">${s.desc}</div>
@@ -14570,6 +14587,43 @@ function renderGiftSkinList(){
   // 最初の所持スキンを自動選択
   const first = GIFT_SKIN_CATALOG.find(s=>(hs[s.key]||0)>0);
   if(first) selectGiftSkin(first.key);
+}
+
+let _selectedRingKey = '';
+function renderGiftRingList(){
+  const el = document.getElementById('giftRingList');
+  if(!el) return;
+  const rings = PROFILE.rings || {};
+  const giftable = _RING_CATALOG.filter(r => (rings[r.key]||0) > 1 || false);
+  // 所持数2以上のみ送れる（自分の手元に1つ残す）
+  const sendable = _RING_CATALOG.filter(r => (rings[r.key]||0) >= 2);
+  if(_RING_CATALOG.filter(r=>(rings[r.key]||0)>0).length === 0){
+    el.innerHTML = '<div style="font-size:.6rem;color:#4a5a6a;text-align:center;padding:12px;">所持している指輪がありません</div>';
+    return;
+  }
+  el.innerHTML = _RING_CATALOG.filter(r=>(rings[r.key]||0)>0).map(r=>{
+    const cnt = rings[r.key]||0;
+    const canSend = cnt >= 2;
+    return `<div class="gift-skin-item${!canSend?' locked':''}" id="giftRingItem_${r.key}"
+      style="${!canSend?'opacity:.4;cursor:default;':''}" onclick="${canSend?'selectGiftRing(\''+r.key+'\')':''}">
+      <img src="${r.icon}" style="width:44px;height:44px;object-fit:contain;border-radius:6px;flex-shrink:0;" onerror="this.style.display='none'">
+      <div style="flex:1;">
+        <div style="font-size:.68rem;font-weight:700;color:#cc99ff;">${r.name}</div>
+        <div style="font-size:.52rem;color:#7a5a9a;">${canSend?'送れます（×'+cnt+'所持）':'×'+cnt+'所持（送るには2個以上必要）'}</div>
+      </div>
+    </div>`;
+  }).join('');
+  // 最初の送れる指輪を自動選択
+  const first = _RING_CATALOG.find(r=>(rings[r.key]||0)>=2);
+  if(first) selectGiftRing(first.key); else _selectedRingKey='';
+}
+
+function selectGiftRing(key){
+  _selectedRingKey = key;
+  _RING_CATALOG.forEach(r=>{
+    const el = document.getElementById('giftRingItem_'+r.key);
+    if(el) el.classList.toggle('selected', r.key===key);
+  });
 }
 
 let _selectedSkinKey = '';
@@ -14599,6 +14653,11 @@ async function doSendGift(){
     if(!amt || amt < 1){ msg.textContent='枚数を入力してください'; btn.disabled=false; return; }
     if(amt > (PROFILE.tbbCoins||0)){ msg.textContent='TBBコインが不足しています'; btn.disabled=false; return; }
     body = {receiverId:_giftTarget.id, type:'tbb_coins', amount:amt};
+  } else if(_giftTab === 'ring'){
+    if(!_selectedRingKey){ msg.textContent='指輪を選択してください'; btn.disabled=false; return; }
+    const cnt = (PROFILE.rings&&PROFILE.rings[_selectedRingKey])||0;
+    if(cnt < 2){ msg.textContent='送るには2個以上所持が必要です'; btn.disabled=false; return; }
+    body = {receiverId:_giftTarget.id, type:'ring', ringKey:_selectedRingKey};
   } else {
     if(!_selectedSkinKey){ msg.textContent='スキンを選択してください'; btn.disabled=false; return; }
     const cnt = (PROFILE.handSkins&&PROFILE.handSkins[_selectedSkinKey])||0;
@@ -14615,6 +14674,15 @@ async function doSendGift(){
     if(_giftTab==='tbb'){
       PROFILE.tbbCoins = d.tbbCoins ?? ((PROFILE.tbbCoins||0) - body.amount);
       updateGachaTbbDisplay();
+    } else if(_giftTab==='ring'){
+      if(d.rings) PROFILE.rings = d.rings;
+      else {
+        PROFILE.rings = PROFILE.rings||{};
+        PROFILE.rings[_selectedRingKey] = Math.max(0,(PROFILE.rings[_selectedRingKey]||0)-1);
+        if(!PROFILE.rings[_selectedRingKey] && PROFILE.ring===_selectedRingKey) PROFILE.ring='';
+      }
+      saveProfileSilent();
+      if(typeof _renderRingBookGrid==='function') _renderRingBookGrid();
     } else {
       if(d.handSkins) PROFILE.handSkins = d.handSkins;
       else {
@@ -14657,9 +14725,11 @@ function renderGiftInbox(gifts){
   if(badge){ badge.textContent=gifts.length; badge.style.display=''; }
   el.innerHTML = gifts.map(g=>{
     const isCoins = g.type==='tbb_coins';
-    const icon = isCoins ? '🪙' : '🖊️';
+    const isRing = g.type==='ring';
+    const icon = isCoins ? '🪙' : isRing ? '💍' : '🖊️';
     const desc = isCoins
       ? `TBBコイン ×${g.amount} from ${_esc(g.sender_name||'プレイヤー')}`
+      : isRing ? `${_RING_CATALOG.find(r=>r.key===g.ring_key)?.name||g.ring_key} from ${_esc(g.sender_name||'プレイヤー')}`
       : `${GIFT_SKIN_CATALOG.find(s=>s.key===g.skin_key)?.name||g.skin_key} from ${_esc(g.sender_name||'プレイヤー')}`;
     return `<div class="gift-inbox-item" id="giftInboxItem_${g.id}">
       <div class="gift-inbox-icon">${icon}</div>
@@ -14687,6 +14757,11 @@ async function claimGift(giftId, btn){
       else { PROFILE.handSkins=PROFILE.handSkins||{}; PROFILE.handSkins[d.skinKey]=(PROFILE.handSkins[d.skinKey]||0)+1; }
       // 自動装備しない
       _updateHandSkinUI();
+    } else if(d.type==='ring'){
+      if(d.rings) PROFILE.rings = d.rings;
+      else { PROFILE.rings=PROFILE.rings||{}; PROFILE.rings[d.ringKey]=(PROFILE.rings[d.ringKey]||0)+1; }
+      saveProfileSilent();
+      if(typeof _renderRingBookGrid==='function') _renderRingBookGrid();
     }
     updateProfileBadge();
     // 受取済み行を消す

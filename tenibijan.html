@@ -2532,7 +2532,7 @@ body{
         <div class="lbs-inner" style="background:linear-gradient(135deg,#1a0505,#0d0202);border:1px solid #5a1a1a;">
           <span class="lbs-tag" style="background:#2a0808;color:#ff8866;border:1px solid #aa3322;">💣 手にボム！</span>
           <div class="lbs-title" style="color:#ffaa88;">爆弾を避けて山牌を引け！</div>
-          <div class="lbs-desc" style="color:#aa6655;">ステージ5の倍数クリアでコイン獲得。どこまで進めるか挑戦しよう。</div>
+          <div class="lbs-desc" style="color:#aa6655;">ステージクリアごとに手にビコイン2枚獲得。どこまで進めるか挑戦しよう。</div>
         </div>
       </div>
 
@@ -9934,7 +9934,7 @@ function checkEnd(){
 }
 // 💣 BOMBモード: 結果をDBに送信する共通ヘルパー
 function _bombSendResult(stage, score){
-  const bombEarned = (stage >= 5 && stage % 5 === 0) ? stage : 0;
+  const bombEarned = stage * 2;
   authFetch('/api/bomb/result',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({stage, score})})
   .then(r=>r.json()).then(d=>{
@@ -9977,10 +9977,10 @@ function _soloShowFinalResult(cleared){
       <span style="font-size:.65rem;color:#5a7a6a;letter-spacing:.1em;">持ち点</span><br>
       <span style="font-size:1.3rem;font-weight:700;color:${score>=0?'var(--gold2)':'#ff7777'};">${score.toLocaleString()} 点</span>
     </td></tr>`;
-  // 💣 BOMBモード: ステージ数に応じてコイン付与（1〜4は0枚、5の倍数のみ付与）
-  const bombEarned = (stage >= 5 && stage % 5 === 0) ? stage : 0;
+  // 💣 BOMBモード: ステージクリアごとにコイン2枚付与
+  const bombEarned = stage * 2;
   const rewardEl=document.getElementById('resultCoinReward');
-  if(rewardEl) rewardEl.innerHTML=`🎯 スコア：ステージ ${stage} 到達 / ${score.toLocaleString()} 点${bombEarned===0?' <span style="font-size:.6rem;color:#5a5a5a;">（ステージ5の倍数で報酬）</span>':''}`;
+  if(rewardEl) rewardEl.innerHTML=`🎯 スコア：ステージ ${stage} 到達 / ${score.toLocaleString()} 点`;
   // DB送信（共通ヘルパー）
   _bombSendResult(stage, score);
   // コイン報酬表示（DB応答を待たずに楽観的表示）
@@ -14502,12 +14502,13 @@ function loadFriendCode(){
 }
 
 function copyFriendCode(){
-  const el = document.getElementById('myFriendCode');
-  const code = localStorage.getItem('myFriendCode');
+  const code = document.getElementById('myFriendCode')?.textContent;
   if(!code || code==='------') return;
   navigator.clipboard?.writeText(code).catch(()=>{});
+  const el = document.getElementById('myFriendCode');
+  const orig = el.textContent;
   el.textContent = 'コピー！';
-  setTimeout(()=>{ el.textContent = code; }, 1200);
+  setTimeout(()=>{ el.textContent = orig; }, 1200);
 }
 
 function _friendIconHTML(iconId){

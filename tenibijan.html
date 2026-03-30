@@ -14502,13 +14502,12 @@ function loadFriendCode(){
 }
 
 function copyFriendCode(){
-  const code = document.getElementById('myFriendCode')?.textContent;
+  const el = document.getElementById('myFriendCode');
+  const code = localStorage.getItem('myFriendCode');
   if(!code || code==='------') return;
   navigator.clipboard?.writeText(code).catch(()=>{});
-  const el = document.getElementById('myFriendCode');
-  const orig = el.textContent;
   el.textContent = 'コピー！';
-  setTimeout(()=>{ el.textContent = orig; }, 1200);
+  setTimeout(()=>{ el.textContent = code; }, 1200);
 }
 
 function _friendIconHTML(iconId){

@@ -4290,6 +4290,166 @@ let playerAFK=false;
 let noMeldEnabled=false;          // 離席モード
 let numPlayers=3;
 let pendingAction=null;
+
+// ダブロン対応: 全人間候補者を同時に待機させ、全員の回答後に一括処理
+function _startRonQueue(fromIdx, tile, conditionFn, isChankanFlag) {
+  const humanQ = [];
+  const cpuQ   = [];
+  for(let i = 0; i < numPlayers; i++){
+    if(i === fromIdx) continue;
+    if(!conditionFn(G.players[i], i)) continue;
+    if(i === NET.myIdx || isOnlineGuestIdx(i)) humanQ.push(i);
+    else cpuQ.push(i);
+  }
+  if(humanQ.length > 0){
+    if(isChankanFlag) humanQ.forEach(i => G.players[i].isChankan = true);
+    // _ronDecisions: {pidx: 'ron'|'skip'} — 全員回答後に一括処理
+    // _ronWaiting: まだ回答していない人間候補者リスト
+    pendingAction = {
+      type:'ron', tile, from:fromIdx,
+      // 後方互換のためtargetも設定（自分のidxを優先、なければ先頭）
+      target: humanQ.includes(NET.myIdx) ? NET.myIdx : humanQ[0],
+      _ronQueue:humanQ, _ronQueueIdx:0,
+      _ronDecisions:{},
+      _ronWaiting:[...humanQ],
+      _cpuQ: cpuQ,
+      _isChankan: isChankanFlag,
+    };
+    G.phase = 'pending_ron';
+    renderAll(); broadcastState();
+    // 自分のターンならタイマー起動・自動上がり
+    if(humanQ.includes(NET.myIdx)){
+      timerOnMyTurn();
+      setTimeout(()=>{ if(G.phase==='pending_ron' && pendingAction?._ronWaiting?.includes(NET.myIdx) && autoWinEnabled) humanRon(); }, 250);
+    }
+    return true;
+  }
+  // 人間なし → CPUのみチェック
+  for(const ci of cpuQ){
+    if(isChankanFlag) G.players[ci].isChankan = true;
+    if(cpuDecideRon(ci, tile)){ handleRon(ci, tile, fromIdx); return true; }
+  }
+  return false;
+}
+
+// 全員の回答が揃ったか確認し、揃っていれば処理する
+function _resolveRonDecisions(){
+  if(!pendingAction || !pendingAction._ronWaiting) return;
+  if(pendingAction._ronWaiting.length > 0) return; // まだ待っている人がいる
+
+  const tile   = pendingAction.tile;
+  const from   = pendingAction.from;
+  const decs   = pendingAction._ronDecisions;
+  const cpuQ   = pendingAction._cpuQ || [];
+  const isChankan = pendingAction._isChankan;
+
+  // ロンを宣言した人間プレイヤーを振り込み者からの席順（上家→下家）で並べる
+  const ronners = Object.keys(decs)
+    .filter(k => decs[k] === 'ron')
+    .map(Number)
+    .sort((a,b)=>{
+      // from の次から座席順に並べる（mod numPlayers）
+      const da = (a - from + numPlayers) % numPlayers;
+      const db = (b - from + numPlayers) % numPlayers;
+      return da - db;
+    });
+
+  pendingAction = null;
+
+  if(ronners.length === 0){
+    // 人間全員スキップ → ポン/カン予約チェック → CPU確認
+    G.phase = 'discard';
+    // ポン予約があればポンを優先
+    const ponAfter = decs['_ponAfter'];
+    if(ponAfter !== undefined){
+      handlePon(ponAfter, tile, from);
+      return;
+    }
+    const kanAfter = decs['_kanAfter'];
+    if(kanAfter !== undefined){
+      handleMinkan(kanAfter, tile, from);
+      return;
+    }
+    for(const ci of cpuQ){
+      if(isChankan) G.players[ci].isChankan = true;
+      if(cpuDecideRon(ci, tile)){ handleRon(ci, tile, from); return; }
+    }
+    if(!checkPon(from, tile)) nextTurn((from + 1) % numPlayers);
+    broadcastState();
+    return;
+  }
+
+  if(ronners.length === 1){
+    // 通常ロン（1人）
+    handleRon(ronners[0], tile, from);
+    return;
+  }
+
+  // ━━ ダブロン（2人以上）━━
+  // 全員が振込者から支払いを受ける（頭ハネなし）
+  addLog(`🀄🀄 ダブロン！ ${ronners.map(i=>G.players[i].name).join(' & ')} が同時ロン！`, 'log-win');
+  G.phase = 'win';
+  const loser = G.players[from];
+  let winModals = [];
+  for(const widx of ronners){
+    const winner = G.players[widx];
+    winner.hand.push(tile);
+    // 人和チェック
+    if(G.firstRound && (winner.turnCount||0)===0 && winner.melds.length===0){
+      winner.isRenhou = true;
+    }
+    const displayHand = [...winner.hand];
+    const yakus = evalYaku(displayHand, tile, false, winner, G.roundWind);
+    const isYakumanPlus = yakus.some(y=>y.han>=13);
+    if(!isYakumanPlus){
+      const dc = countDoras(displayHand, winner);
+      if(dc>0) yakus.push({name:`ドラ×${dc}`,han:dc});
+      if(winner.riichi){
+        const ud = G.uraInds.map(doraFromIndicator);
+        let uc=0; displayHand.forEach(t=>ud.forEach(d=>{if(teq(t,d))uc++;}));
+        if(uc>0) yakus.push({name:`裏ドラ×${uc}`,han:uc});
+      }
+    }
+    if(yakus.length === 0){
+      addLog(`${winner.name}: 役なし（ロンキャンセル）`, 'log-new');
+      winner.hand.pop(); // 追加したtileを戻す
+      continue;
+    }
+    const {score, han} = calcScore(yakus, winner.isDealer, false);
+    const rb = G.riichiPot;
+    const isSanctuary = G_ABILITY_MODE && loser.ability==='sanctuary' && loser.isDealer;
+    if(!isSanctuary){
+      loser.score -= score;
+      winner.score += score + rb;
+    } else {
+      winner.score += rb;
+      addLog(`🏛️ 聖域！${loser.name}の支払いが免除（${winner.name}へ）`,'log-dora');
+    }
+    G.riichiPot = 0; // 最初の勝者がリーチ棒を全取り
+    addLog(`${winner.name} のロン上がり！ ${score}点（${han}翻）`, 'log-win');
+    winModals.push({widx, displayHand, tile, yakus, score, han});
+  }
+  G._dealerWon = ronners.some(i => G.players[i].isDealer);
+  saveScores();
+  if(checkTobi()) return;
+  // 勝利モーダルを順番に表示（先頭1人目のみ表示、次局で残りはスキップ）
+  if(winModals.length > 0){
+    const first = winModals[0];
+    const w = G.players[first.widx];
+    renderAll();
+    // ダブロン用にbroadcastState（最初の勝者情報を送信）
+    const _wmd = {
+      winnerId: w.id, hand: first.displayHand, winTile: tile,
+      isTsumo: false, losidx: from, yakus: first.yakus,
+      score: first.score, han: first.han,
+      doubleRon: winModals.length > 1,
+      doubleRonNames: ronners.map(i=>G.players[i].name),
+    };
+    broadcastState({winModal: _wmd});
+    playSeFallback(first.widx, 'ron', ()=>SFX.ron());
+    showWinModal(w, first.displayHand, tile, false, from, first.yakus, first.score, first.han, winModals);
+  }
+}
 let _cpuActionGen = 0; // 世代カウンタ: ホスト昇格時にインクリメントし古いsetTimeoutを無効化
 
 // Online state
@@ -5844,8 +6004,34 @@ function resumeGameAfterHostLost(disconnectedPidx){
 
   // pending_ron/pon: 切断者が待機中のみスキップ、それ以外はそのまま継続
   if(G.phase === 'pending_ron' || G.phase === 'pending_pon'){
-    if(pendingAction && pendingAction.target === disconnectedPidx){
+    if(pendingAction && (pendingAction._ronQueue
+        ? pendingAction._ronQueue.includes(disconnectedPidx)
+        : pendingAction.target === disconnectedPidx)){
       const pa = pendingAction;
+      // ── ダブロン方式: _ronWaiting から切断者を除いて再チェック ──
+      if(pa._ronDecisions !== undefined && pa._ronWaiting){
+        pa._ronWaiting = pa._ronWaiting.filter(i=>i!==disconnectedPidx);
+        // スキップ扱いで記録
+        pa._ronDecisions[disconnectedPidx] = 'skip';
+        renderAll(); broadcastState();
+        _resolveRonDecisions();
+        return;
+      }
+      // キュー内に切断者がいる場合: そのプレイヤーをスキップしてキューを進める
+      if(pa._ronQueue){
+        const remaining = pa._ronQueue.filter(idx => idx !== disconnectedPidx);
+        const currentQueueIdx = pa._ronQueueIdx;
+        // 現在のターゲットより後ろの残りを探す
+        const nextTarget = remaining.find(idx => pa._ronQueue.indexOf(idx) > pa._ronQueue.indexOf(pa.target));
+        if(nextTarget !== undefined){
+          pa._ronQueue = remaining;
+          pa._ronQueueIdx = remaining.indexOf(nextTarget);
+          pa.target = nextTarget;
+          renderAll(); broadcastState();
+          return;
+        }
+        // キューに次がなければ終了
+      }
       pendingAction = null;
       nextTurn((pa.from + 1) % numPlayers);
       broadcastState();
@@ -6103,7 +6289,7 @@ function handleGuestAction(msg, senderIdx){
     case 'discard':   remoteDiscard(msg.pidx, msg.tidx, msg.isYami??false); break;
     case 'tsumo':     remoteWin(msg.pidx, true, -1); break;
     case 'ron':       remoteRon(msg.pidx, msg.tile, msg.from); break;
-    case 'skipRon':   remoteSkipRon(msg.from); break;
+    case 'skipRon':   remoteSkipRon(msg.from, msg.pidx ?? senderIdx); break;
     case 'skipRonToPon': if(amIHost()){ pendingAction=null; handlePon(msg.pidx,msg.tile,msg.from); broadcastState(); } break;
     case 'skipRonToKan': if(amIHost()){ pendingAction=null; handleMinkan(msg.pidx,msg.tile,msg.from); broadcastState(); } break;
     case 'pon':       handlePon(msg.pidx, msg.tile, msg.from); broadcastState(); break;
@@ -6384,10 +6570,20 @@ function applyHostState(msg){
       }
       addLog('山牌を選んでクリックしてください','log-new');
     }
-    // ゲスト: pending_ron で自動上がりON → 自動ロン
-    if(G.phase==='pending_ron' && pendingAction?.target===NET.myIdx){
-      timerOnMyTurn();
-      if(autoWinEnabled) setTimeout(()=>{ if(G.phase==='pending_ron'&&pendingAction?.target===NET.myIdx) humanRon(); }, 250);
+    // ゲスト: pending_ron で自動上がりON → 自動ロン（ダブロン対応）
+    if(G.phase==='pending_ron'){
+      const _isMyRon = pendingAction?._ronWaiting
+        ? pendingAction._ronWaiting.includes(NET.myIdx)
+        : pendingAction?.target===NET.myIdx;
+      if(_isMyRon){
+        timerOnMyTurn();
+        if(autoWinEnabled) setTimeout(()=>{
+          const _still = pendingAction?._ronWaiting
+            ? pendingAction._ronWaiting.includes(NET.myIdx)
+            : (G.phase==='pending_ron'&&pendingAction?.target===NET.myIdx);
+          if(_still) humanRon();
+        }, 250);
+      }
     }
     // ゲスト: 自分のターンでdiscardフェーズ（ツモ済み）の場合もタイマーを起動
     if(G.phase==='discard' && G.current===NET.myIdx){
@@ -6460,8 +6656,46 @@ function remoteDiscard(pidx,tidx,isYami=false){
   discardAction(pidx,tidx,isYami);
 }
 function remoteWin(pidx,isTsumo,losidx){ handleWin(pidx,G.players[pidx].drawnTile,isTsumo,losidx); } // broadcastState は handleWin内で winModal付きで呼ばれる
-function remoteRon(pidx,tile,from){ handleRon(pidx,tile,from); }  // broadcastState は handleWin内で winModal付きで呼ばれる
-function remoteSkipRon(from){ pendingAction=null; nextTurn((from+1)%numPlayers); }
+function remoteRon(pidx,tile,from){
+  // ダブロン方式: _ronDecisions がある場合は記録して全員確定を待つ
+  if(pendingAction?._ronDecisions !== undefined){
+    if(pendingAction._ronWaiting.includes(pidx)){
+      pendingAction._ronDecisions[pidx] = 'ron';
+      pendingAction._ronWaiting = pendingAction._ronWaiting.filter(i=>i!==pidx);
+      renderAll(); broadcastState();
+      _resolveRonDecisions();
+    }
+    return;
+  }
+  handleRon(pidx,tile,from);
+}  // broadcastState は handleWin内で winModal付きで呼ばれる
+function remoteSkipRon(from, pidx){
+  // ダブロン方式: _ronDecisions がある場合はスキップを記録
+  if(pendingAction?._ronDecisions !== undefined){
+    const skipPidx = pidx !== undefined ? pidx : (() => {
+      // pidxが不明な場合は送信者の推定（後方互換）
+      return pendingAction._ronWaiting.find(i=>i!==NET.myIdx) ?? -1;
+    })();
+    if(skipPidx >= 0 && pendingAction._ronWaiting.includes(skipPidx)){
+      pendingAction._ronDecisions[skipPidx] = 'skip';
+      pendingAction._ronWaiting = pendingAction._ronWaiting.filter(i=>i!==skipPidx);
+      renderAll(); broadcastState();
+      _resolveRonDecisions();
+    }
+    return;
+  }
+  // 旧キュー方式
+  if(pendingAction?._ronQueue && pendingAction._ronQueueIdx + 1 < pendingAction._ronQueue.length){
+    const nextIdx    = pendingAction._ronQueueIdx + 1;
+    const nextTarget = pendingAction._ronQueue[nextIdx];
+    pendingAction._ronQueueIdx = nextIdx;
+    pendingAction.target       = nextTarget;
+    renderAll(); broadcastState();
+    return;
+  }
+  pendingAction=null;
+  nextTurn((from+1)%numPlayers);
+}
 function remoteSkipPon(from){ pendingAction=null; nextTurn((from+1)%numPlayers); }
 function remoteWallPick(pidx,slotIdx){
   // ホスト側ではゲストのターンで G.phase='draw' のまま待機しているので、draw も許可
@@ -6525,21 +6759,7 @@ function remoteKita(pidx){
   const kt=p.hand.splice(ki,1)[0];p.kitaTiles.push(kt);p.kitaCount++;
   addLog(`${p.name} が北を抜いた！（ドラ+1）`,'log-dora');
   // 北抜き槍槓チェック
-  for(let ci=0;ci<numPlayers;ci++){
-    if(ci===pidx)continue;
-    const cop=G.players[ci];
-    if((cop.hand.length===4||cop.hand.length===1)&&cop.tenpai&&cop.waits.some(w=>teq(w,kt))){
-      cop.isChankan=true;
-      // オンライン: 自分自身か、ホストが管理しているゲストか判定
-      const isMe = (ci===NET.myIdx);
-      if(isMe || isOnlineGuestIdx(ci)){
-        pendingAction={type:'ron',tile:kt,from:pidx,target:ci};
-        G.phase='pending_ron';renderAll();broadcastState();
-        if(isMe){ timerOnMyTurn(); setTimeout(()=>{ if(G.phase==='pending_ron'&&autoWinEnabled) humanRon(); },250); }
-        return;
-      } else if(cpuDecideRon(ci,kt)){handleRon(ci,kt,pidx);return;}
-    }
-  }
+  if(_startRonQueue(pidx, kt, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,kt)), true)) return;
   const rep=drawRinshanTile(pidx);
   // 北抜きはカンドラを開かない
   if(!rep){handleExhausted();broadcastState();return;}
@@ -7403,20 +7623,7 @@ function discardAction(pidx,tidx,isYami=false){ if(pidx===NET.myIdx){ _timerSave
     return;
   }
   // Check ron
-  for(let i=0;i<numPlayers;i++){
-    if(i===pidx)continue;
-    const op=G.players[i];
-    if((op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op)){
-      // オンライン: 自分自身か、ホストが管理しているゲストか判定
-      const isMe = (i===NET.myIdx);
-      if(isMe || isOnlineGuestIdx(i)){
-        pendingAction={type:'ron',tile,from:pidx,target:i};
-        G.phase='pending_ron';renderAll();broadcastState();
-        if(isMe){ timerOnMyTurn(); setTimeout(()=>{ if(G.phase==='pending_ron'&&autoWinEnabled) humanRon(); },250); }
-        return;
-      }else if(cpuDecideRon(i,tile)){handleRon(i,tile,pidx);return;}
-    }
-  }
+  if(_startRonQueue(pidx, tile, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op))) return;
   // 1人モードは自分の番に即戻る（ポン・ロンなし）
   if(numPlayers===1){ nextTurn(0); broadcastState(); return; }
   if(!checkPon(pidx,tile)){nextTurn((pidx+1)%numPlayers);}
@@ -7453,23 +7660,7 @@ function handleKakan(pidx, handIdx){
     return;
   }
   // 槍槓チェック: 他プレイヤーがこの牌でロンできるか
-  for(let i=0;i<numPlayers;i++){
-    if(i===pidx)continue;
-    const op=G.players[i];
-    if((op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op)){
-      op.isChankan=true;
-      // オンライン: 自分自身か、ホストが管理しているゲストか判定
-      const isMe = (i===NET.myIdx);
-      if(isMe || isOnlineGuestIdx(i)){
-        pendingAction={type:'ron',tile,from:pidx,target:i};
-        G.phase='pending_ron';renderAll();broadcastState();
-        if(isMe){ timerOnMyTurn(); setTimeout(()=>{ if(G.phase==='pending_ron'&&autoWinEnabled) humanRon(); },250); }
-        return;
-      } else if(cpuDecideRon(i,tile)){
-        handleRon(i,tile,pidx);return;
-      }
-    }
-  }
+  if(_startRonQueue(pidx, tile, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op), true)) return;
   if(pidx!==NET.myIdx||autoSortEnabled) p.hand=sortTiles(p.hand);updateTenpai(p);
   G.phase='discard';
   // 嶺上牌を選択状態にする（自分の番のみ）
@@ -7688,7 +7879,7 @@ function _timerStep(){
   if(G.phase==='win'||G.phase==='end') return;
   // 自分のターンでない場合は止める
   const myIdx=NET.myIdx;
-  const isMyTurn=(G.current===myIdx)&&(G.phase==='draw_wait'||G.phase==='discard')||(G.phase==='pending_ron'&&G.players[myIdx])||(G.phase==='pending_pon'&&G.current===myIdx);
+  const isMyTurn=(G.current===myIdx)&&(G.phase==='draw_wait'||G.phase==='discard')||(G.phase==='pending_ron'&&G.players[myIdx]&&(pendingAction?._ronWaiting?pendingAction._ronWaiting.includes(myIdx):(pendingAction?.target===myIdx)))||(G.phase==='pending_pon'&&G.current===myIdx);
   if(!isMyTurn){ _timerRender(); return; }
   _timerSec--;
   _timerRender();
@@ -8011,7 +8202,7 @@ function _timerRender(){
   const en=document.getElementById('handTimerBonus');
   if(!eb||!en) return;
   const myIdx=NET.myIdx;
-  const isMyTurn=(G.current===myIdx)&&(G.phase==='draw_wait'||G.phase==='discard')||(G.phase==='pending_ron'&&G.players&&G.players[myIdx])||(G.phase==='pending_pon'&&G.current===myIdx);
+  const isMyTurn=(G.current===myIdx)&&(G.phase==='draw_wait'||G.phase==='discard')||(G.phase==='pending_ron'&&G.players&&G.players[myIdx]&&(pendingAction?._ronWaiting?pendingAction._ronWaiting.includes(myIdx):(pendingAction?.target===myIdx)))||(G.phase==='pending_pon'&&G.current===myIdx);
   const show=G_TIME_MODE&&isMyTurn&&G.phase!=='win'&&G.phase!=='end';
   if(!show){ eb.textContent=''; en.textContent=''; return; }
   // ベース残り秒（0〜20）、ボーナス残り（0〜5）
@@ -8591,19 +8782,7 @@ function resolveYamiChallenge(pidx, action){
       G.phase='discard'; // 一時的に戻す
       G.yamiChallenge=null;
       // 通常のロン/ポンチェック
-      let ponFound=false;
-      for(let i=0;i<numPlayers;i++){
-        if(i===from)continue;
-        if((G.players[i].hand.length===4||G.players[i].hand.length===1)&&G.players[i].tenpai&&G.players[i].waits.some(w=>teq(w,tile))&&!isFuriten(G.players[i])){
-          const isMe=(i===NET.myIdx);
-          if(isMe||isOnlineGuestIdx(i)){
-            pendingAction={type:'ron',tile,from,target:i};
-            G.phase='pending_ron';renderAll();broadcastState();
-            if(isMe){timerOnMyTurn();setTimeout(()=>{if(G.phase==='pending_ron'&&autoWinEnabled)humanRon();},250);}
-            return;
-          } else if(cpuDecideRon(i,tile)){handleRon(i,tile,from);return;}
-        }
-      }
+      if(_startRonQueue(from, tile, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op))) return;
       if(!checkPon(from,tile)) nextTurn((from+1)%numPlayers);
       broadcastState();
     } else {
@@ -9061,20 +9240,7 @@ function cpuPullKita(pidx){
   SFX.kita();
   addLog(`${p.name} が北を抜いた！（ドラ+1）`,'log-dora');
   // 北抜き槍槓チェック: 他プレイヤーが北でロンできるか
-  for(let i=0;i<numPlayers;i++){
-    if(i===pidx)continue;
-    const op=G.players[i];
-    if((op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,kt))&&!isFuriten(op)){
-      op.isChankan=true;
-      const isMe=(i===NET.myIdx);
-      if(isMe||isOnlineGuestIdx(i)){
-        pendingAction={type:'ron',tile:kt,from:pidx,target:i};
-        G.phase='pending_ron';renderAll();broadcastState();
-        if(isMe){ timerOnMyTurn(); setTimeout(()=>{ if(G.phase==='pending_ron'&&autoWinEnabled) humanRon(); },250); }
-        return;
-      }else if(cpuDecideRon(i,kt)){handleRon(i,kt,pidx);return;}
-    }
-  }
+  if(_startRonQueue(pidx, kt, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,kt))&&!isFuriten(op), true)) return;
   const rep=drawRinshanTile(pidx);if(!rep){handleExhausted();return;}
   // 💣 嶺上地雷チェック（北抜き後）
   if(G._mineHit){
@@ -9565,6 +9731,17 @@ function humanRon(){
   if(!pendingAction||pendingAction.type!=='ron')return;
   const{tile,from}=pendingAction;
   if(NET.online&&!amIHost()){netSend({type:'ron',pidx:NET.myIdx,tile,from});pendingAction=null;return;}
+  // ダブロン: 自分の決断を記録して全員確定を待つ
+  if(pendingAction._ronDecisions !== undefined){
+    if(!pendingAction._ronWaiting.includes(NET.myIdx)) return;
+    pendingAction._ronDecisions[NET.myIdx] = 'ron';
+    pendingAction._ronWaiting = pendingAction._ronWaiting.filter(i=>i!==NET.myIdx);
+    timerStop();
+    renderAll(); broadcastState();
+    _resolveRonDecisions();
+    return;
+  }
+  // 旧来の単独処理
   pendingAction=null;
   handleRon(NET.myIdx,tile,from);
 }
@@ -9573,12 +9750,47 @@ function humanSkipRon(){
   if(!pendingAction)return;
   const tile=pendingAction.tile;
   const f=pendingAction.from;
-  if(NET.online&&!amIHost()){netSend({type:'skipRon',from:f});pendingAction=null;return;}
-  pendingAction=null;
-  G.phase='discard'; // pending_ron を解除してからcheckPon
-  if(!checkPon(f, tile)){
-    nextTurn((f+1)%numPlayers);
+  if(NET.online&&!amIHost()){netSend({type:'skipRon',from:f,pidx:NET.myIdx});pendingAction=null;return;}
+
+  // ── ダブロン方式: 自分のスキップを記録して全員確定を待つ ──
+  if(pendingAction._ronDecisions !== undefined){
+    if(!pendingAction._ronWaiting.includes(NET.myIdx)) return;
+    pendingAction._ronDecisions[NET.myIdx] = 'skip';
+    pendingAction._ronWaiting = pendingAction._ronWaiting.filter(i=>i!==NET.myIdx);
+    timerStop();
+    renderAll(); broadcastState();
+    _resolveRonDecisions();
+    return;
   }
+
+  // ── 旧キュー方式（後方互換） ──────────────────────────────
+  if(pendingAction._ronQueue && pendingAction._ronQueueIdx + 1 < pendingAction._ronQueue.length){
+    const nextIdx    = pendingAction._ronQueueIdx + 1;
+    const nextTarget = pendingAction._ronQueue[nextIdx];
+    pendingAction._ronQueueIdx = nextIdx;
+    pendingAction.target       = nextTarget;
+    renderAll(); broadcastState();
+    if(nextTarget === NET.myIdx){
+      timerOnMyTurn();
+      setTimeout(()=>{ const _sw = pendingAction?._ronWaiting ? pendingAction._ronWaiting.includes(NET.myIdx) : (G.phase==='pending_ron'&&pendingAction?.target===NET.myIdx); if(_sw && autoWinEnabled) humanRon(); }, 250);
+    }
+    return;
+  }
+  const skippedHumans = pendingAction._ronQueue || [];
+  pendingAction = null;
+  G.phase = 'discard';
+  for(let i = 0; i < numPlayers; i++){
+    if(i === f) continue;
+    if(skippedHumans.includes(i)) continue;
+    const op = G.players[i];
+    if((op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op)){
+      if(i !== NET.myIdx && !isOnlineGuestIdx(i)){
+        if(cpuDecideRon(i, tile)){ handleRon(i, tile, f); return; }
+      }
+    }
+  }
+  if(!checkPon(f, tile)){ nextTurn((f+1)%numPlayers); }
+  broadcastState();
 }
 
 // ロンをスキップしてポンに進む
@@ -9588,7 +9800,20 @@ function humanRonSkipToPon(){
   const from=pendingAction.from;
   if(NET.online&&!amIHost()){
     netSend({type:'skipRonToPon',pidx:NET.myIdx,tile,from});
-    pendingAction=null;
+    if(pendingAction?._ronWaiting){
+      pendingAction._ronDecisions[NET.myIdx]='skip';
+      pendingAction._ronWaiting=pendingAction._ronWaiting.filter(i=>i!==NET.myIdx);
+    } else pendingAction=null;
+    return;
+  }
+  // ダブロン中はスキップを記録して全員確定後にポン
+  if(pendingAction._ronDecisions !== undefined){
+    if(!pendingAction._ronWaiting.includes(NET.myIdx)) return;
+    pendingAction._ronDecisions[NET.myIdx]='skip';
+    pendingAction._ronDecisions['_ponAfter']=NET.myIdx; // ポン予約
+    pendingAction._ronWaiting=pendingAction._ronWaiting.filter(i=>i!==NET.myIdx);
+    timerStop(); renderAll(); broadcastState();
+    _resolveRonDecisions();
     return;
   }
   pendingAction=null;
@@ -9602,7 +9827,20 @@ function humanRonSkipToKan(){
   const from=pendingAction.from;
   if(NET.online&&!amIHost()){
     netSend({type:'skipRonToKan',pidx:NET.myIdx,tile,from});
-    pendingAction=null;
+    if(pendingAction?._ronWaiting){
+      pendingAction._ronDecisions[NET.myIdx]='skip';
+      pendingAction._ronWaiting=pendingAction._ronWaiting.filter(i=>i!==NET.myIdx);
+    } else pendingAction=null;
+    return;
+  }
+  // ダブロン中はスキップを記録して全員確定後にカン
+  if(pendingAction._ronDecisions !== undefined){
+    if(!pendingAction._ronWaiting.includes(NET.myIdx)) return;
+    pendingAction._ronDecisions[NET.myIdx]='skip';
+    pendingAction._ronDecisions['_kanAfter']=NET.myIdx; // カン予約
+    pendingAction._ronWaiting=pendingAction._ronWaiting.filter(i=>i!==NET.myIdx);
+    timerStop(); renderAll(); broadcastState();
+    _resolveRonDecisions();
     return;
   }
   pendingAction=null;
@@ -9690,21 +9928,7 @@ function humanKita(){
   }
   // 北抜き槍槓チェック: 他プレイヤーが北でロンできるか
   const kitaTile=kt;
-  for(let i=0;i<numPlayers;i++){
-    if(i===myIdx)continue;
-    const op=G.players[i];
-    if((op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,kitaTile))&&!isFuriten(op)){
-      op.isChankan=true; // 槍槓として扱う
-      // オンライン: 自分自身か、ホストが管理しているゲストか判定
-      const isMe = (i===NET.myIdx);
-      if(isMe || isOnlineGuestIdx(i)){
-        pendingAction={type:'ron',tile:kitaTile,from:myIdx,target:i};
-        G.phase='pending_ron';renderAll();broadcastState();
-        if(isMe){ timerOnMyTurn(); setTimeout(()=>{ if(G.phase==='pending_ron'&&autoWinEnabled) humanRon(); },250); }
-        return;
-      } else if(cpuDecideRon(i,kitaTile)){handleRon(i,kitaTile,myIdx);return;}
-    }
-  }
+  if(_startRonQueue(myIdx, kitaTile, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,kitaTile))&&!isFuriten(op), true)) return;
   const rep=drawRinshanTile(myIdx);if(!rep){handleExhausted();return;}
   // 💣 嶺上地雷チェック（北抜き後）
   if(G._mineHit){
@@ -9944,19 +10168,19 @@ function _bombSendResult(stage, score){
       if(d.bombBestScore != null) PROFILE.bombBestScore = d.bombBestScore;
     } else {
       PROFILE.coins = (PROFILE.coins||0) + bombEarned;
-      if(stage > (PROFILE.bombBestStage||0)){ PROFILE.bombBestStage=stage; PROFILE.bombBestScore=score; }
-      else if(stage===(PROFILE.bombBestStage||0) && score>(PROFILE.bombBestScore??-Infinity)){ PROFILE.bombBestScore=score; }
+      if(stage > (PROFILE.bombBestStage||0)) PROFILE.bombBestStage = stage;
+      if(score > (PROFILE.bombBestScore??-Infinity)) PROFILE.bombBestScore = score;
       saveProfileSilent();
     }
   }).catch(()=>{
     PROFILE.coins = (PROFILE.coins||0) + bombEarned;
-    if(stage > (PROFILE.bombBestStage||0)){ PROFILE.bombBestStage=stage; PROFILE.bombBestScore=score; }
-    else if(stage===(PROFILE.bombBestStage||0) && score>(PROFILE.bombBestScore??-Infinity)){ PROFILE.bombBestScore=score; }
+    if(stage > (PROFILE.bombBestStage||0)) PROFILE.bombBestStage = stage;
+    if(score > (PROFILE.bombBestScore??-Infinity)) PROFILE.bombBestScore = score;
     saveProfileSilent();
   });
   // クライアント側ベストも楽観的に更新
-  if(stage > (PROFILE.bombBestStage||0)){ PROFILE.bombBestStage=stage; PROFILE.bombBestScore=score; }
-  else if(stage===(PROFILE.bombBestStage||0) && score>(PROFILE.bombBestScore??-Infinity)){ PROFILE.bombBestScore=score; }
+  if(stage > (PROFILE.bombBestStage||0)) PROFILE.bombBestStage = stage;
+  if(score > (PROFILE.bombBestScore??-Infinity)) PROFILE.bombBestScore = score;
   // ローカルランキングにも保存
   _saveBombLocalRanking(stage, score);
 }
@@ -10116,13 +10340,13 @@ function showFinalResult(){
   _setResultBtn();
   broadcastState({finalResult:sorted.map(p=>({name:p.name,wind:p.wind,score:p.score}))});
 
-  // ── 戦績保存（ルームマッチ・ランクマッチのみ） ──
-  if(NET.online){
+  // ── 戦績保存（ソロ含む全対局） ──
+  {
     const recPlayer2 = G.players[NET.myIdx];
     const recName2 = recPlayer2 ? recPlayer2.name : (PROFILE.name||'プレイヤー');
     const recRank2 = sorted.findIndex(p=>p===recPlayer2)+1;
     const recordType = NET.isRankMatch ? 'rank' : 'room';
-    _saveMatchRecord(recordType, sorted, recName2, recRank2, numPlayers);
+    _saveMatchRecord(recordType, sorted, recName2, recRank2 > 0 ? recRank2 : 1, numPlayers);
   }
 }
 
@@ -10456,11 +10680,10 @@ function closeRecordScreen(){
   document.getElementById('lobby').style.display = 'block';
 }
 
-function switchRecordTab(tab){
-  _recordCurrentTab = tab;
-  // タブのスタイル切替
+function _applyRecordTabStyle(tab){
   const roomTab = document.getElementById('recordTabRoom');
   const rankTab = document.getElementById('recordTabRank');
+  if(!roomTab || !rankTab) return;
   if(tab === 'room'){
     roomTab.style.background = '#0a1428'; roomTab.style.color = '#88aacc'; roomTab.style.borderColor = '#3a5a8a';
     rankTab.style.background = '#030a10'; rankTab.style.color = '#4a7a5a'; rankTab.style.borderColor = '#1a3a2a';
@@ -10468,6 +10691,10 @@ function switchRecordTab(tab){
     rankTab.style.background = '#0a1a12'; rankTab.style.color = '#5adb9a'; rankTab.style.borderColor = '#2a6a4a';
     roomTab.style.background = '#030a10'; roomTab.style.color = '#4a5a7a'; roomTab.style.borderColor = '#1a2a4a';
   }
+}
+function switchRecordTab(tab){
+  _recordCurrentTab = tab;
+  _applyRecordTabStyle(tab);
   _renderRecordList();
 }
 
@@ -10479,8 +10706,8 @@ function _renderRecordList(){
   const container = document.getElementById('recordList');
   if(!container) return;
 
-  // タブ初期スタイル適用
-  switchRecordTab(_recordCurrentTab);
+  // タブスタイル適用（再帰しないよう直接呼ぶ）
+  _applyRecordTabStyle(_recordCurrentTab);
 
   if(list.length === 0){
     container.innerHTML = `<div style="text-align:center;color:#3a4a5a;font-size:.72rem;padding:30px 0;">まだ対局履歴がありません</div>`;
@@ -10746,11 +10973,23 @@ function showWinModalData(d){
     return;
   }
   showWinModal(w,d.hand,d.winTile,d.isTsumo,d.losidx,d.yakus,d.score,d.han);
+  // ダブロンの場合はタイトルに表示（既にshowWinModal内で処理されるが、ゲスト側向け）
+  if(d.doubleRon && d.doubleRonNames){
+    const sub = document.getElementById('mSub');
+    if(sub && G.players[d.losidx]){
+      sub.textContent = `${d.doubleRonNames.join(' & ')} が${G.players[d.losidx].name}からダブロン！`;
+    }
+    const title = document.getElementById('mTitle');
+    if(title) title.textContent = '🀄🀄 ダブロン！';
+  }
 }
-function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han){
+function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han,_doubleRonModals){
   const ln=losidx>=0?G.players[losidx].name:'';
-  document.getElementById('mTitle').textContent=isTsumo?'🀄 ツモ上がり！':'🀄 ロン上がり！';
-  document.getElementById('mSub').textContent=`${winner.name} が${isTsumo?'ツモ':`${ln}からロン`}`;
+  const isDouble = _doubleRonModals && _doubleRonModals.length > 1;
+  document.getElementById('mTitle').textContent=isTsumo?'🀄 ツモ上がり！':(isDouble?'🀄🀄 ダブロン！':'🀄 ロン上がり！');
+  document.getElementById('mSub').textContent= isDouble
+    ? `${_doubleRonModals.map(m=>G.players[m.widx].name).join(' & ')} が${ln}からダブロン！`
+    : `${winner.name} が${isTsumo?'ツモ':`${ln}からロン`}`;
   const doras=getDoras();
   document.getElementById('mHand').innerHTML=sortTiles(hand).map(t=>{
     const id=doras.some(d=>teq(d,t));
@@ -11538,6 +11777,13 @@ const _doraImgCache={};
   wc.classList.toggle('pen-on', _penModeOn);
   wc.classList.toggle('pick-on', (canPick||plantMode||lightPickMode)&&!_penModeOn);
 
+  // 自分のターン（draw_wait）: 山牌全体を控えめに光る枠で囲む
+  if(canPick && !plantMode && !lightPickMode && !_penModeOn){
+    _startWallGlowAnim(wc, cw, ch);
+  } else {
+    _stopWallGlowAnim();
+  }
+
   // 💣 BOMBモード: wallArea の marginTop を canvas高さから動的算出してズレを防ぐ
   if(wc.id==='wallCanvas'){
     const wa=document.getElementById('wallArea');
@@ -11549,6 +11795,57 @@ const _doraImgCache={};
         wa.style.marginTop='';
       }
     }
+  }
+}
+
+// ── 山牌ターン枠アニメーション ────────────────────────────────
+let _wallGlowRafId = null;
+let _wallGlowStart = 0;
+const _WALL_GLOW_DURATION = 2000; // 1周2秒
+
+function _drawWallGlowFrame(wc, cw, ch, t){
+  const ctx = wc.getContext('2d');
+  // sin波で 0〜1 の明るさ（0.3〜1.0 の範囲に収める）
+  const phase = (t % _WALL_GLOW_DURATION) / _WALL_GLOW_DURATION; // 0〜1
+  const alpha = 0.18 + 0.22 * Math.sin(phase * Math.PI * 2 + Math.PI / 2); // 0.18〜0.40
+  const blur  = 6 + 10 * Math.sin(phase * Math.PI * 2 + Math.PI / 2);       // 6〜16
+
+  const pad = 3; // canvasの端からのパディング
+  ctx.save();
+  ctx.shadowColor = `rgba(100, 210, 255, ${alpha * 1.8})`;
+  ctx.shadowBlur  = blur;
+  ctx.strokeStyle = `rgba(100, 210, 255, ${alpha})`;
+  ctx.lineWidth   = 2.5;
+  const r = 6; // 角丸半径
+  const x = pad, y = pad, w = cw - pad*2, h = ch - pad*2;
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function _startWallGlowAnim(wc, cw, ch){
+  if(_wallGlowRafId !== null) return; // 既に動いている
+  _wallGlowStart = performance.now();
+  const loop = (now) => {
+    // 条件が変わったら停止（draw_wait でなくなったとき）
+    const stillMyTurn = G && G.phase === 'draw_wait' && G.current === NET.myIdx;
+    if(!stillMyTurn){ _wallGlowRafId = null; return; }
+    _drawWallGlowFrame(wc, cw, ch, now - _wallGlowStart);
+    _wallGlowRafId = requestAnimationFrame(loop);
+  };
+  _wallGlowRafId = requestAnimationFrame(loop);
+}
+
+function _stopWallGlowAnim(){
+  if(_wallGlowRafId !== null){
+    cancelAnimationFrame(_wallGlowRafId);
+    _wallGlowRafId = null;
   }
 }
 
@@ -12925,9 +13222,12 @@ if(canWinNow&&!pinzuNoTsumo)html+=`<button class="btn btn-tsumo" onclick="humanT
       html+=`<button class="btn btn-danger" onclick="humanYamiChallenge('skip')">スキップ</button>`;
     }
   }else if(G.phase==='pending_ron'){
-    // ロン対象が自分の場合のみ表示（オンラインではtargetで判定）
-    const ronTarget = pendingAction?.target ?? NET.myIdx;
-    if(ronTarget===NET.myIdx){
+    // ダブロン対応: 自分がまだ未回答の場合にボタン表示
+    const _waiting = pendingAction?._ronWaiting;
+    const _myTurn = _waiting
+      ? _waiting.includes(NET.myIdx)
+      : (pendingAction?.target ?? NET.myIdx) === NET.myIdx;
+    if(_myTurn){
       html+=`<button class="btn btn-ron" onclick="humanRon()">ロン！ [${tileLabel(pendingAction?.tile)}]</button>`;
       // ロンをスキップ後にポン/カンできる場合は一緒に表示
       const _ronTile = pendingAction?.tile;
@@ -17113,15 +17413,15 @@ function plantMineRinshan(ri){
     <!-- 手のスキン + 指輪オーバーレイ -->
     <div>
       <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:6px;">💉 手のスキン</div>
-      <div id="fpm-skin-wrap" style="max-width:120px;position:relative;">
+      <div id="fpm-skin-wrap" style="max-width:120px;position:relative;aspect-ratio:1/1;">
         <video id="fpm-skin-video" muted loop autoplay playsinline style="
           width:100%;border-radius:8px;border:1.5px solid #4a2a6a;
-          display:block;background:#000;aspect-ratio:1;object-fit:cover;
+          display:block;background:#000;aspect-ratio:1/1;object-fit:contain;
           position:relative;z-index:1;
         "></video>
         <video id="fpm-ring-video" muted loop autoplay playsinline style="
-          position:absolute;inset:0;width:100%;height:100%;
-          border-radius:8px;object-fit:cover;
+          position:absolute;top:0;left:0;width:100%;height:100%;
+          border-radius:8px;object-fit:contain;
           z-index:2;pointer-events:none;display:none;
         "></video>
         <div id="fpm-skin-name" style="font-size:.52rem;color:#9a6acc;text-align:center;margin-top:4px;"></div>

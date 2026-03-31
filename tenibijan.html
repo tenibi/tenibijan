@@ -1773,7 +1773,7 @@ body{
 
       <!-- 排出アイテム一覧 -->
       <div style="margin-top:16px;background:#0a0515;border:1px solid #3a1a5a;border-radius:10px;padding:12px 14px;">
-        <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:10px;">📋 排出アイテム（全16種）</div>
+        <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:10px;">📋 排出アイテム（全20種）</div>
         <!-- 刺青 -->
         <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
           background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
@@ -1781,6 +1781,42 @@ body{
           <div style="flex:1;min-width:0;">
             <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">刺青01</div>
             <div style="font-size:.52rem;color:#7a5a9a;margin-top:2px;">牌を切る時の手に刺青が入る</div>
+          </div>
+          <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
+          background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+          <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/ao01.png" style="width:36px;height:36px;object-fit:contain;flex-shrink:0;border-radius:6px;" onerror="this.outerHTML='🌸'">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">花 青</div>
+            <div style="font-size:.52rem;color:#7a5a9a;margin-top:2px;">青い花の刺青が入る</div>
+          </div>
+          <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
+          background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+          <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/kiiro01.png" style="width:36px;height:36px;object-fit:contain;flex-shrink:0;border-radius:6px;" onerror="this.outerHTML='🌼'">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">花 黄色</div>
+            <div style="font-size:.52rem;color:#7a5a9a;margin-top:2px;">黄色い花の刺青が入る</div>
+          </div>
+          <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
+          background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+          <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/kuro01.png" style="width:36px;height:36px;object-fit:contain;flex-shrink:0;border-radius:6px;" onerror="this.outerHTML='🖤'">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">花 黒</div>
+            <div style="font-size:.52rem;color:#7a5a9a;margin-top:2px;">黒い花の刺青が入る</div>
+          </div>
+          <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
+          background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+          <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/pink01.png" style="width:36px;height:36px;object-fit:contain;flex-shrink:0;border-radius:6px;" onerror="this.outerHTML='🌺'">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.68rem;font-weight:700;color:#cc88ff;">花 ピンク</div>
+            <div style="font-size:.52rem;color:#7a5a9a;margin-top:2px;">ピンクの花の刺青が入る</div>
           </div>
           <div style="font-size:.6rem;color:#cc66ff;font-weight:700;flex-shrink:0;">EPIC</div>
         </div>
@@ -13647,9 +13683,22 @@ function toggleHandSkin(){
 // ── スキン図鑑 ────────────────────────────────────────────────
 const _SKIN_CATALOG = [
   { key:'', name:'デフォルト', icon:'✋', desc:'スキンなし（デフォルト）',
+    iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/defote.png',
     videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tete.webm' },
   { key:'tattoo01', name:'刺青01', icon:'🖊️', desc:'牌を切る手に刺青が入る',
     videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tete2.webm' },
+  { key:'irezumi01ao', name:'花 青', icon:'🌸', desc:'青い花の刺青が入る',
+    iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/ao01.png',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/irezumi01ao.webm' },
+  { key:'irezumi01kiiro', name:'花 黄色', icon:'🌼', desc:'黄色い花の刺青が入る',
+    iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/kiiro01.png',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/irezumi01kiiro.webm' },
+  { key:'irezumi01kuro', name:'花 黒', icon:'🖤', desc:'黒い花の刺青が入る',
+    iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/kuro01.png',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/irezumi01kuro.webm' },
+  { key:'irezumi01pink', name:'花 ピンク', icon:'🌺', desc:'ピンクの花の刺青が入る',
+    iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/pink01.png',
+    videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/irezumi01pink.webm' },
   { key:'hyou', name:'豹', icon:'🐆', desc:'豹の手で牌を切る',
     iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/hyou.png',
     videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/hyou.webm' },
@@ -13708,7 +13757,11 @@ _RING_CATALOG.forEach(r=>_preloadRingVideo(r.key, r.videoUrl));
 
 // ── TBBガチャ排出プール ──────────────────────────────────────
 const _TBB_POOL = [
-  { type:'skin', key:'tattoo01',      weight:20, rarity:'epic',   name:'刺青01',     icon:'🖊️', desc:'牌を切る手に刺青が入る' },
+  { type:'skin', key:'tattoo01',       weight:20, rarity:'epic', name:'刺青01',    icon:'🖊️', desc:'牌を切る手に刺青が入る' },
+  { type:'skin', key:'irezumi01ao',    weight:20, rarity:'epic', name:'花 青',      icon:'🌸', iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/ao01.png',    desc:'青い花の刺青が入る' },
+  { type:'skin', key:'irezumi01kiiro', weight:20, rarity:'epic', name:'花 黄色',    icon:'🌼', iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/kiiro01.png', desc:'黄色い花の刺青が入る' },
+  { type:'skin', key:'irezumi01kuro',  weight:20, rarity:'epic', name:'花 黒',      icon:'🖤', iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/kuro01.png',  desc:'黒い花の刺青が入る' },
+  { type:'skin', key:'irezumi01pink',  weight:20, rarity:'epic', name:'花 ピンク',  icon:'🌺', iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/pink01.png',  desc:'ピンクの花の刺青が入る' },
   { type:'skin', key:'hyou',          weight:20, rarity:'epic',   name:'豹',          icon:'🐆', iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/hyou.png', desc:'豹の手で牌を切る' },
   { type:'skin', key:'nekonote',      weight:20, rarity:'epic',   name:'猫の手',      icon:'🐱', iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/neko.png', desc:'猫の手で牌を切る' },
 

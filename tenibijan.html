@@ -2345,9 +2345,9 @@ body{
         border-radius:10px;overflow:hidden;transition:border-color .15s;
         max-width:160px;position:relative;
       " onmouseover="this.style.borderColor='#6a3a9a'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'">
-        <video id="handSkinVideo" muted autoplay playsinline
+        <video id="handSkinVideo" muted loop autoplay playsinline
           style="width:100%;display:block;background:#000;pointer-events:none;aspect-ratio:1;object-fit:cover;position:relative;z-index:1;"></video>
-        <video id="handSkinRingVideo" muted autoplay playsinline
+        <video id="handSkinRingVideo" muted loop autoplay playsinline
           style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;z-index:2;pointer-events:none;display:none;"></video>
       </div>
     </div>
@@ -13597,28 +13597,6 @@ function _applyProfile(){
   _updateRingUI();
 }
 
-// ── 手＋指輪の同期ループ再生ヘルパー ──────────────────────────────
-// loopは使わず、ended→両方reset→同時play()を繰り返してズレを防ぐ
-function _syncLoop(mainVid, subVid){
-  mainVid._syncEndedHandler && mainVid.removeEventListener('ended', mainVid._syncEndedHandler);
-  if(subVid) subVid._syncEndedHandler && subVid.removeEventListener('ended', subVid._syncEndedHandler);
-  if(!subVid){ mainVid.loop = true; return; }
-  mainVid.loop = false;
-  subVid.loop  = false;
-  let mainDone = false, subDone = false;
-  const restart = () => {
-    if(!mainDone || !subDone) return;
-    mainDone = false; subDone = false;
-    mainVid.currentTime = 0;
-    subVid.currentTime  = 0;
-    Promise.all([mainVid.play(), subVid.play()]).catch(()=>{});
-  };
-  mainVid._syncEndedHandler = () => { mainDone = true; restart(); };
-  subVid._syncEndedHandler  = () => { subDone  = true; restart(); };
-  mainVid.addEventListener('ended', mainVid._syncEndedHandler);
-  subVid.addEventListener('ended',  subVid._syncEndedHandler);
-}
-
 function _updateHandSkinUI(){
   const vid = document.getElementById('handSkinVideo');
   const ringVid = document.getElementById('handSkinRingVideo');
@@ -13668,7 +13646,6 @@ function _updateHandSkinUI(){
         if(!skinReady || !ringReady) return;
         vid.currentTime = 0;
         ringVid.currentTime = 0;
-        _syncLoop(vid, ringVid);
         Promise.all([vid.play(), ringVid.play()]).catch(()=>{});
       };
       vid.oncanplay = () => { skinReady = true; vid.oncanplay = null; tryPlay(); };
@@ -13676,11 +13653,11 @@ function _updateHandSkinUI(){
       vid.load();
       ringVid.load();
     } else {
-      _syncLoop(vid, null);
       vid.oncanplay = () => { vid.oncanplay = null; vid.play().catch(()=>{}); };
       vid.load();
     }
   } else if(!skinChanged && rd && ringVid && !ringChanged){
+    // srcが同じでも再生位置を合わせる
     ringVid.currentTime = vid.currentTime;
   }
 }
@@ -14001,7 +13978,7 @@ function loadProfile(){
         abilities:  data.abilities  ?? PROFILE.abilities,
         totalPulls: data.totalPulls ?? PROFILE.totalPulls,
         gachaIcons: data.gachaIcons ?? PROFILE.gachaIcons,
-        iconId:          data.iconId          ?? PROFILE.iconId,
+        iconId:          data.iconId          || PROFILE.iconId,
         ability:         data.ability         ?? PROFILE.ability,
         name:            data.name            || PROFILE.name,
         ownedEmoteSets:       data.ownedEmoteSets      ?? PROFILE.ownedEmoteSets ?? ['01'],
@@ -15344,6 +15321,7 @@ function _fpmRender(u){
     }
 
     if(skinChanged || (rd && ringChanged)){
+      // 両方止めてsrcをセット
       vid.pause();
       if(rd) ringVid.pause();
 
@@ -15354,13 +15332,13 @@ function _fpmRender(u){
         ringVid.setAttribute('data-fpm-src', rd.videoUrl);
       }
 
+      // 両方canplayableになったら同時再生
       if(rd){
         let skinReady = false, ringReady = false;
         const tryPlay = () => {
           if(!skinReady || !ringReady) return;
           vid.currentTime = 0;
           ringVid.currentTime = 0;
-          _syncLoop(vid, ringVid);
           Promise.all([vid.play(), ringVid.play()]).catch(()=>{});
         };
         vid.oncanplay = () => { skinReady = true; vid.oncanplay = null; tryPlay(); };
@@ -15368,11 +15346,11 @@ function _fpmRender(u){
         vid.load();
         ringVid.load();
       } else {
-        _syncLoop(vid, null);
         vid.oncanplay = () => { vid.oncanplay = null; vid.play().catch(()=>{}); };
         vid.load();
       }
     } else if(!skinChanged && rd && !ringChanged){
+      // srcが同じでも再生位置を合わせる
       ringVid.currentTime = vid.currentTime;
     }
   }
@@ -17587,13 +17565,13 @@ function plantMineRinshan(ri){
     <div>
       <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:6px;">💉 手のスキン</div>
       <div id="fpm-skin-wrap" style="width:160px;flex-shrink:0;position:relative;aspect-ratio:1/1;margin-bottom:22px;">
-        <video id="fpm-skin-video" muted autoplay playsinline style="
+        <video id="fpm-skin-video" muted loop autoplay playsinline style="
           position:absolute;top:0;left:0;width:100%;height:100%;
           border-radius:8px;border:1.5px solid #4a2a6a;
           display:block;background:#000;object-fit:contain;
           z-index:1;
         "></video>
-        <video id="fpm-ring-video" muted autoplay playsinline style="
+        <video id="fpm-ring-video" muted loop autoplay playsinline style="
           position:absolute;top:0;left:0;width:100%;height:100%;
           border-radius:8px;object-fit:contain;
           z-index:2;pointer-events:none;display:none;

@@ -2345,9 +2345,9 @@ body{
         border-radius:10px;overflow:hidden;transition:border-color .15s;
         max-width:160px;position:relative;
       " onmouseover="this.style.borderColor='#6a3a9a'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'">
-        <video id="handSkinVideo" muted loop autoplay playsinline
+        <video id="handSkinVideo" muted autoplay playsinline
           style="width:100%;display:block;background:#000;pointer-events:none;aspect-ratio:1;object-fit:cover;position:relative;z-index:1;"></video>
-        <video id="handSkinRingVideo" muted loop autoplay playsinline
+        <video id="handSkinRingVideo" muted autoplay playsinline
           style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;z-index:2;pointer-events:none;display:none;"></video>
       </div>
     </div>
@@ -4336,6 +4336,10 @@ const _HAND_ANIM_NEKO_SRC       = 'https://raw.githubusercontent.com/tenibi/teni
 const _HAND_ANIM_SIRONEKO_SRC   = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/siroinekonote.webm';
 const _HAND_ANIM_TENIBI_SRC     = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tenibinote.webm';
 const _HAND_ANIM_TORA_SRC       = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/tora.webm';
+const _HAND_ANIM_IREZUMI_AO_SRC    = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/irezumi01ao.webm';
+const _HAND_ANIM_IREZUMI_KIIRO_SRC = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/irezumi01kiiro.webm';
+const _HAND_ANIM_IREZUMI_KURO_SRC  = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/irezumi01kuro.webm';
+const _HAND_ANIM_IREZUMI_PINK_SRC  = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/hand/irezumi01pink.webm';
 let _handAnimBlobUrl = null;  // プリロード済みBlobURL
 let _handAnimTatBlobUrl = null; // 刺青01用BlobURL
 let _handAnimHyouBlobUrl     = null;
@@ -4343,6 +4347,10 @@ let _handAnimNekoBlobUrl     = null;
 let _handAnimSironekoBlobUrl = null;
 let _handAnimTenibiNoteBlobUrl = null;
 let _handAnimToraBlobUrl     = null;
+let _handAnimIrezumiAoBlobUrl    = null;
+let _handAnimIrezumiKiiroBlobUrl = null;
+let _handAnimIrezumiKuroBlobUrl  = null;
+let _handAnimIrezumiPinkBlobUrl  = null;
 // ゲーム開始前にバックグラウンドでプリロード
 (function _preloadHandAnim(){
   const _load = (src, cb) => fetch(src).then(r=>{ if(!r.ok) throw new Error(); return r.blob(); }).then(b=>{ if(b.type&&b.type.includes('video')) cb(URL.createObjectURL(b)); }).catch(()=>{});
@@ -4353,6 +4361,10 @@ let _handAnimToraBlobUrl     = null;
   _load(_HAND_ANIM_SIRONEKO_SRC,  b => _handAnimSironekoBlobUrl   = b);
   _load(_HAND_ANIM_TENIBI_SRC,    b => _handAnimTenibiNoteBlobUrl = b);
   _load(_HAND_ANIM_TORA_SRC,      b => _handAnimToraBlobUrl       = b);
+  _load(_HAND_ANIM_IREZUMI_AO_SRC,    b => _handAnimIrezumiAoBlobUrl    = b);
+  _load(_HAND_ANIM_IREZUMI_KIIRO_SRC, b => _handAnimIrezumiKiiroBlobUrl = b);
+  _load(_HAND_ANIM_IREZUMI_KURO_SRC,  b => _handAnimIrezumiKuroBlobUrl  = b);
+  _load(_HAND_ANIM_IREZUMI_PINK_SRC,  b => _handAnimIrezumiPinkBlobUrl  = b);
 })();
 
 // 指輪動画Blobキャッシュ: key→BlobURL
@@ -13027,6 +13039,10 @@ function _playDiscardHandAnim(si, pidx){
     'siroinekonote': _handAnimSironekoBlobUrl || _HAND_ANIM_SIRONEKO_SRC,
     'tenibinote': _handAnimTenibiNoteBlobUrl || _HAND_ANIM_TENIBI_SRC,
     'tora':       _handAnimToraBlobUrl       || _HAND_ANIM_TORA_SRC,
+    'irezumi01ao':    _handAnimIrezumiAoBlobUrl    || _HAND_ANIM_IREZUMI_AO_SRC,
+    'irezumi01kiiro': _handAnimIrezumiKiiroBlobUrl || _HAND_ANIM_IREZUMI_KIIRO_SRC,
+    'irezumi01kuro':  _handAnimIrezumiKuroBlobUrl  || _HAND_ANIM_IREZUMI_KURO_SRC,
+    'irezumi01pink':  _handAnimIrezumiPinkBlobUrl  || _HAND_ANIM_IREZUMI_PINK_SRC,
   };
   const animUrl = _skinBlobMap[useSkin] || (_handAnimBlobUrl || _HAND_ANIM_SRC);
   const vid = document.createElement('video');
@@ -13597,6 +13613,28 @@ function _applyProfile(){
   _updateRingUI();
 }
 
+// ── 手＋指輪の同期ループ再生ヘルパー ──────────────────────────────
+// loopは使わず、ended→両方reset→同時play()を繰り返してズレを防ぐ
+function _syncLoop(mainVid, subVid){
+  mainVid._syncEndedHandler && mainVid.removeEventListener('ended', mainVid._syncEndedHandler);
+  if(subVid) subVid._syncEndedHandler && subVid.removeEventListener('ended', subVid._syncEndedHandler);
+  if(!subVid){ mainVid.loop = true; return; }
+  mainVid.loop = false;
+  subVid.loop  = false;
+  let mainDone = false, subDone = false;
+  const restart = () => {
+    if(!mainDone || !subDone) return;
+    mainDone = false; subDone = false;
+    mainVid.currentTime = 0;
+    subVid.currentTime  = 0;
+    Promise.all([mainVid.play(), subVid.play()]).catch(()=>{});
+  };
+  mainVid._syncEndedHandler = () => { mainDone = true; restart(); };
+  subVid._syncEndedHandler  = () => { subDone  = true; restart(); };
+  mainVid.addEventListener('ended', mainVid._syncEndedHandler);
+  subVid.addEventListener('ended',  subVid._syncEndedHandler);
+}
+
 function _updateHandSkinUI(){
   const vid = document.getElementById('handSkinVideo');
   const ringVid = document.getElementById('handSkinRingVideo');
@@ -13646,6 +13684,7 @@ function _updateHandSkinUI(){
         if(!skinReady || !ringReady) return;
         vid.currentTime = 0;
         ringVid.currentTime = 0;
+        _syncLoop(vid, ringVid);
         Promise.all([vid.play(), ringVid.play()]).catch(()=>{});
       };
       vid.oncanplay = () => { skinReady = true; vid.oncanplay = null; tryPlay(); };
@@ -13653,11 +13692,11 @@ function _updateHandSkinUI(){
       vid.load();
       ringVid.load();
     } else {
+      _syncLoop(vid, null);
       vid.oncanplay = () => { vid.oncanplay = null; vid.play().catch(()=>{}); };
       vid.load();
     }
   } else if(!skinChanged && rd && ringVid && !ringChanged){
-    // srcが同じでも再生位置を合わせる
     ringVid.currentTime = vid.currentTime;
   }
 }
@@ -15321,7 +15360,6 @@ function _fpmRender(u){
     }
 
     if(skinChanged || (rd && ringChanged)){
-      // 両方止めてsrcをセット
       vid.pause();
       if(rd) ringVid.pause();
 
@@ -15332,13 +15370,13 @@ function _fpmRender(u){
         ringVid.setAttribute('data-fpm-src', rd.videoUrl);
       }
 
-      // 両方canplayableになったら同時再生
       if(rd){
         let skinReady = false, ringReady = false;
         const tryPlay = () => {
           if(!skinReady || !ringReady) return;
           vid.currentTime = 0;
           ringVid.currentTime = 0;
+          _syncLoop(vid, ringVid);
           Promise.all([vid.play(), ringVid.play()]).catch(()=>{});
         };
         vid.oncanplay = () => { skinReady = true; vid.oncanplay = null; tryPlay(); };
@@ -15346,11 +15384,11 @@ function _fpmRender(u){
         vid.load();
         ringVid.load();
       } else {
+        _syncLoop(vid, null);
         vid.oncanplay = () => { vid.oncanplay = null; vid.play().catch(()=>{}); };
         vid.load();
       }
     } else if(!skinChanged && rd && !ringChanged){
-      // srcが同じでも再生位置を合わせる
       ringVid.currentTime = vid.currentTime;
     }
   }
@@ -17565,13 +17603,13 @@ function plantMineRinshan(ri){
     <div>
       <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:6px;">💉 手のスキン</div>
       <div id="fpm-skin-wrap" style="width:160px;flex-shrink:0;position:relative;aspect-ratio:1/1;margin-bottom:22px;">
-        <video id="fpm-skin-video" muted loop autoplay playsinline style="
+        <video id="fpm-skin-video" muted autoplay playsinline style="
           position:absolute;top:0;left:0;width:100%;height:100%;
           border-radius:8px;border:1.5px solid #4a2a6a;
           display:block;background:#000;object-fit:contain;
           z-index:1;
         "></video>
-        <video id="fpm-ring-video" muted loop autoplay playsinline style="
+        <video id="fpm-ring-video" muted autoplay playsinline style="
           position:absolute;top:0;left:0;width:100%;height:100%;
           border-radius:8px;object-fit:contain;
           z-index:2;pointer-events:none;display:none;

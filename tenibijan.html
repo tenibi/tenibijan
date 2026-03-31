@@ -17477,18 +17477,18 @@ function plantMineRinshan(ri){
       background:#030a10;border:1px solid #2a3a4a;border-radius:7px;
       color:#5a7a8a;font-size:.65rem;padding:4px 9px;cursor:pointer;">✕</button>
 
-    <!-- アイコン + 名前 -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-      <div id="fpm-icon" style="
-        width:80px;height:106px;flex-shrink:0;border-radius:10px;
-        overflow:hidden;border:2px solid #3a5a3a;background:#040c12;
-        display:flex;align-items:center;justify-content:center;font-size:1.6rem;
-      ">👤</div>
-      <div style="min-width:0;">
-        <div id="fpm-name" style="font-size:.95rem;font-weight:700;color:var(--gold);letter-spacing:.05em;"></div>
-        <div id="fpm-ability" style="font-size:.58rem;color:#5a8a7a;margin-top:3px;"></div>
-        <div id="fpm-inline-stats" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
-      </div>
+    <!-- アイコン（横幅いっぱい） -->
+    <div id="fpm-icon" style="
+      width:100%;aspect-ratio:3/4;max-height:220px;border-radius:10px;
+      overflow:hidden;border:2px solid #3a5a3a;background:#040c12;
+      display:flex;align-items:center;justify-content:center;font-size:2.5rem;
+      margin-bottom:10px;
+    ">👤</div>
+    <!-- 名前 -->
+    <div style="min-width:0;margin-bottom:10px;">
+      <div id="fpm-name" style="font-size:.95rem;font-weight:700;color:var(--gold);letter-spacing:.05em;"></div>
+      <div id="fpm-ability" style="font-size:.58rem;color:#5a8a7a;margin-top:3px;"></div>
+      <div id="fpm-inline-stats" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
     </div>
 
     <!-- フレンド申請エリア（対戦中アイコンクリック時のみ表示） -->
@@ -17505,18 +17505,19 @@ function plantMineRinshan(ri){
     <!-- 手のスキン + 指輪オーバーレイ -->
     <div>
       <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:6px;">💉 手のスキン</div>
-      <div id="fpm-skin-wrap" style="width:160px;flex-shrink:0;position:relative;aspect-ratio:1/1;">
+      <div id="fpm-skin-wrap" style="width:160px;flex-shrink:0;position:relative;aspect-ratio:1/1;margin-bottom:22px;">
         <video id="fpm-skin-video" muted loop autoplay playsinline style="
-          width:100%;border-radius:8px;border:1.5px solid #4a2a6a;
-          display:block;background:#000;aspect-ratio:1/1;object-fit:contain;
-          position:relative;z-index:1;
+          position:absolute;top:0;left:0;width:100%;height:100%;
+          border-radius:8px;border:1.5px solid #4a2a6a;
+          display:block;background:#000;object-fit:contain;
+          z-index:1;
         "></video>
         <video id="fpm-ring-video" muted loop autoplay playsinline style="
           position:absolute;top:0;left:0;width:100%;height:100%;
           border-radius:8px;object-fit:contain;
           z-index:2;pointer-events:none;display:none;
         "></video>
-        <div id="fpm-skin-name" style="font-size:.52rem;color:#9a6acc;text-align:center;margin-top:4px;"></div>
+        <div id="fpm-skin-name" style="position:absolute;bottom:-18px;left:0;right:0;font-size:.52rem;color:#9a6acc;text-align:center;"></div>
       </div>
     </div>
   </div>

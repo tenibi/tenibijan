@@ -756,6 +756,18 @@ body{
 .wall-area{
   display:flex;flex-direction:column;align-items:center;gap:4px;
   width:100%;
+  position:relative;
+  border-radius:6px;
+  outline:2px solid transparent;
+  outline-offset:4px;
+  transition:outline-color .1s;
+}
+@keyframes wallTurnGlow{
+  0%,100%{ box-shadow:0 0 0 3px rgba(100,210,255,0.10), 0 0 14px 4px rgba(100,210,255,0.08); outline-color:rgba(100,210,255,0.18); }
+  50%{     box-shadow:0 0 0 3px rgba(100,210,255,0.38), 0 0 22px 8px rgba(100,210,255,0.22); outline-color:rgba(100,210,255,0.45); }
+}
+.wall-area.my-turn-glow{
+  animation:wallTurnGlow 2s ease-in-out infinite;
 }
 /* Canvas wall */
 #wallCanvas{
@@ -11777,11 +11789,26 @@ const _doraImgCache={};
   wc.classList.toggle('pen-on', _penModeOn);
   wc.classList.toggle('pick-on', (canPick||plantMode||lightPickMode)&&!_penModeOn);
 
-  // 自分のターン（draw_wait）: 山牌全体を控えめに光る枠で囲む
-  if(canPick && !plantMode && !lightPickMode && !_penModeOn){
-    _startWallGlowAnim(wc, cw, ch);
-  } else {
-    _stopWallGlowAnim();
+  // 自分のアクション待ち: wallAreaにCSSクラスで枠を光らせる
+  // draw_wait（ツモ）・discard（捨て）・pending_ron（ロン）・pending_pon（ポン/カン）
+  {
+    const _wa = document.getElementById('wallArea');
+    if(_wa){
+      const _myIdx = NET.myIdx;
+      const _isMyAction = !_penModeOn && !plantMode && !lightPickMode && G && (
+        // ツモ待ち・捨て待ち
+        ((G.phase === 'draw_wait' || G.phase === 'discard') && G.current === _myIdx) ||
+        // ロン待ち（自分が未回答）
+        (G.phase === 'pending_ron' && pendingAction && (
+          pendingAction._ronWaiting
+            ? pendingAction._ronWaiting.includes(_myIdx)
+            : pendingAction.target === _myIdx
+        )) ||
+        // ポン/カン待ち
+        (G.phase === 'pending_pon' && pendingAction && pendingAction.target === _myIdx)
+      );
+      _wa.classList.toggle('my-turn-glow', !!_isMyAction);
+    }
   }
 
   // 💣 BOMBモード: wallArea の marginTop を canvas高さから動的算出してズレを防ぐ
@@ -11798,56 +11825,7 @@ const _doraImgCache={};
   }
 }
 
-// ── 山牌ターン枠アニメーション ────────────────────────────────
-let _wallGlowRafId = null;
-let _wallGlowStart = 0;
-const _WALL_GLOW_DURATION = 2000; // 1周2秒
 
-function _drawWallGlowFrame(wc, cw, ch, t){
-  const ctx = wc.getContext('2d');
-  // sin波で 0〜1 の明るさ（0.3〜1.0 の範囲に収める）
-  const phase = (t % _WALL_GLOW_DURATION) / _WALL_GLOW_DURATION; // 0〜1
-  const alpha = 0.18 + 0.22 * Math.sin(phase * Math.PI * 2 + Math.PI / 2); // 0.18〜0.40
-  const blur  = 6 + 10 * Math.sin(phase * Math.PI * 2 + Math.PI / 2);       // 6〜16
-
-  const pad = 3; // canvasの端からのパディング
-  ctx.save();
-  ctx.shadowColor = `rgba(100, 210, 255, ${alpha * 1.8})`;
-  ctx.shadowBlur  = blur;
-  ctx.strokeStyle = `rgba(100, 210, 255, ${alpha})`;
-  ctx.lineWidth   = 2.5;
-  const r = 6; // 角丸半径
-  const x = pad, y = pad, w = cw - pad*2, h = ch - pad*2;
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.restore();
-}
-
-function _startWallGlowAnim(wc, cw, ch){
-  if(_wallGlowRafId !== null) return; // 既に動いている
-  _wallGlowStart = performance.now();
-  const loop = (now) => {
-    // 条件が変わったら停止（draw_wait でなくなったとき）
-    const stillMyTurn = G && G.phase === 'draw_wait' && G.current === NET.myIdx;
-    if(!stillMyTurn){ _wallGlowRafId = null; return; }
-    _drawWallGlowFrame(wc, cw, ch, now - _wallGlowStart);
-    _wallGlowRafId = requestAnimationFrame(loop);
-  };
-  _wallGlowRafId = requestAnimationFrame(loop);
-}
-
-function _stopWallGlowAnim(){
-  if(_wallGlowRafId !== null){
-    cancelAnimationFrame(_wallGlowRafId);
-    _wallGlowRafId = null;
-  }
-}
 
 function _roundRect(ctx,x,y,w,h,r,fill,stroke){
   ctx.beginPath();
@@ -15174,33 +15152,37 @@ function _fpmRender(u){
       ringVid.load();
     }
 
-    if(skinChanged || (rd && ringChanged)){
+    if(skinChanged || (rd && ringChanged) || (!rd && ringChanged)){
       // 両方止めてsrcをセット
       vid.pause();
-      if(rd) ringVid.pause();
+      ringVid.pause();
+      vid.oncanplay = null;
+      ringVid.oncanplay = null;
 
       vid.src = sk.videoUrl;
       vid.setAttribute('data-fpm-src', sk.videoUrl);
+
       if(rd){
         ringVid.src = rd.videoUrl;
         ringVid.setAttribute('data-fpm-src', rd.videoUrl);
-      }
 
-      // 両方canplayableになったら同時再生
-      if(rd){
+        // 両方canplaythroughになったら同時再生（タイミング同期）
         let skinReady = false, ringReady = false;
         const tryPlay = () => {
           if(!skinReady || !ringReady) return;
           vid.currentTime = 0;
           ringVid.currentTime = 0;
-          Promise.all([vid.play(), ringVid.play()]).catch(()=>{});
+          // 同一フレームで再生開始してズレを防ぐ
+          requestAnimationFrame(() => {
+            Promise.all([vid.play(), ringVid.play()]).catch(()=>{});
+          });
         };
-        vid.oncanplay = () => { skinReady = true; vid.oncanplay = null; tryPlay(); };
-        ringVid.oncanplay = () => { ringReady = true; ringVid.oncanplay = null; tryPlay(); };
+        vid.oncanplaythrough = () => { skinReady = true; vid.oncanplaythrough = null; tryPlay(); };
+        ringVid.oncanplaythrough = () => { ringReady = true; ringVid.oncanplaythrough = null; tryPlay(); };
         vid.load();
         ringVid.load();
       } else {
-        vid.oncanplay = () => { vid.oncanplay = null; vid.play().catch(()=>{}); };
+        vid.oncanplay = () => { vid.oncanplay = null; vid.currentTime = 0; vid.play().catch(()=>{}); };
         vid.load();
       }
     } else if(!skinChanged && rd && !ringChanged){
@@ -17421,7 +17403,7 @@ function plantMineRinshan(ri){
         "></video>
         <video id="fpm-ring-video" muted loop autoplay playsinline style="
           position:absolute;top:0;left:0;width:100%;height:100%;
-          border-radius:8px;object-fit:contain;
+          border-radius:8px;object-fit:contain;aspect-ratio:1/1;
           z-index:2;pointer-events:none;display:none;
         "></video>
         <div id="fpm-skin-name" style="font-size:.52rem;color:#9a6acc;text-align:center;margin-top:4px;"></div>

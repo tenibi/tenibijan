@@ -2142,6 +2142,10 @@ body{
         <div style="font-size:1rem;">🪙</div>
         <div>TBBコイン</div>
       </div>
+      <div class="gift-type-btn" id="giftTabCoins" onclick="switchGiftTab('coins')">
+        <div style="font-size:1rem;"><img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"></div>
+        <div>手にビコイン</div>
+      </div>
       <div class="gift-type-btn" id="giftTabSkin" onclick="switchGiftTab('skin')">
         <div style="font-size:1rem;">🖊️</div>
         <div>スキン</div>
@@ -2168,6 +2172,25 @@ body{
         <button class="gift-quick-btn" onclick="setGiftTbb(500)">500</button>
         <button class="gift-quick-btn" onclick="setGiftTbb(Math.floor((PROFILE.tbbCoins||0)/2))">半分</button>
         <button class="gift-quick-btn" onclick="setGiftTbb(PROFILE.tbbCoins||0)">全部</button>
+      </div>
+    </div>
+
+    <!-- 手にビコインパネル -->
+    <div id="giftPanelCoins" style="display:none;">
+      <div style="font-size:.55rem;color:#4a7a6a;margin-bottom:6px;text-align:center;">
+        所持: <span id="giftMyCoins" style="color:var(--gold);font-weight:700;">0</span> 手にビコイン
+      </div>
+      <div class="gift-tbb-row">
+        <img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:20px;height:20px;object-fit:contain;">
+        <input id="giftCoinsAmount" class="gift-tbb-input" type="number" min="1" max="10000" placeholder="枚数">
+      </div>
+      <div class="gift-quick-btns">
+        <button class="gift-quick-btn" onclick="setGiftCoins(10)">10</button>
+        <button class="gift-quick-btn" onclick="setGiftCoins(50)">50</button>
+        <button class="gift-quick-btn" onclick="setGiftCoins(100)">100</button>
+        <button class="gift-quick-btn" onclick="setGiftCoins(500)">500</button>
+        <button class="gift-quick-btn" onclick="setGiftCoins(Math.floor((PROFILE.coins||0)/2))">半分</button>
+        <button class="gift-quick-btn" onclick="setGiftCoins(PROFILE.coins||0)">全部</button>
       </div>
     </div>
 
@@ -6601,7 +6624,10 @@ function handleGuestAction(msg, senderIdx){
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
         renderWall(); renderDoraCanvas();
-        broadcastState();
+        // broadcastState() は呼ばない: state同期すると他プレイヤーの描き込み中のoffscreen canvasが
+        // applyHostState でリセットされ、描画が途中で止まるバグを防ぐ。
+        // 代わりに penSync をそのまま他のゲストへ転送するだけにする。
+        netBroadcastAll({type:'penSync', changedKeys: msg.changedKeys});
       }
       break;
   }
@@ -9213,12 +9239,14 @@ function cpuAction(){
       }
     }
     if(p.riichi){scheduleForPlayer(idx,600,()=>discardAction(idx,p.hand.length-1));return;}
-    if(!p.riichi&&p.tenpai&&p.melds.length===0){cpuDeclareRiichi(idx);return;}
+    if(!p.riichi&&p.tenpai&&p.melds.every(m=>m.type==='ankan')){cpuDeclareRiichi(idx);return;}
     // CPU能力発動（discardフェーズ前）
     if(cpuTryAbility(idx)) return;
     scheduleForPlayer(idx,550,cpuDiscard);
   }else if(G.phase==='discard'){
     if(p.riichi){scheduleForPlayer(idx,600,()=>discardAction(idx,p.hand.length-1));return;}
+    // 暗槓後リーチ判定（暗槓は門前扱いのため全副露が暗槓ならリーチ可）
+    if(!p.riichi&&p.tenpai&&p.melds.every(m=>m.type==='ankan')){cpuDeclareRiichi(idx);return;}
     // CPU能力発動（discardフェーズ）
     if(cpuTryAbility(idx)) return;
     scheduleForPlayer(idx,550,cpuDiscard);
@@ -10063,7 +10091,7 @@ function humanDeclareRiichi(mode){
   const myIdx=NET.myIdx;
   if(G.current!==myIdx||G.phase!=='discard')return;
   const p=G.players[myIdx];
-  if(p.riichi||p.melds.length>0)return;
+  if(p.riichi||p.melds.some(m=>m.type!=='ankan'))return;
   const vd=getRiichiDiscards(p.hand);
   if(vd.length===0)return;
   let finalMode=mode;
@@ -11849,10 +11877,6 @@ const _doraImgCache={};
       ctx.font=`${Math.round(34*_wScale())}px serif`; ctx.fillText('💣',r.x+r.w/2,r.y+r.h/2);
     } else if(isPinzu){
       ctx.font=`${Math.round(34*_wScale())}px serif`; ctx.fillText('🔵',r.x+r.w/2,r.y+r.h/2);
-    } else if(!penImg){
-      // 裏面アイコン（小さく）
-      ctx.fillStyle='#3a6a8a'; ctx.font=`${Math.round(28*_wScale())}px serif`;
-      ctx.fillText('🀫',r.x+r.w/2,r.y+r.h/2);
     }
   }
 
@@ -12059,11 +12083,10 @@ function _saveWallPenDrawingsFromOC(oc, changedSlots){
         const mc=merged.getContext('2d');
         const prevImg=new Image();
         prevImg.src=G.penDrawings[key];
-        // 既存を先に描いてから今回のを multiply 合成
+        // source-over で重ねる（multiply にすると同色ストロークが重なるたびに濃くなるバグのため）
         mc.drawImage(prevImg,0,0);
-        mc.globalCompositeOperation='multiply';
-        mc.drawImage(tmp,0,0);
         mc.globalCompositeOperation='source-over';
+        mc.drawImage(tmp,0,0);
         G.penDrawings[key]=merged.toDataURL('image/webp',0.65);
       } else {
         G.penDrawings[key]=tmp.toDataURL('image/webp',0.65);
@@ -12283,10 +12306,6 @@ function renderDoraCanvas(){
         ctx.font='44px serif';ctx.textAlign='center';ctx.textBaseline='middle';
         ctx.fillStyle=isDora?'#111':'#ff4422';ctx.fillText(_dEmoji,r.x+r.w/2,r.y+r.h/2);
       }
-    } else if(isBack&&!penImg){
-      ctx.fillStyle='#3a6a8a'; ctx.font='14px serif';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('🀫', r.x+r.w/2, r.y+r.h/2);
     }
   }
 
@@ -12423,9 +12442,8 @@ function _saveDoraFromOC(oc, changedSet){
         const mc=merged.getContext('2d');
         const prev=new Image(); prev.src=G.penDrawings[key];
         mc.drawImage(prev,0,0);
-        mc.globalCompositeOperation='multiply';
-        mc.drawImage(tmp,0,0);
         mc.globalCompositeOperation='source-over';
+        mc.drawImage(tmp,0,0);
         G.penDrawings[key]=merged.toDataURL('image/webp',0.65);
       } else {
         G.penDrawings[key]=tmp.toDataURL('image/webp',0.65);
@@ -13218,7 +13236,8 @@ function renderActions(){
     const hasKita=p.hand.some(t=>t.suit==='honor'&&t.num==='北');
     const canWinNow=canWin(p.hand);
     const isPR=!!G.pendingRiichi;
-    const vrd=(!p.riichi&&p.melds.length===0&&p.hand.length===5)?getRiichiDiscards(p.hand):[];
+    const allMeldsAnkan=p.melds.every(m=>m.type==='ankan');
+    const vrd=(!p.riichi&&allMeldsAnkan&&(p.hand.length===5||p.hand.length===2))?getRiichiDiscards(p.hand):[];
     const canRiichi=vrd.length>0&&!isPR;
 
     if(p.riichi){
@@ -15434,7 +15453,9 @@ function openGiftModal(friendId, friendName){
   _giftTab = 'tbb';
   document.getElementById('giftModalTo').textContent = `送り先: ${friendName}`;
   document.getElementById('giftMyTbb').textContent = (PROFILE.tbbCoins||0).toLocaleString();
+  document.getElementById('giftMyCoins').textContent = (PROFILE.coins||0).toLocaleString();
   document.getElementById('giftTbbAmount').value = '';
+  document.getElementById('giftCoinsAmount').value = '';
   document.getElementById('giftModalMsg').textContent = '';
   document.getElementById('giftSendBtn').disabled = false;
   switchGiftTab('tbb');
@@ -15452,11 +15473,13 @@ document.addEventListener('DOMContentLoaded',()=>{
 function switchGiftTab(tab){
   _giftTab = tab;
   document.getElementById('giftTabTbb').classList.toggle('active', tab==='tbb');
+  document.getElementById('giftTabCoins').classList.toggle('active', tab==='coins');
   document.getElementById('giftTabSkin').classList.toggle('active', tab==='skin');
   document.getElementById('giftTabRing').classList.toggle('active', tab==='ring');
-  document.getElementById('giftPanelTbb').style.display  = tab==='tbb'  ? '' : 'none';
-  document.getElementById('giftPanelSkin').style.display = tab==='skin' ? '' : 'none';
-  document.getElementById('giftPanelRing').style.display = tab==='ring' ? '' : 'none';
+  document.getElementById('giftPanelTbb').style.display   = tab==='tbb'   ? '' : 'none';
+  document.getElementById('giftPanelCoins').style.display = tab==='coins' ? '' : 'none';
+  document.getElementById('giftPanelSkin').style.display  = tab==='skin'  ? '' : 'none';
+  document.getElementById('giftPanelRing').style.display  = tab==='ring'  ? '' : 'none';
   document.getElementById('giftModalMsg').textContent = '';
   if(tab==='skin') renderGiftSkinList();
   if(tab==='ring') renderGiftRingList();
@@ -15542,6 +15565,11 @@ function setGiftTbb(n){
   document.getElementById('giftTbbAmount').value = v > 0 ? v : '';
 }
 
+function setGiftCoins(n){
+  const v = Math.max(0, Math.min(n, PROFILE.coins||0));
+  document.getElementById('giftCoinsAmount').value = v > 0 ? v : '';
+}
+
 async function doSendGift(){
   const btn = document.getElementById('giftSendBtn');
   const msg = document.getElementById('giftModalMsg');
@@ -15555,6 +15583,11 @@ async function doSendGift(){
     if(!amt || amt < 1){ msg.textContent='枚数を入力してください'; btn.disabled=false; return; }
     if(amt > (PROFILE.tbbCoins||0)){ msg.textContent='TBBコインが不足しています'; btn.disabled=false; return; }
     body = {receiverId:_giftTarget.id, type:'tbb_coins', amount:amt};
+  } else if(_giftTab === 'coins'){
+    const amt = parseInt(document.getElementById('giftCoinsAmount').value, 10);
+    if(!amt || amt < 1){ msg.textContent='枚数を入力してください'; btn.disabled=false; return; }
+    if(amt > (PROFILE.coins||0)){ msg.textContent='手にビコインが不足しています'; btn.disabled=false; return; }
+    body = {receiverId:_giftTarget.id, type:'coins', amount:amt};
   } else if(_giftTab === 'ring'){
     if(!_selectedRingKey){ msg.textContent='指輪を選択してください'; btn.disabled=false; return; }
     const cnt = (PROFILE.rings&&PROFILE.rings[_selectedRingKey])||0;
@@ -15576,6 +15609,9 @@ async function doSendGift(){
     if(_giftTab==='tbb'){
       PROFILE.tbbCoins = d.tbbCoins ?? ((PROFILE.tbbCoins||0) - body.amount);
       updateGachaTbbDisplay();
+    } else if(_giftTab==='coins'){
+      PROFILE.coins = d.coins ?? Math.max(0,(PROFILE.coins||0) - body.amount);
+      updateProfileBadge();
     } else if(_giftTab==='ring'){
       if(d.rings) PROFILE.rings = d.rings;
       else {
@@ -15626,13 +15662,16 @@ function renderGiftInbox(gifts){
   }
   if(badge){ badge.textContent=gifts.length; badge.style.display=''; }
   el.innerHTML = gifts.map(g=>{
-    const isCoins = g.type==='tbb_coins';
-    const isRing  = g.type==='ring';
-    const isSkin  = g.type==='skin';
+    const isCoins    = g.type==='tbb_coins';
+    const isTenibi   = g.type==='coins';
+    const isRing     = g.type==='ring';
+    const isSkin     = g.type==='skin';
     // 指輪: 画像アイコン / スキン: 動画 / コイン: 絵文字
     let mediaHtml;
     if(isCoins){
       mediaHtml = '<span style="font-size:1.4rem;">🪙</span>';
+    } else if(isTenibi){
+      mediaHtml = '<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:36px;height:36px;object-fit:contain;">';
     } else if(isRing){
       const rd = _RING_CATALOG.find(r=>r.key===g.skin_key);
       mediaHtml = rd
@@ -15646,9 +15685,11 @@ function renderGiftInbox(gifts){
     }
     const itemName = isCoins
       ? `TBBコイン ×${g.amount}`
-      : isRing
-        ? (_RING_CATALOG.find(r=>r.key===g.skin_key)?.name || g.skin_key)
-        : (GIFT_SKIN_CATALOG.find(s=>s.key===g.skin_key)?.name || g.skin_key);
+      : isTenibi
+        ? `手にビコイン ×${g.amount}`
+        : isRing
+          ? (_RING_CATALOG.find(r=>r.key===g.skin_key)?.name || g.skin_key)
+          : (GIFT_SKIN_CATALOG.find(s=>s.key===g.skin_key)?.name || g.skin_key);
     return `<div class="gift-inbox-item" id="giftInboxItem_${g.id}">
       <div class="gift-inbox-icon" style="display:flex;align-items:center;">${mediaHtml}</div>
       <div class="gift-inbox-info">
@@ -15670,6 +15711,9 @@ async function claimGift(giftId, btn){
     if(d.type==='tbb_coins'){
       PROFILE.tbbCoins = d.tbbCoins ?? ((PROFILE.tbbCoins||0)+d.amount);
       updateGachaTbbDisplay();
+    } else if(d.type==='coins'){
+      PROFILE.coins = d.coins ?? ((PROFILE.coins||0)+d.amount);
+      updateProfileBadge();
     } else if(d.type==='skin'){
       if(d.handSkins) PROFILE.handSkins = d.handSkins;
       else { PROFILE.handSkins=PROFILE.handSkins||{}; PROFILE.handSkins[d.skinKey]=(PROFILE.handSkins[d.skinKey]||0)+1; }

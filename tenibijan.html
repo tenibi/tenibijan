@@ -370,6 +370,10 @@ body{
   display:none;position:fixed;inset:0;z-index:10;
   flex-direction:column;align-items:center;justify-content:center;
   padding:0;gap:0;overflow:hidden;
+  background-image:url('https://raw.githubusercontent.com/tenibi/tenibijan/main/taisenhaikei.webp');
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
 }
 #gameScreen.active{display:flex;}
 
@@ -505,6 +509,13 @@ body{
   box-shadow:0 1px 3px #00000066;
 }
 .wind-orb.dealer-orb{background:radial-gradient(circle at 35% 35%,#ff9966,#882211);}
+@keyframes iconTurnGlow{
+  0%,100%{ box-shadow:0 0 0 2px rgba(100,210,255,0.15), 0 0 10px 3px rgba(100,210,255,0.10); }
+  50%{     box-shadow:0 0 0 3px rgba(100,210,255,0.55), 0 0 18px 7px rgba(100,210,255,0.30); }
+}
+.wind-orb.icon-turn-glow{
+  animation:iconTurnGlow 1.6s ease-in-out infinite;
+}
 .p-name{font-size:.68rem;font-weight:700;color:var(--gold);white-space:nowrap;}
 .p-score{font-size:.6rem;color:#6a8a7a;margin-left:auto;white-space:nowrap;}
 .p-badges{display:flex;gap:3px;align-items:center;}
@@ -12653,6 +12664,12 @@ function renderTable(){
     nameEl2.textContent=(p.name||'').slice(0,10);
     leftPanel.appendChild(windOrb2);
     leftPanel.appendChild(nameEl2);
+    // ★ ターンプレイヤーのアイコンをグロー
+    {
+      const _isTurnPlayer = G && G.current === pidx &&
+        (G.phase === 'draw' || G.phase === 'draw_wait' || G.phase === 'discard');
+      windOrb2.classList.toggle('icon-turn-glow', !!_isTurnPlayer);
+    }
     // ★ 相手アイコンをクリックでフレンドモーダル（オンライン・人間・自分以外）
     if(NET.online && !isHuman && !p.isCpu){
       windOrb2.style.cursor = 'pointer';

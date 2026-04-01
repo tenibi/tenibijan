@@ -1748,15 +1748,6 @@ body{
             <div><div style="font-size:.58rem;font-weight:700;color:#ffd700;">ピンズー教</div><div style="font-size:.48rem;color:#8a7040;">情報系</div></div>
           </div>
         </div>
-        <!-- 手スキン -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F489; 手スキン（約33%）</div>
-        <div style="display:flex;align-items:center;gap:8px;background:#0a0800;border:1px solid #6a5010;border-radius:8px;padding:6px 10px;margin-bottom:10px;">
-          <span style="font-size:1.2rem;">&#x1F90D;</span>
-          <div>
-            <div style="font-size:.6rem;font-weight:700;color:#ffd700;">白猫の手</div>
-            <div style="font-size:.48rem;color:#8a7040;">白猫の手で牌を切る</div>
-          </div>
-        </div>
         <!-- あがり動画 -->
         <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F3AC; あがり動画（約33%・3種）</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -1771,6 +1762,15 @@ body{
           <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
             <span style="font-size:.85rem;">&#x1F4A5;</span>
             <div><div style="font-size:.58rem;font-weight:700;color:#ffd700;">あがり！04</div><div style="font-size:.48rem;color:#8a7040;">上がり演出</div></div>
+          </div>
+        </div>
+        <!-- 手スキン -->
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F489; 手スキン（約33%）</div>
+        <div style="display:flex;align-items:center;gap:8px;background:#0a0800;border:1px solid #6a5010;border-radius:8px;padding:6px 10px;margin-bottom:10px;">
+          <span style="font-size:1.2rem;">&#x1F90D;</span>
+          <div>
+            <div style="font-size:.6rem;font-weight:700;color:#ffd700;">白猫の手</div>
+            <div style="font-size:.48rem;color:#8a7040;">白猫の手で牌を切る</div>
           </div>
         </div>
         <!-- レジェンドアイコン -->
@@ -6789,7 +6789,7 @@ function applyHostState(msg){
     G.phase=s.phase;G.firstRound=s.firstRound;G.log=s.log;
     G.savedScores=s.savedScores;G._dealerWon=s._dealerWon;
     G.pendingRiichi=s.pendingRiichi;G.riichiValidIdx=s.riichiValidIdx;
-    G.mineSlots=s.mineSlots??[];G.mineRinshanIdxs=s.mineRinshanIdxs??[];G.mineOwners=s.mineOwners??{};G.mineRinshanOwners=s.mineRinshanOwners??{};G.mineCount=s.mineCount??0;G.minePlantPlayers=s.minePlantPlayers??[];G.yamiSelectMode=s.yamiSelectMode??false;G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
+    G.mineSlots=s.mineSlots??[];G.mineRinshanIdxs=s.mineRinshanIdxs??[];G.mineOwners=s.mineOwners??{};G.mineRinshanOwners=s.mineRinshanOwners??{};G.mineCount=s.mineCount??0;G.mineStock=s.mineStock??{};G.minePlantPlayers=s.minePlantPlayers??[];G.yamiSelectMode=s.yamiSelectMode??false;G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
     G.players=s.players;
     numPlayers=s.numPlayers;
     pendingAction=s.pendingAction;
@@ -6879,7 +6879,7 @@ function _buildStateSnapshot(extra={}){
     phase:G.phase,firstRound:G.firstRound,log:G.log,
     savedScores:G.savedScores,_dealerWon:G._dealerWon,
     pendingRiichi:G.pendingRiichi,riichiValidIdx:G.riichiValidIdx,
-    mineSlots:G.mineSlots,mineRinshanIdxs:G.mineRinshanIdxs,mineOwners:G.mineOwners??{},mineRinshanOwners:G.mineRinshanOwners??{},mineCount:G.mineCount,minePlantPlayers:G.minePlantPlayers??[],yamiSelectMode:G.yamiSelectMode,hakuSelectPlayers:G.hakuSelectPlayers??[],stealMode:G.stealMode,lightMode:G.lightMode,lightUserIdx:G.lightUserIdx??null,yamiChallenge:G.yamiChallenge??null,lightRevealedSlots:G.lightRevealedSlots,lightRevealedHand:G.lightRevealedHand,lightExtraDora:G.lightExtraDora??[],penDrawings:G.penDrawings??{},
+    mineSlots:G.mineSlots,mineRinshanIdxs:G.mineRinshanIdxs,mineOwners:G.mineOwners??{},mineRinshanOwners:G.mineRinshanOwners??{},mineCount:G.mineCount,mineStock:G.mineStock??{},minePlantPlayers:G.minePlantPlayers??[],yamiSelectMode:G.yamiSelectMode,hakuSelectPlayers:G.hakuSelectPlayers??[],stealMode:G.stealMode,lightMode:G.lightMode,lightUserIdx:G.lightUserIdx??null,yamiChallenge:G.yamiChallenge??null,lightRevealedSlots:G.lightRevealedSlots,lightRevealedHand:G.lightRevealedHand,lightExtraDora:G.lightExtraDora??[],penDrawings:G.penDrawings??{},
     players:G.players,numPlayers,pendingAction,
     guestPeerIds:NET.guestPeerIds,
     tobiMode:G_TOBI_MODE,
@@ -7104,7 +7104,7 @@ function startOnlineGame(){
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable();
   updateEmoteAreaVisibility();
-  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,penDrawings:{},yamiChallenge:null,
+  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:numPlayers===1?0:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,_sessionYakuman:[]};
@@ -7361,7 +7361,7 @@ function initGame(){
   document.getElementById('lobby').style.display='none';
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable();
-  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,penDrawings:{},yamiChallenge:null,
+  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:numPlayers===1?1:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,
@@ -7569,6 +7569,16 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   G.mineCount=0;
   G.minePlantPlayers=[];
   G._mineHit=null;
+  // 💣 地雷ストック: 局ごとに+2（初回は0から+2）
+  if(!G.mineStock) G.mineStock={};
+  if(G_ABILITY_MODE){
+    G.players.forEach((p,i)=>{
+      if(p.ability==='mine'){
+        G.mineStock[i]=(G.mineStock[i]||0)+2;
+        if(i===NET.myIdx) addLog(`💣 地雷ストック: ${G.mineStock[i]}個（+2）`,'log-dora');
+      }
+    });
+  }
 
   // ── 1人モード: 爆弾をランダム配置（ステージごとに+1）──────────────
   if(numPlayers===1){
@@ -10811,7 +10821,7 @@ function startTenbiBattle(){
   bgmToGame();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,
      kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},
-     stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,
+     stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},
      penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*2),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
@@ -11443,8 +11453,9 @@ function renderCornerAbilityBtns(){
   };
 
   // ── 地雷 💣 ─────────────────────────────────────────────
-  if(ab==='mine'&&myMineCount(myIdx)<3&&G.deck.length>0&&!(G.minePlantPlayers&&G.minePlantPlayers.includes(myIdx))){
-    add('💣 地雷','#ff8866','#884422',()=>{ if(!G.minePlantPlayers) G.minePlantPlayers=[]; if(!G.minePlantPlayers.includes(NET.myIdx)) G.minePlantPlayers.push(NET.myIdx); renderAll(); },'地雷を仕掛ける');
+  const _mineStock = (G.mineStock&&G.mineStock[myIdx])||0;
+  if(ab==='mine'&&_mineStock>0&&G.deck.length>0&&!(G.minePlantPlayers&&G.minePlantPlayers.includes(myIdx))){
+    add(`💣 地雷(残${_mineStock}個)`,'#ff8866','#884422',()=>{ if(!G.minePlantPlayers) G.minePlantPlayers=[]; if(!G.minePlantPlayers.includes(NET.myIdx)) G.minePlantPlayers.push(NET.myIdx); renderAll(); },'地雷を仕掛ける');
   }
 
   // ── 光 ☀️ ───────────────────────────────────────────────
@@ -12135,7 +12146,6 @@ function _initWallCanvasEvents(wc){
   let _strokeSlots=new Set();
   // ── ペン用 offscreen canvas（透明背景にストロークのみ）
   // wc と同サイズ。ストロークはここに描いて、renderWall時に multiply 合成する
-  let _penOC=null; // offscreen canvas
   let _penCommitted=null; // 確定済みストロークバッファ（epUp と同じパターン）
   function _ensureWallCommitted(){
     if(!_penCommitted||_penCommitted.width!==wc.width||_penCommitted.height!==wc.height){
@@ -12146,12 +12156,13 @@ function _initWallCanvasEvents(wc){
       if(prev) _penCommitted.getContext('2d').drawImage(prev,0,0);
     }
   }
+  let _penOC=null; // offscreen canvas
   function _getPenOC(){
     if(!_penOC||_penOC.width!==wc.width||_penOC.height!==wc.height){
       _penOC=document.createElement('canvas');
-      _penOC.width=wc.width; _penOC.height=wc.height;
       // 確定済み内容を引き継ぐ
       if(_penCommitted) _penOC.getContext('2d').drawImage(_penCommitted,0,0);
+      _penOC.width=wc.width; _penOC.height=wc.height;
     }
     window._activePenOC=_penOC;
     return _penOC;
@@ -12197,14 +12208,13 @@ function _initWallCanvasEvents(wc){
     if(!_penModeOn||!_wallPenActive) return;
     e.preventDefault();
     _wallPenActive=false;
+    _saveWallPenDrawingsFromOC(_penOC, _strokeSlots);
 
     // 確定バッファに今のストロークを合成してから保存（epUp と同じパターン）
     _ensureWallCommitted();
     if(_penOC){
       _penCommitted.getContext('2d').drawImage(_penOC,0,0);
     }
-
-    _saveWallPenDrawingsFromOC(_penOC, _strokeSlots);
 
     // ★ _activePenOC を確定バッファに差し替えて null にしない
     //   → 画像キャッシュ読み込み完了前も確定済み描画が表示され続ける

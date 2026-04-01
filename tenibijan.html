@@ -8821,6 +8821,11 @@ function toggleAutoDiscard(){
 function humanPickWall(slotIdx){
   if(G.phase!=='draw_wait'||G.current!==NET.myIdx)return;
   if(G.lightMode)return; // 光モード中はツモ不可
+  // ペン能力 + 聴牌中は山牌選択ツモ不可（通常ツモのみ）
+  if(G_ABILITY_MODE && PROFILE.ability==='pen'){
+    const _myP = G.players[NET.myIdx];
+    if(_myP && _myP.tenpai) return;
+  }
   // 🚩 旗が立っているスロットは引けない
   if(G._soloFlags && G._soloFlags.has(slotIdx)) return;
   SFX.draw();
@@ -9165,38 +9170,35 @@ function handleWin(widx,winTile,isTsumo,losidx){
   if(checkTobi()) return; // 飛び発生 → 即終了（winModalは出さない）
   const _yakuVideoUrls=numPlayers===1?[]:getYakumanVideoUrls(yakus);
   const _wmd={winnerId:w.id,hand:displayHand,winTile,isTsumo,losidx,yakus,score,han,yakuVideo:_yakuVideoUrls.length?_yakuVideoUrls:null};
+  // 上がり時: renderAll()でDOMが再構築される前に上がり牌の座標を取得
+  _captureRonTilePos(losidx, isTsumo);
   renderAll();
   broadcastState({winModal:_wmd});
-  // renderTable内でrAFを使って_positionDiscards()が実行されるため、
-  // _captureRonTilePos()もrAFの後に呼び、正確なロン牌座標を取得する
-  requestAnimationFrame(()=>{
-    _captureRonTilePos(losidx, isTsumo);
-    if(_yakuVideoUrls.length){
-      // 役満動画の前にロン/ツモのアイコンボイスを再生してから動画へ
-      const _capturedToken = _yakumanVideoToken;
-      const _playVidWithVoice = () => {
-        if(_capturedToken !== _yakumanVideoToken) return;
-        playYakumanVideo(_yakuVideoUrls, ()=>{ showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han); });
-      };
-      const _voiceAction = isTsumo ? 'tsumo' : 'ron';
-      const _iconId = _getPlayerIconId(widx);
-      const _voiceUrl = (ICON_SE_MAP[_iconId]||{})[_voiceAction];
-      if(_voiceUrl){
-        const _va = _iconSeCache[_voiceUrl] || (()=>{ const a=new Audio(_voiceUrl); a.preload='auto'; _iconSeCache[_voiceUrl]=a; return a; })();
-        _va.onended = null; _va.onerror = null;
-        _va.currentTime = 0;
-        const _vs = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
-        _va.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction) : 1) * _vs);
-        _va.onended = _playVidWithVoice;
-        _va.onerror = _playVidWithVoice;
-        _va.play().catch(_playVidWithVoice);
-      } else {
-        _playVidWithVoice();
-      }
+  if(_yakuVideoUrls.length){
+    // 役満動画の前にロン/ツモのアイコンボイスを再生してから動画へ
+    const _capturedToken = _yakumanVideoToken;
+    const _playVidWithVoice = () => {
+      if(_capturedToken !== _yakumanVideoToken) return;
+      playYakumanVideo(_yakuVideoUrls, ()=>{ showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han); });
+    };
+    const _voiceAction = isTsumo ? 'tsumo' : 'ron';
+    const _iconId = _getPlayerIconId(widx);
+    const _voiceUrl = (ICON_SE_MAP[_iconId]||{})[_voiceAction];
+    if(_voiceUrl){
+      const _va = _iconSeCache[_voiceUrl] || (()=>{ const a=new Audio(_voiceUrl); a.preload='auto'; _iconSeCache[_voiceUrl]=a; return a; })();
+      _va.onended = null; _va.onerror = null; // 前回のコールバックをクリア
+      _va.currentTime = 0;
+      const _vs = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
+      _va.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction) : 1) * _vs);
+      _va.onended = _playVidWithVoice;
+      _va.onerror = _playVidWithVoice;
+      _va.play().catch(_playVidWithVoice);
     } else {
-      showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han);
+      _playVidWithVoice();
     }
-  });
+  } else {
+    showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han);
+  }
 }
 
 function handleRon(widx,tile,fromidx){
@@ -11800,7 +11802,8 @@ const _doraImgCache={};
   const ctx=wc.getContext('2d');
   ctx.clearRect(0,0,cw,ch);
 
-  const canPick  = G.phase==='draw_wait' && G.current===NET.myIdx;
+  const _isPenTenpai = G_ABILITY_MODE && PROFILE.ability==='pen' && !!(G.players[NET.myIdx]?.tenpai);
+  const canPick  = G.phase==='draw_wait' && G.current===NET.myIdx && !_isPenTenpai;
   const plantMode= !!(G.minePlantPlayers&&G.minePlantPlayers.includes(NET.myIdx));
   const lightPickMode = G.lightMode==='pick';
   const amMineOwner= G_ABILITY_MODE && PROFILE.ability==='mine';

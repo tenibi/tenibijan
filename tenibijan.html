@@ -9166,12 +9166,13 @@ function handleWin(widx,winTile,isTsumo,losidx){
   const _yakuVideoUrls=numPlayers===1?[]:getYakumanVideoUrls(yakus);
   const _wmd={winnerId:w.id,hand:displayHand,winTile,isTsumo,losidx,yakus,score,han,yakuVideo:_yakuVideoUrls.length?_yakuVideoUrls:null};
   renderAll();
-  // 上がり時: renderAll()でDOM再構築後に上がり牌の座標を取得
-  _captureRonTilePos(losidx, isTsumo);
   broadcastState({winModal:_wmd});
-  if(_yakuVideoUrls.length){
-    // agari動画を先に再生 → ロン/ツモのアイコンボイス → 役満動画 → winModal
-    _playRonAgariEffect(()=>{
+  // renderTable内でrAFを使って_positionDiscards()が実行されるため、
+  // _captureRonTilePos()もrAFの後に呼び、正確なロン牌座標を取得する
+  requestAnimationFrame(()=>{
+    _captureRonTilePos(losidx, isTsumo);
+    if(_yakuVideoUrls.length){
+      // 役満動画の前にロン/ツモのアイコンボイスを再生してから動画へ
       const _capturedToken = _yakumanVideoToken;
       const _playVidWithVoice = () => {
         if(_capturedToken !== _yakumanVideoToken) return;
@@ -9182,7 +9183,7 @@ function handleWin(widx,winTile,isTsumo,losidx){
       const _voiceUrl = (ICON_SE_MAP[_iconId]||{})[_voiceAction];
       if(_voiceUrl){
         const _va = _iconSeCache[_voiceUrl] || (()=>{ const a=new Audio(_voiceUrl); a.preload='auto'; _iconSeCache[_voiceUrl]=a; return a; })();
-        _va.onended = null; _va.onerror = null; // 前回のコールバックをクリア
+        _va.onended = null; _va.onerror = null;
         _va.currentTime = 0;
         const _vs = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
         _va.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction) : 1) * _vs);
@@ -9192,10 +9193,10 @@ function handleWin(widx,winTile,isTsumo,losidx){
       } else {
         _playVidWithVoice();
       }
-    });
-  } else {
-    showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han);
-  }
+    } else {
+      showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han);
+    }
+  });
 }
 
 function handleRon(widx,tile,fromidx){
@@ -11142,30 +11143,27 @@ function showWinModalData(d){
   }
   const w=G.players.find(p=>p.id===d.winnerId)||G.players[0];
   if(d.yakuVideo){
-    // agari動画を先に再生 → ロン/ツモのアイコンボイス → 役満動画 → winModal
-    _playRonAgariEffect(()=>{
-      const _capturedToken2 = _yakumanVideoToken;
-      const _playVidWithVoice2 = () => {
-        if(_capturedToken2 !== _yakumanVideoToken) return;
-        playYakumanVideo(d.yakuVideo, ()=>{ showWinModal(w,d.hand,d.winTile,d.isTsumo,d.losidx,d.yakus,d.score,d.han); });
-      };
-      const _voiceAction2 = d.isTsumo ? 'tsumo' : 'ron';
-      const _winnerpidx = G.players.indexOf(w);
-      const _iconId2 = _winnerpidx >= 0 ? _getPlayerIconId(_winnerpidx) : '';
-      const _voiceUrl2 = (ICON_SE_MAP[_iconId2]||{})[_voiceAction2];
-      if(_voiceUrl2){
-        const _va2 = _iconSeCache[_voiceUrl2] || (()=>{ const a=new Audio(_voiceUrl2); a.preload='auto'; _iconSeCache[_voiceUrl2]=a; return a; })();
-        _va2.onended = null; _va2.onerror = null; // 前回のコールバックをクリア
-        _va2.currentTime = 0;
-        const _vs2 = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
-        _va2.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction2) : 1) * _vs2);
-        _va2.onended = _playVidWithVoice2;
-        _va2.onerror = _playVidWithVoice2;
-        _va2.play().catch(_playVidWithVoice2);
-      } else {
-        _playVidWithVoice2();
-      }
-    });
+    const _capturedToken2 = _yakumanVideoToken;
+    const _playVidWithVoice2 = () => {
+      if(_capturedToken2 !== _yakumanVideoToken) return;
+      playYakumanVideo(d.yakuVideo, ()=>{ showWinModal(w,d.hand,d.winTile,d.isTsumo,d.losidx,d.yakus,d.score,d.han); });
+    };
+    const _voiceAction2 = d.isTsumo ? 'tsumo' : 'ron';
+    const _winnerpidx = G.players.indexOf(w);
+    const _iconId2 = _winnerpidx >= 0 ? _getPlayerIconId(_winnerpidx) : '';
+    const _voiceUrl2 = (ICON_SE_MAP[_iconId2]||{})[_voiceAction2];
+    if(_voiceUrl2){
+      const _va2 = _iconSeCache[_voiceUrl2] || (()=>{ const a=new Audio(_voiceUrl2); a.preload='auto'; _iconSeCache[_voiceUrl2]=a; return a; })();
+      _va2.onended = null; _va2.onerror = null; // 前回のコールバックをクリア
+      _va2.currentTime = 0;
+      const _vs2 = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
+      _va2.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction2) : 1) * _vs2);
+      _va2.onended = _playVidWithVoice2;
+      _va2.onerror = _playVidWithVoice2;
+      _va2.play().catch(_playVidWithVoice2);
+    } else {
+      _playVidWithVoice2();
+    }
     return;
   }
   showWinModal(w,d.hand,d.winTile,d.isTsumo,d.losidx,d.yakus,d.score,d.han);

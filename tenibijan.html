@@ -7755,7 +7755,7 @@ function _startDiscardAnimLock(pidx){
   if(!ov){
     ov = document.createElement('div');
     ov.id = '_discardAnimOverlay';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:150;pointer-events:all;background:transparent;';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:150;pointer-events:all;background:transparent;cursor:default;';
     // オーバーレイ上のイベントを処理:
     // ・tableCornerLeft/Right・wallCanvas 内の要素へのクリックはそのまま通過させる
     // ・手牌タイルへのポインターはドラッグ開始に転送する
@@ -7816,6 +7816,8 @@ function _startDiscardAnimLock(pidx){
       tileEl._dragMoved = false;
       tileEl.style.opacity = '0.35';
     }
+    // pointerdown前にpointer-eventsが'none'のまま残っていた場合のリセット保険
+    ov.addEventListener('pointermove', ()=>{ if(ov.style.pointerEvents==='none') ov.style.pointerEvents='all'; });
     ov.addEventListener('pointerdown', e=>{
       if(e.pointerType==='touch') return;
       // cornerLeft/Right・wallCanvas は通過
@@ -8533,7 +8535,7 @@ function autoPickWall(){
     if(safe.length>0) available=safe;
   }
   const slotIdx=available[Math.floor(Math.random()*available.length)];
-  humanPickWall(slotIdx);
+  humanPickWall(slotIdx, true);
 }
 function humanHakuSelectOpponent(pidx, tidx){
   if(!G.hakuSelectPlayers||!G.hakuSelectPlayers.includes(NET.myIdx)) return;
@@ -8926,11 +8928,11 @@ function toggleAutoDiscard(){
   }
 }
 
-function humanPickWall(slotIdx){
+function humanPickWall(slotIdx, _fromAuto=false){
   if(G.phase!=='draw_wait'||G.current!==NET.myIdx)return;
   if(G.lightMode)return; // 光モード中はツモ不可
-  // ペン能力 + 聴牌中は山牌選択ツモ不可
-  if(G_ABILITY_MODE && PROFILE.ability==='pen'){
+  // ペン能力 + 聴牌中は手動の山牌選択ツモ不可（自動ランダムツモはOK）
+  if(!_fromAuto && G_ABILITY_MODE && PROFILE.ability==='pen'){
     const _myP = G.players[NET.myIdx];
     if(_myP && _myP.tenpai) return;
   }

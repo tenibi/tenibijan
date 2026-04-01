@@ -5617,6 +5617,8 @@ function resumeGame(){
       G.phase = 'draw_wait';
       timerOnMyTurn();
       if(autoDrawEnabled){ broadcastState(); setTimeout(autoPickWall, 200); return; }
+      // ペン能力＋聴牌中: 自動でランダム1枚ツモ
+      if(G_ABILITY_MODE && PROFILE.ability==='pen' && G.players[NET.myIdx]?.tenpai){ broadcastState(); setTimeout(autoPickWall, 200); return; }
       addLog('山牌を選んでクリックしてください','log-new');
     } else if(G.phase === 'discard'){
       timerOnMyTurn();
@@ -6248,6 +6250,8 @@ function resumeGameAfterHostLost(disconnectedPidx){
       G.phase = 'draw_wait';
       timerOnMyTurn();
       if(autoDrawEnabled){ renderAll(); broadcastState(); setTimeout(autoPickWall, 200); return; }
+      // ペン能力＋聴牌中: 自動でランダム1枚ツモ
+      if(G_ABILITY_MODE && PROFILE.ability==='pen' && G.players[NET.myIdx]?.tenpai){ renderAll(); broadcastState(); setTimeout(autoPickWall, 200); return; }
       addLog('山牌を選んでクリックしてください', 'log-new');
     }
     renderAll();
@@ -7752,12 +7756,23 @@ function _startDiscardAnimLock(pidx){
     ov = document.createElement('div');
     ov.id = '_discardAnimOverlay';
     ov.style.cssText = 'position:fixed;inset:0;z-index:150;pointer-events:all;background:transparent;';
-    // tableCornerRight（ペンボタン含む）はオーバーレイより上に出す
-    const _crPen = document.getElementById('tableCornerRight');
-    if(_crPen) _crPen.style.zIndex = '160';
-    const _clPen = document.getElementById('tableCornerLeft');
-    if(_clPen) _clPen.style.zIndex = '160';
-    // オーバーレイ上のpointerdown/touchstartを手牌タイルに転送してドラッグ開始を許可
+    // オーバーレイ上のイベントを処理:
+    // ・tableCornerLeft/Right・wallCanvas 内の要素へのクリックはそのまま通過させる
+    // ・手牌タイルへのポインターはドラッグ開始に転送する
+    function _ovDispatchThrough(clientX, clientY, originalEvent){
+      ov.style.pointerEvents = 'none';
+      const el = document.elementFromPoint(clientX, clientY);
+      ov.style.pointerEvents = 'all';
+      if(!el) return false;
+      // tableCornerLeft/Right・wallCanvas内は通過してクリック転送
+      const inCorner = el.closest('#tableCornerLeft, #tableCornerRight, #wallCanvas, #wallExpandOverlay, #emotePanel');
+      if(inCorner){
+        el.dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true, clientX, clientY}));
+        if(originalEvent) originalEvent.stopPropagation();
+        return true;
+      }
+      return false;
+    }
     function _ovStartDragAt(clientX, clientY, pointerId, touchId){
       if(_dragState) return;
       // 一時的に overlay を透過してヒットテスト
@@ -7765,6 +7780,8 @@ function _startDiscardAnimLock(pidx){
       const el = document.elementFromPoint(clientX, clientY);
       ov.style.pointerEvents = 'all';
       if(!el) return;
+      // cornerLeft/Right・wallCanvas は通過（クリックはclick/touchendで処理）
+      if(el.closest('#tableCornerLeft, #tableCornerRight, #wallCanvas, #wallExpandOverlay, #emotePanel')) return;
       const tileEl = el.closest('.seat-bottom .tile[data-idx]');
       if(!tileEl) return;
       const idx = parseInt(tileEl.dataset.idx);
@@ -7801,13 +7818,37 @@ function _startDiscardAnimLock(pidx){
     }
     ov.addEventListener('pointerdown', e=>{
       if(e.pointerType==='touch') return;
+      // cornerLeft/Right・wallCanvas は通過
+      ov.style.pointerEvents = 'none';
+      const _elCheck = document.elementFromPoint(e.clientX, e.clientY);
+      ov.style.pointerEvents = 'all';
+      if(_elCheck && _elCheck.closest('#tableCornerLeft, #tableCornerRight, #wallCanvas, #wallExpandOverlay, #emotePanel')){
+        // cornerLeft/Right・wallCanvas は完全通過: pointerEventsをnoneにしてイベントを下層に届ける
+        // pointerup/touchend/mouseleave でallに戻す
+        ov.style.pointerEvents = 'none';
+        const _restoreOv = ()=>{ ov.style.pointerEvents = 'all'; };
+        ov.addEventListener('pointerup',   _restoreOv, {once:true});
+        ov.addEventListener('mouseleave',  _restoreOv, {once:true});
+        return;
+      }
       e.preventDefault();
       _ovStartDragAt(e.clientX, e.clientY, e.pointerId, undefined);
     }, {passive:false});
     ov.addEventListener('touchstart', e=>{
       if(!e.changedTouches.length) return;
-      e.preventDefault();
       const t = e.changedTouches[0];
+      // cornerLeft/Right・wallCanvas は通過
+      ov.style.pointerEvents = 'none';
+      const _elCheck = document.elementFromPoint(t.clientX, t.clientY);
+      ov.style.pointerEvents = 'all';
+      if(_elCheck && _elCheck.closest('#tableCornerLeft, #tableCornerRight, #wallCanvas, #wallExpandOverlay, #emotePanel')){
+        ov.style.pointerEvents = 'none';
+        const _restoreOvT = ()=>{ ov.style.pointerEvents = 'all'; };
+        ov.addEventListener('touchend',    _restoreOvT, {once:true});
+        ov.addEventListener('touchcancel', _restoreOvT, {once:true});
+        return;
+      }
+      e.preventDefault();
       _ovStartDragAt(t.clientX, t.clientY, undefined, t.identifier);
     }, {passive:false});
     document.body.appendChild(ov);
@@ -7817,10 +7858,7 @@ function _startDiscardAnimLock(pidx){
     _discardAnimActivePidx = null;
     const el = document.getElementById('_discardAnimOverlay');
     if(el) el.remove();
-    const _crR = document.getElementById('tableCornerRight');
-    if(_crR) _crR.style.zIndex = '';
-    const _crL = document.getElementById('tableCornerLeft');
-    if(_crL) _crL.style.zIndex = '';
+    // (cornerLeft/Right の zIndex はオーバーレイ通過で対応済みのため変更不要)
     _discardAnimLockTimer = null;
   }, 700);
 }
@@ -8069,6 +8107,12 @@ function nextTurn(pidx){
   setTimeout(()=>{ _updateBombAutoPickBtn(); _updateBombFlagBtn(); _updateBombQueryBtn(); if(_bombAutoPickOn) _bombTryAutoPick(); }, 200); // 💣 BOMBモードボタン更新
   timerOnMyTurn(); // 制限時間モード: タイマー起動（autoDrawON時も）
   if(autoDrawEnabled){
+    renderAll();broadcastState();
+    setTimeout(autoPickWall,200);
+    return;
+  }
+  // ペン能力＋聴牌中: 自動でランダム1枚ツモ
+  if(G_ABILITY_MODE && PROFILE.ability==='pen' && G.players[NET.myIdx]?.tenpai){
     renderAll();broadcastState();
     setTimeout(autoPickWall,200);
     return;

@@ -1597,10 +1597,10 @@ body{
   }
   #emoteBtn:hover{border-color:#4a8a6a;color:#aaffcc;}
   #emotePanel{
-    display:none;position:absolute;bottom:calc(100% + 4px);left:0;
+    display:none;position:fixed;bottom:auto;left:auto;
     background:#040d14;border:1px solid #1a3a2a;border-radius:10px;
-    padding:6px;gap:6px;z-index:60;
-    display:none;flex-wrap:wrap;width:100px;
+    padding:6px;gap:6px;z-index:9999;
+    flex-wrap:wrap;width:100px;
   }
   .emote-pick-btn{
     width:42px;height:42px;border-radius:7px;
@@ -3047,9 +3047,9 @@ body{
       <!-- エモートボタン（オンライン時のみ表示） -->
       <div id="emoteArea" style="display:none;position:relative;">
         <button id="emoteBtn" onclick="toggleEmotePanel()">😊 エモート</button>
-        <div id="emotePanel" style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;
+        <div id="emotePanel" style="display:none;position:fixed;
           background:#040d14;border:1px solid #1a3a2a;border-radius:10px;
-          padding:6px;gap:6px;z-index:60;flex-wrap:wrap;width:208px;">
+          padding:6px;gap:6px;z-index:9999;flex-wrap:wrap;width:100px;">
         </div>
       </div>
       <button id="bombAutoPickBtn" onclick="toggleBombAutoPick()" style="
@@ -12178,7 +12178,11 @@ function _initWallCanvasEvents(wc){
     }
     else if(_bombQueryMode && numPlayers===1 && G){ _bombQueryToggleSlot(si); }
     else if(_bombFlagMode && numPlayers===1 && G){ _bombFlagToggleSlot(si); }
-    else if(G.phase==='draw_wait'&&G.current===NET.myIdx){ humanPickWall(si); }
+    else if(G.phase==='draw_wait'&&G.current===NET.myIdx){
+      // ペン能力＋聴牌中は山牌選択ツモ禁止（お絵かきモードで使うため）
+      const _penTenpaiBlock = G_ABILITY_MODE && PROFILE.ability==='pen' && !!(G.players[NET.myIdx]?.tenpai);
+      if(!_penTenpaiBlock) humanPickWall(si);
+    }
   };
 
   let _lastTouchHandled = false;
@@ -14210,7 +14214,7 @@ function _renderAgariBookGrid(){
     const owned = isDefault || count > 0;
     const equipped = (PROFILE.agariVideo || 'agari01') === ag.key;
     const countLabel = isDefault ? 'デフォルト' : (owned ? '×'+count+' 所持' : '未入手');
-    return '<div onclick="'+(owned?'_toggleAgariEquip(''+ag.key+'')':'')+'"'
+    return '<div onclick="'+(owned?'_toggleAgariEquip(\''+ag.key+'\')':'')+'"'
       +' style="background:'+(owned?'#040d18':'#020508')+';border:1.5px solid '+(equipped?'#ffd700':owned?'#2a5a8a':'#111a22')+';'
       +'border-radius:10px;padding:10px 6px;text-align:center;cursor:'+(owned?'pointer':'default')+';opacity:'+(owned?1:.45)+';position:relative;overflow:hidden;">'
       +(equipped?'<div style="position:absolute;top:4px;right:5px;font-size:.45rem;color:#ffd700;font-weight:700;">装備中</div>':'')

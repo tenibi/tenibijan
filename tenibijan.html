@@ -7750,117 +7750,9 @@ function _startDiscardAnimLock(pidx){
   _discardAnimLocked = true;
   _discardAnimActivePidx = pidx;
   if(_discardAnimLockTimer) clearTimeout(_discardAnimLockTimer);
-  // 透明オーバーレイでタップ/クリックを全遮断（winOverlay z-index:200 より下に置く）
-  let ov = document.getElementById('_discardAnimOverlay');
-  if(!ov){
-    ov = document.createElement('div');
-    ov.id = '_discardAnimOverlay';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:150;pointer-events:all;background:transparent;cursor:default;';
-    // オーバーレイ上のイベントを処理:
-    // ・tableCornerLeft/Right・wallCanvas 内の要素へのクリックはそのまま通過させる
-    // ・手牌タイルへのポインターはドラッグ開始に転送する
-    function _ovDispatchThrough(clientX, clientY, originalEvent){
-      ov.style.pointerEvents = 'none';
-      const el = document.elementFromPoint(clientX, clientY);
-      ov.style.pointerEvents = 'all';
-      if(!el) return false;
-      // tableCornerLeft/Right・wallCanvas内は通過してクリック転送
-      const inCorner = el.closest('#tableCornerLeft, #tableCornerRight, #wallCanvas, #wallExpandOverlay, #emotePanel');
-      if(inCorner){
-        el.dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true, clientX, clientY}));
-        if(originalEvent) originalEvent.stopPropagation();
-        return true;
-      }
-      return false;
-    }
-    function _ovStartDragAt(clientX, clientY, pointerId, touchId){
-      if(_dragState) return;
-      // 一時的に overlay を透過してヒットテスト
-      ov.style.pointerEvents = 'none';
-      const el = document.elementFromPoint(clientX, clientY);
-      ov.style.pointerEvents = 'all';
-      if(!el) return;
-      // cornerLeft/Right・wallCanvas は通過（クリックはclick/touchendで処理）
-      if(el.closest('#tableCornerLeft, #tableCornerRight, #wallCanvas, #wallExpandOverlay, #emotePanel')) return;
-      const tileEl = el.closest('.seat-bottom .tile[data-idx]');
-      if(!tileEl) return;
-      const idx = parseInt(tileEl.dataset.idx);
-      if(isNaN(idx)) return;
-      const rect = tileEl.getBoundingClientRect();
-      const ghost = tileEl.cloneNode(true);
-      ghost.style.cssText += `;position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;z-index:99999;pointer-events:none;opacity:0.9;transition:none;transform:scale(1.15);box-shadow:0 8px 24px #000a;`;
-      document.body.appendChild(ghost);
-      const handWrap = tileEl.closest('.hand-wrap');
-      const handEls = handWrap ? Array.from(handWrap.querySelectorAll('.tile[data-idx]')) : [];
-      // canDiscard は硬直中なので false（移動のみ）
-      _dragState = {
-        tileEl, idx, startX:clientX, startY:clientY, ghost, rect, handEls,
-        _swapTarget:-1, _insertTarget:-1,
-        canDiscard: false,
-        calcInsertIdx: function(cx, hels, dragEl){
-          const others = hels.filter(e=>e!==dragEl);
-          if(!others.length) return -1;
-          const first = others[0], firstR = first.getBoundingClientRect();
-          if(cx < firstR.left + firstR.width*0.5) return parseInt(first.dataset.idx);
-          for(let j=1;j<others.length;j++){
-            const r=others[j].getBoundingClientRect();
-            if(cx < r.left+r.width*0.5) return parseInt(others[j].dataset.idx);
-          }
-          const last=others[others.length-1], lastR=last.getBoundingClientRect();
-          if(cx >= lastR.left+lastR.width*0.5) return parseInt(last.dataset.idx)+1;
-          return parseInt(last.dataset.idx);
-        }
-      };
-      if(pointerId !== undefined) _dragState.pointerId = pointerId;
-      if(touchId !== undefined) _dragState.touchId = touchId;
-      tileEl._dragMoved = false;
-      tileEl.style.opacity = '0.35';
-    }
-    // pointerdown前にpointer-eventsが'none'のまま残っていた場合のリセット保険
-    ov.addEventListener('pointermove', ()=>{ if(ov.style.pointerEvents==='none') ov.style.pointerEvents='all'; });
-    ov.addEventListener('pointerdown', e=>{
-      if(e.pointerType==='touch') return;
-      // cornerLeft/Right・wallCanvas は通過
-      ov.style.pointerEvents = 'none';
-      const _elCheck = document.elementFromPoint(e.clientX, e.clientY);
-      ov.style.pointerEvents = 'all';
-      if(_elCheck && _elCheck.closest('#tableCornerLeft, #tableCornerRight, #wallCanvas, #wallExpandOverlay, #emotePanel')){
-        // cornerLeft/Right・wallCanvas は完全通過: pointerEventsをnoneにしてイベントを下層に届ける
-        // pointerup/touchend/mouseleave でallに戻す
-        ov.style.pointerEvents = 'none';
-        const _restoreOv = ()=>{ ov.style.pointerEvents = 'all'; };
-        ov.addEventListener('pointerup',   _restoreOv, {once:true});
-        ov.addEventListener('mouseleave',  _restoreOv, {once:true});
-        return;
-      }
-      e.preventDefault();
-      _ovStartDragAt(e.clientX, e.clientY, e.pointerId, undefined);
-    }, {passive:false});
-    ov.addEventListener('touchstart', e=>{
-      if(!e.changedTouches.length) return;
-      const t = e.changedTouches[0];
-      // cornerLeft/Right・wallCanvas は通過
-      ov.style.pointerEvents = 'none';
-      const _elCheck = document.elementFromPoint(t.clientX, t.clientY);
-      ov.style.pointerEvents = 'all';
-      if(_elCheck && _elCheck.closest('#tableCornerLeft, #tableCornerRight, #wallCanvas, #wallExpandOverlay, #emotePanel')){
-        ov.style.pointerEvents = 'none';
-        const _restoreOvT = ()=>{ ov.style.pointerEvents = 'all'; };
-        ov.addEventListener('touchend',    _restoreOvT, {once:true});
-        ov.addEventListener('touchcancel', _restoreOvT, {once:true});
-        return;
-      }
-      e.preventDefault();
-      _ovStartDragAt(t.clientX, t.clientY, undefined, t.identifier);
-    }, {passive:false});
-    document.body.appendChild(ov);
-  }
   _discardAnimLockTimer = setTimeout(()=>{
     _discardAnimLocked = false;
     _discardAnimActivePidx = null;
-    const el = document.getElementById('_discardAnimOverlay');
-    if(el) el.remove();
-    // (cornerLeft/Right の zIndex はオーバーレイ通過で対応済みのため変更不要)
     _discardAnimLockTimer = null;
   }, 700);
 }
@@ -9680,6 +9572,7 @@ function cpuDiscard(){
 // HUMAN ACTIONS
 // ============================================================
 function humanSelect(idx){
+  if(_discardAnimLocked) return; // 捨てアニメ中は操作無効
   if(G.current!==NET.myIdx||G.phase!=='discard')return;
   const p=G.players[NET.myIdx];
   if(p.riichi)return;
@@ -9997,6 +9890,7 @@ document.addEventListener('contextmenu', e=>{
 });
 
 function humanDiscard(){
+  if(_discardAnimLocked) return; // 捨てアニメ中は操作無効
   const myTurn = NET.online ? G.current===NET.myIdx : G.current===0;
   if(!myTurn||G.phase!=='discard')return;
   if(G.yamiSelectMode)return; // 闇選択中は切り不可

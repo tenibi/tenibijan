@@ -6776,10 +6776,8 @@ function applyHostState(msg){
       // 自動発火
       _triggerAutoAction(NET.myIdx, 350);
     }
-    // ロン時: renderAll()でDOMが再構築される前に振り込み牌の座標を取得
-    if(s.winModal && !s.winModal.isTsumo && s.winModal.losidx >= 0){
-      _captureRonTilePos(s.winModal.losidx);
-    }
+    // 上がり時: renderAll()でDOMが再構築される前に上がり牌の座標を取得
+    if(s.winModal) _captureRonTilePos(s.winModal.losidx, s.winModal.isTsumo);
     renderAll();
     if(s.winModal){
       showWinModalData(s.winModal);
@@ -9167,8 +9165,8 @@ function handleWin(widx,winTile,isTsumo,losidx){
   if(checkTobi()) return; // 飛び発生 → 即終了（winModalは出さない）
   const _yakuVideoUrls=numPlayers===1?[]:getYakumanVideoUrls(yakus);
   const _wmd={winnerId:w.id,hand:displayHand,winTile,isTsumo,losidx,yakus,score,han,yakuVideo:_yakuVideoUrls.length?_yakuVideoUrls:null};
-  // ロン時: renderAll()でDOMが再構築される前に振り込み牌の座標を取得
-  if(!isTsumo && losidx >= 0) _captureRonTilePos(losidx);
+  // 上がり時: renderAll()でDOMが再構築される前に上がり牌の座標を取得
+  _captureRonTilePos(losidx, isTsumo);
   renderAll();
   broadcastState({winModal:_wmd});
   if(_yakuVideoUrls.length){
@@ -10278,6 +10276,7 @@ function nextRound(){
   if(existingVidOv) existingVidOv.remove();
   // ロンエフェクト動画を削除
   document.querySelectorAll('.ron-agari-effect').forEach(v=>v.remove());
+  _ronAgariPos = null;
   // キャッシュ済みアイコンボイスAudioのコールバックもクリア（残留コールバック防止）
   Object.values(_iconSeCache||{}).forEach(a=>{ try{ a.onended=null; a.onerror=null; a.pause(); }catch(e){} });
   // 役満動画でミュートされていた場合BGMを復元
@@ -11215,16 +11214,11 @@ function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han,_double
     }
   }
   timerStop();
-  // ロン時: 振り込み牌の上でエフェクト動画を再生してから winOverlay を表示
-  if(!isTsumo && losidx >= 0){
-    _playRonAgariEffect(()=>{
-      document.getElementById('winOverlay').classList.add('show');
-      _startWinTimer();
-    });
-  } else {
+  // 上がり時: エフェクト動画を再生してから winOverlay を表示
+  _playRonAgariEffect(()=>{
     document.getElementById('winOverlay').classList.add('show');
     _startWinTimer();
-  }
+  });
 }
 
 // ============================================================
@@ -13684,24 +13678,38 @@ const _AGARI_VIDEO_URL = 'https://raw.githubusercontent.com/tenibi/tenibijan/mai
 let _ronAgariPos = null; // {cx, cy} in tableWrapper local coords (scale前px)
 let _globalSeatMap = [0,-1,-1,-1]; // renderTable() が更新するグローバルseatMap
 
-// renderAll() 前に呼ぶ: last-discard 牌の座標を取得して保存
-function _captureRonTilePos(losidx){
+// renderAll() 前に呼ぶ: 対象牌の画面座標(fixed)を取得して保存
+// losidx: ロン時=振り込んだプレイヤーidx / ツモ時=-1(自分のdrawnTileを使う)
+function _captureRonTilePos(losidx, isTsumo){
   _ronAgariPos = null;
-  const wrapper = document.getElementById('tableWrapper');
-  if(!wrapper) return;
-  const si = _globalSeatMap ? _globalSeatMap.indexOf(losidx) : -1;
-  if(si < 0) return;
-  const discardAbs = document.querySelector(`.discard-abs[data-discard-side="${si}"]`);
-  if(!discardAbs) return;
-  const lastTile = discardAbs.querySelector('.last-discard');
+  let lastTile = null;
+
+  if(isTsumo){
+    // ツモ: 自分の手牌末尾（drawn tile）を探す
+    const bottomSeat = document.querySelector('.seat-bottom .seat-inner');
+    if(bottomSeat){
+      const handWrap = bottomSeat.querySelector('.hand-wrap');
+      if(handWrap){
+        const tiles = handWrap.querySelectorAll('.tile');
+        if(tiles.length > 0) lastTile = tiles[tiles.length - 1];
+      }
+    }
+  } else {
+    // ロン: 振り込んだプレイヤーの last-discard 牌
+    const si = _globalSeatMap ? _globalSeatMap.indexOf(losidx) : -1;
+    if(si < 0) return;
+    const discardAbs = document.querySelector(`.discard-abs[data-discard-side="${si}"]`);
+    if(!discardAbs) return;
+    lastTile = discardAbs.querySelector('.last-discard');
+  }
+
   if(!lastTile) return;
-  const wRect = wrapper.getBoundingClientRect();
-  if(!wRect.width) return;
-  const scale = wRect.width / 1400;
   const tRect = lastTile.getBoundingClientRect();
+  if(!tRect.width) return;
+  // 画面座標（fixed）を保存する
   _ronAgariPos = {
-    cx: (tRect.left + tRect.width  / 2 - wRect.left) / scale,
-    cy: (tRect.top  + tRect.height / 2 - wRect.top)  / scale,
+    screenCX: tRect.left + tRect.width  / 2,
+    screenCY: tRect.top  + tRect.height / 2,
   };
 }
 
@@ -13709,13 +13717,16 @@ function _captureRonTilePos(losidx){
 function _playRonAgariEffect(callback){
   const done = (()=>{ let called=false; return ()=>{ if(!called){ called=true; callback && callback(); } }; })();
 
-  const wrapper = document.getElementById('tableWrapper');
-  if(!wrapper || !_ronAgariPos){ done(); return; }
+  if(!_ronAgariPos){ done(); return; }
 
-  const {cx, cy} = _ronAgariPos;
+  const {screenCX, screenCY} = _ronAgariPos;
   _ronAgariPos = null;
 
-  const EW = 300, EH = 300;
+  // tableWrapper の scale を取得してエフェクトサイズに反映
+  const wrapper = document.getElementById('tableWrapper');
+  const scale = wrapper ? (wrapper.getBoundingClientRect().width / 1400) : 1;
+  const EW = 300 * scale, EH = 300 * scale;
+
   const vid = document.createElement('video');
   vid.className = 'ron-agari-effect';
   vid.src = _AGARI_VIDEO_URL;
@@ -13723,22 +13734,23 @@ function _playRonAgariEffect(callback){
   vid.autoplay = true;
   vid.playsInline = true;
   vid.loop = false;
+  // position:fixed で画面座標に直接配置
   vid.style.cssText = [
-    'position:absolute',
-    `left:${cx - EW/2}px`,
-    `top:${cy - EH/2}px`,
+    'position:fixed',
+    `left:${screenCX - EW/2}px`,
+    `top:${screenCY - EH/2}px`,
     `width:${EW}px`,
     `height:${EH}px`,
     'object-fit:contain',
     'pointer-events:none',
-    'z-index:50',
+    'z-index:9999',
   ].join(';');
 
   const _fallback = setTimeout(()=>done(), 4000);
   vid.addEventListener('ended', ()=>{ clearTimeout(_fallback); done(); });
   vid.addEventListener('error', ()=>{ clearTimeout(_fallback); done(); });
 
-  wrapper.appendChild(vid);
+  document.body.appendChild(vid);
   const p = vid.play();
   if(p && typeof p.catch === 'function') p.catch(()=>done());
 }

@@ -2448,6 +2448,19 @@ body{
       </div>
     </div>
 
+    <!-- 上がり演出 -->
+    <div style="margin-top:14px;">
+      <h3 style="margin-bottom:6px;">🎬 上がり演出</h3>
+      <div id="agariBookDisplay" onclick="openAgariBook()" style="
+        cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+        border-radius:10px;padding:10px 12px;
+        display:flex;align-items:center;gap:10px;transition:border-color .15s;
+      " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#4466cc'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'" data-equipped="0">
+        <span style="font-size:1.2rem;">🎬</span>
+        <div id="agariBookDisplayText" style="font-size:.68rem;color:#4a6a5a;">あがり！<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で変更</span></div>
+      </div>
+    </div>
+
     <!-- タイトル背景 -->
     <div style="margin-top:14px;">
       <h3 style="margin-bottom:8px;">🖼️ タイトル背景</h3>
@@ -3567,6 +3580,7 @@ function saveSettings(){
       titleBgm:   _titleBgmKey,
       gameBgm:    _gameBgmKey,
       yakumanVideoVol: _yakumanVideoVol,
+      agariVideoVol: _agariVideoVol,
       oneClickDiscard: oneClickDiscard,
       seScale: Object.fromEntries(
         ['draw','discard','ron','tsumo','riichi','pon','kan','kita','yakuman','light','yami','haku','steal','mine','myTurn','countdown','voice']
@@ -3611,6 +3625,11 @@ function loadSettings(){
     if(data.yakumanVideoVol!=null){
       _yakumanVideoVol=+data.yakumanVideoVol;
       const sl=document.getElementById('sliderYakuVid'); if(sl) sl.value=_yakumanVideoVol;
+    }
+    // 上がり動画音量
+    if(data.agariVideoVol!=null){
+      _agariVideoVol=+data.agariVideoVol;
+      const sl=document.getElementById('sliderAgariVid'); if(sl) sl.value=_agariVideoVol;
     }
     // 個別SE音量
     if(data.seScale){
@@ -6679,15 +6698,49 @@ function handleGuestAction(msg, senderIdx){
     case 'penSync':
       if(amIHost() && msg.changedKeys){
         if(!G.penDrawings) G.penDrawings={};
+        const _mergedKeys={};
+        const _pendingMerge=Object.keys(msg.changedKeys).length;
+        let _doneCount=0;
+        const _afterMerge=()=>{
+          _doneCount++;
+          if(_doneCount<_pendingMerge) return;
+          Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+          renderWall(); renderDoraCanvas();
+          netBroadcastAll({type:'penSync', changedKeys: _mergedKeys});
+        };
+        for(const k of Object.keys(msg.changedKeys)){
+          const incoming=msg.changedKeys[k];
+          if(G.penDrawings[k]){
+            const imgEx=new Image(), imgIn=new Image();
+            let exLoaded=false, inLoaded=false;
+            const tryMerge=()=>{
+              if(!exLoaded||!inLoaded) return;
+              const mc=document.createElement('canvas');
+              mc.width=imgEx.naturalWidth||36; mc.height=imgEx.naturalHeight||48;
+              const mctx=mc.getContext('2d');
+              mctx.drawImage(imgEx,0,0);
+              mctx.globalCompositeOperation='source-over';
+              mctx.drawImage(imgIn,0,0,mc.width,mc.height);
+              const merged=mc.toDataURL('image/webp',0.65);
+              G.penDrawings[k]=merged; _mergedKeys[k]=merged; _afterMerge();
+            };
+            imgEx.onload=()=>{exLoaded=true;tryMerge();};
+            imgIn.onload=()=>{inLoaded=true;tryMerge();};
+            imgEx.onerror=()=>{ G.penDrawings[k]=incoming; _mergedKeys[k]=incoming; _afterMerge(); };
+            imgIn.onerror=()=>{ _mergedKeys[k]=G.penDrawings[k]; _afterMerge(); };
+            imgEx.src=G.penDrawings[k]; imgIn.src=incoming;
+          } else {
+            G.penDrawings[k]=incoming; _mergedKeys[k]=incoming; _afterMerge();
+          }
+        }
+        if(_pendingMerge===0){ renderWall(); renderDoraCanvas(); }
+      } else if(!amIHost() && msg.changedKeys){
+        if(!G.penDrawings) G.penDrawings={};
         for(const k of Object.keys(msg.changedKeys)){
           G.penDrawings[k]=msg.changedKeys[k];
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
         renderWall(); renderDoraCanvas();
-        // broadcastState() は呼ばない: state同期すると他プレイヤーの描き込み中のoffscreen canvasが
-        // applyHostState でリセットされ、描画が途中で止まるバグを防ぐ。
-        // 代わりに penSync をそのまま他のゲストへ転送するだけにする。
-        netBroadcastAll({type:'penSync', changedKeys: msg.changedKeys});
       }
       break;
   }
@@ -6776,11 +6829,13 @@ function applyHostState(msg){
       // 自動発火
       _triggerAutoAction(NET.myIdx, 350);
     }
-    // 上がり時: renderAll()でDOMが再構築される前に上がり牌の座標を取得
-    if(s.winModal) _captureRonTilePos(s.winModal.losidx, s.winModal.isTsumo);
     renderAll();
     if(s.winModal){
-      showWinModalData(s.winModal);
+      const _wmWinIdx = G.players.findIndex(p=>p.id===s.winModal.winnerId);
+      requestAnimationFrame(()=>{
+        _captureRonTilePos(s.winModal.losidx, s.winModal.isTsumo, _wmWinIdx);
+        showWinModalData(s.winModal);
+      });
     } else {
       // 勝利モーダルが表示中なら閉じる（ホストが次局へ進めた場合のみ）
       // ただし win/end フェーズの場合はまだリザルト表示中なので閉じない
@@ -7697,6 +7752,11 @@ function _startDiscardAnimLock(pidx){
     ov = document.createElement('div');
     ov.id = '_discardAnimOverlay';
     ov.style.cssText = 'position:fixed;inset:0;z-index:150;pointer-events:all;background:transparent;';
+    // tableCornerRight（ペンボタン含む）はオーバーレイより上に出す
+    const _crPen = document.getElementById('tableCornerRight');
+    if(_crPen) _crPen.style.zIndex = '160';
+    const _clPen = document.getElementById('tableCornerLeft');
+    if(_clPen) _clPen.style.zIndex = '160';
     // オーバーレイ上のpointerdown/touchstartを手牌タイルに転送してドラッグ開始を許可
     function _ovStartDragAt(clientX, clientY, pointerId, touchId){
       if(_dragState) return;
@@ -7757,6 +7817,10 @@ function _startDiscardAnimLock(pidx){
     _discardAnimActivePidx = null;
     const el = document.getElementById('_discardAnimOverlay');
     if(el) el.remove();
+    const _crR = document.getElementById('tableCornerRight');
+    if(_crR) _crR.style.zIndex = '';
+    const _crL = document.getElementById('tableCornerLeft');
+    if(_crL) _crL.style.zIndex = '';
     _discardAnimLockTimer = null;
   }, 700);
 }
@@ -8246,8 +8310,8 @@ function toggleAutoMenu(){
 // エモートパネル外クリックで閉じる
 document.addEventListener('click', function(e){
   const panel = document.getElementById('emotePanel');
-  const area  = document.getElementById('emoteArea');
-  if(panel && panel.style.display==='flex' && area && !area.contains(e.target)){
+  const btn   = document.getElementById('emoteBtn');
+  if(panel && panel.style.display==='flex' && !panel.contains(e.target) && !(btn&&btn.contains(e.target))){
     panel.style.display='none';
   }
   // エモート図鑑外クリックで閉じる
@@ -8821,7 +8885,7 @@ function toggleAutoDiscard(){
 function humanPickWall(slotIdx){
   if(G.phase!=='draw_wait'||G.current!==NET.myIdx)return;
   if(G.lightMode)return; // 光モード中はツモ不可
-  // ペン能力 + 聴牌中は山牌選択ツモ不可（通常ツモのみ）
+  // ペン能力 + 聴牌中は山牌選択ツモ不可
   if(G_ABILITY_MODE && PROFILE.ability==='pen'){
     const _myP = G.players[NET.myIdx];
     if(_myP && _myP.tenpai) return;
@@ -9170,35 +9234,38 @@ function handleWin(widx,winTile,isTsumo,losidx){
   if(checkTobi()) return; // 飛び発生 → 即終了（winModalは出さない）
   const _yakuVideoUrls=numPlayers===1?[]:getYakumanVideoUrls(yakus);
   const _wmd={winnerId:w.id,hand:displayHand,winTile,isTsumo,losidx,yakus,score,han,yakuVideo:_yakuVideoUrls.length?_yakuVideoUrls:null};
-  // 上がり時: renderAll()でDOMが再構築される前に上がり牌の座標を取得
-  _captureRonTilePos(losidx, isTsumo);
   renderAll();
   broadcastState({winModal:_wmd});
-  if(_yakuVideoUrls.length){
-    // 役満動画の前にロン/ツモのアイコンボイスを再生してから動画へ
-    const _capturedToken = _yakumanVideoToken;
-    const _playVidWithVoice = () => {
-      if(_capturedToken !== _yakumanVideoToken) return;
-      playYakumanVideo(_yakuVideoUrls, ()=>{ showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han); });
-    };
-    const _voiceAction = isTsumo ? 'tsumo' : 'ron';
-    const _iconId = _getPlayerIconId(widx);
-    const _voiceUrl = (ICON_SE_MAP[_iconId]||{})[_voiceAction];
-    if(_voiceUrl){
-      const _va = _iconSeCache[_voiceUrl] || (()=>{ const a=new Audio(_voiceUrl); a.preload='auto'; _iconSeCache[_voiceUrl]=a; return a; })();
-      _va.onended = null; _va.onerror = null; // 前回のコールバックをクリア
-      _va.currentTime = 0;
-      const _vs = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
-      _va.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction) : 1) * _vs);
-      _va.onended = _playVidWithVoice;
-      _va.onerror = _playVidWithVoice;
-      _va.play().catch(_playVidWithVoice);
+  // renderTable内でrAFを使って_positionDiscards()が実行されるため、
+  // _captureRonTilePos()もrAFの後に呼び、正確な牌座標を取得する
+  requestAnimationFrame(()=>{
+    _captureRonTilePos(losidx, isTsumo, widx);
+    if(_yakuVideoUrls.length){
+      // 役満動画の前にロン/ツモのアイコンボイスを再生してから動画へ
+      const _capturedToken = _yakumanVideoToken;
+      const _playVidWithVoice = () => {
+        if(_capturedToken !== _yakumanVideoToken) return;
+        playYakumanVideo(_yakuVideoUrls, ()=>{ showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han); });
+      };
+      const _voiceAction = isTsumo ? 'tsumo' : 'ron';
+      const _iconId = _getPlayerIconId(widx);
+      const _voiceUrl = (ICON_SE_MAP[_iconId]||{})[_voiceAction];
+      if(_voiceUrl){
+        const _va = _iconSeCache[_voiceUrl] || (()=>{ const a=new Audio(_voiceUrl); a.preload='auto'; _iconSeCache[_voiceUrl]=a; return a; })();
+        _va.onended = null; _va.onerror = null; // 前回のコールバックをクリア
+        _va.currentTime = 0;
+        const _vs = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
+        _va.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction) : 1) * _vs);
+        _va.onended = _playVidWithVoice;
+        _va.onerror = _playVidWithVoice;
+        _va.play().catch(_playVidWithVoice);
+      } else {
+        _playVidWithVoice();
+      }
     } else {
-      _playVidWithVoice();
+      showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han);
     }
-  } else {
-    showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han);
-  }
+  });
 }
 
 function handleRon(widx,tile,fromidx){
@@ -12140,38 +12207,50 @@ function _saveWallPenDrawingsFromOC(oc, changedSlots){
   const slots = changedSlots && changedSlots.size>0
     ? Array.from(changedSlots)
     : Array.from({length:G.deckSlots.length},(_,i)=>i);
+  const toSync={};
+  let pending=0, done=0;
+  const trySync=()=>{ done++; if(done>=pending) _syncPenDrawings(toSync); };
   for(const i of slots){
     const tile=G.deckSlots[i];
     if(!tile?._pkey) continue;
     const r=_wallTileRect(i);
-    // offscreen から牌領域だけ切り出し（透明背景のストロークのみ）
     const tmp=document.createElement('canvas');
     tmp.width=r.w; tmp.height=r.h;
     tmp.getContext('2d').drawImage(oc,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
-    // 実際に何か描かれているかチェック（空スロットをスキップ）
     const pixels=tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
-    const hasContent=pixels.some((v,i)=>i%4===3&&v>10); // alpha > 10 の画素
+    const hasContent=pixels.some((v,idx)=>idx%4===3&&v>10);
     const key=tile._pkey;
-    if(hasContent){
-      // 既存の描画と合成: 既存があれば重ねる
-      if(G.penDrawings[key]){
+    if(!hasContent){ delete _penImgCache[key]; continue; }
+    pending++;
+    if(G.penDrawings[key]){
+      const prevImg=new Image();
+      prevImg.onload=()=>{
         const merged=document.createElement('canvas');
         merged.width=r.w; merged.height=r.h;
         const mc=merged.getContext('2d');
-        const prevImg=new Image();
-        prevImg.src=G.penDrawings[key];
-        // source-over で重ねる（multiply にすると同色ストロークが重なるたびに濃くなるバグのため）
         mc.drawImage(prevImg,0,0);
         mc.globalCompositeOperation='source-over';
         mc.drawImage(tmp,0,0);
         G.penDrawings[key]=merged.toDataURL('image/webp',0.65);
-      } else {
+        toSync[key]=G.penDrawings[key];
+        delete _penImgCache[key];
+        trySync();
+      };
+      prevImg.onerror=()=>{
         G.penDrawings[key]=tmp.toDataURL('image/webp',0.65);
-      }
+        toSync[key]=G.penDrawings[key];
+        delete _penImgCache[key];
+        trySync();
+      };
+      prevImg.src=G.penDrawings[key];
+    } else {
+      G.penDrawings[key]=tmp.toDataURL('image/webp',0.65);
+      toSync[key]=G.penDrawings[key];
+      delete _penImgCache[key];
+      done++;
     }
-    delete _penImgCache[key];
   }
-  _syncPenDrawings(slots.reduce((o,i)=>{const t=G.deckSlots[i];if(t?._pkey&&G.penDrawings[t._pkey])o[t._pkey]=G.penDrawings[t._pkey];return o;},{}));
+  if(pending===0) _syncPenDrawings(toSync);
 }
 // 後方互換用（呼び出し元がある場合）
 function _saveWallPenDrawings(wc, changedSlots){ _saveWallPenDrawingsFromOC(wc, changedSlots); }
@@ -13539,7 +13618,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}};
 
 // ── タイトル背景リスト ──────────────────────────────
 const TITLE_BG_LIST = [
@@ -13679,22 +13758,31 @@ const MAT_LIST = [
 function _isMatOwned(id){ if(id==='') return true; const m=MAT_LIST.find(m=>m.id===id); const mats=PROFILE.ownedMats||[]; return !!(m&&(m.free||mats.includes(id))); }
 function matUrl(id){ const m=MAT_LIST.find(m=>m.id===id); return m?.url||null; }
 // ── ロン上がりエフェクト動画 ──────────────────────────────
-const _AGARI_VIDEO_URL = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/agari/agari01.webm';
+const _AGARI_CATALOG = [
+  { key:'agari01', name:'あがり！',    icon:'🀄', videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/agari/agari01.webm', isDefault:true },
+  { key:'agari02', name:'あがり！02',  icon:'🎴', videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/agari/agari02.webm' },
+  { key:'agari03', name:'あがり！03',  icon:'⭐', videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/agari/agari03.webm' },
+  { key:'agari04', name:'あがり！04',  icon:'💥', videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/agari/agari04.webm' },
+];
+let _agariVideoVol = 0.1; // 上がり動画音量
 // renderAll() 前に座標を保存しておくための変数
 let _ronAgariPos = null; // {cx, cy} in tableWrapper local coords (scale前px)
 let _globalSeatMap = [0,-1,-1,-1]; // renderTable() が更新するグローバルseatMap
 
 // renderAll() 前に呼ぶ: 対象牌の画面座標(fixed)を取得して保存
 // losidx: ロン時=振り込んだプレイヤーidx / ツモ時=-1(自分のdrawnTileを使う)
-function _captureRonTilePos(losidx, isTsumo){
+function _captureRonTilePos(losidx, isTsumo, widx){
   _ronAgariPos = null;
   let lastTile = null;
 
   if(isTsumo){
-    // ツモ: 自分の手牌末尾（drawn tile）を探す
-    const bottomSeat = document.querySelector('.seat-bottom .seat-inner');
-    if(bottomSeat){
-      const handWrap = bottomSeat.querySelector('.hand-wrap');
+    // ツモ: 勝者の席を seatMap から特定して手牌末尾（drawn tile）を取得
+    const seatNames = ['seat-bottom','seat-right','seat-top','seat-left'];
+    const si = (widx != null && _globalSeatMap) ? _globalSeatMap.indexOf(widx) : 0;
+    const seatCls = seatNames[si >= 0 ? si : 0];
+    const seatInner = document.querySelector('.' + seatCls + ' .seat-inner');
+    if(seatInner){
+      const handWrap = seatInner.querySelector('.hand-wrap');
       if(handWrap){
         const tiles = handWrap.querySelectorAll('.tile');
         if(tiles.length > 0) lastTile = tiles[tiles.length - 1];
@@ -13733,10 +13821,16 @@ function _playRonAgariEffect(callback){
   const scale = wrapper ? (wrapper.getBoundingClientRect().width / 1400) : 1;
   const EW = 300 * scale, EH = 300 * scale;
 
+  // 装備中の上がり動画URLを取得
+  const _agKey = (typeof PROFILE!=='undefined' && PROFILE.agariVideo) || 'agari01';
+  const _agEntry = _AGARI_CATALOG.find(a=>a.key===_agKey) || _AGARI_CATALOG[0];
+  const _agariUrl = _agEntry.videoUrl;
+
   const vid = document.createElement('video');
   vid.className = 'ron-agari-effect';
-  vid.src = _AGARI_VIDEO_URL;
-  vid.muted = true;
+  vid.src = _agariUrl;
+  vid.muted = false;
+  vid.volume = _agariVideoVol;
   vid.autoplay = true;
   vid.playsInline = true;
   vid.loop = false;
@@ -13799,6 +13893,7 @@ function _applyProfile(){
   if(typeof _updateEquippedTitleUI==='function') _updateEquippedTitleUI();
   _updateHandSkinUI();
   _updateRingUI();
+  if(typeof _updateAgariBookDisplay==='function') _updateAgariBookDisplay();
 }
 
 // ── 手＋指輪の同期ループ再生ヘルパー ──────────────────────────────
@@ -14075,6 +14170,67 @@ function selectRing(key){
 
 let _skinPreviewKey = null;
 
+// ── 上がり演出図鑑 ────────────────────────────────────────────────
+function openAgariBook(){
+  document.getElementById('profileScreen').classList.remove('active');
+  document.getElementById('agariBookScreen').style.display='flex';
+  _renderAgariBookGrid();
+  _updateAgariBookEquipped();
+}
+function closeAgariBook(){
+  document.getElementById('agariBookScreen').style.display='none';
+  document.getElementById('profileScreen').classList.add('active');
+  _updateAgariBookDisplay();
+}
+function _updateAgariBookEquipped(){
+  const el = document.getElementById('agariBookEquipped');
+  if(!el) return;
+  const key = PROFILE.agariVideo || 'agari01';
+  const ag = _AGARI_CATALOG.find(a=>a.key===key) || _AGARI_CATALOG[0];
+  el.textContent = ag.icon + ' ' + ag.name;
+}
+function _updateAgariBookDisplay(){
+  const el = document.getElementById('agariBookDisplay');
+  const txt = document.getElementById('agariBookDisplayText');
+  if(!el||!txt) return;
+  const key = PROFILE.agariVideo || 'agari01';
+  const ag = _AGARI_CATALOG.find(a=>a.key===key) || _AGARI_CATALOG[0];
+  const equipped = !ag.isDefault;
+  el.dataset.equipped = equipped ? '1' : '0';
+  el.style.borderColor = equipped ? '#ffd700' : '#2a5a3a';
+  txt.innerHTML = '<span style="font-weight:700;color:'+(equipped?'#44aaff':'#4a6a5a')+';">'+ag.icon+' '+ag.name+'</span><br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で変更</span>';
+}
+function _renderAgariBookGrid(){
+  const grid = document.getElementById('agariBookGrid');
+  if(!grid) return;
+  const av = PROFILE.agariVideos || {};
+  grid.innerHTML = _AGARI_CATALOG.map(ag=>{
+    const isDefault = ag.isDefault;
+    const count = isDefault ? 1 : (av[ag.key] || 0);
+    const owned = isDefault || count > 0;
+    const equipped = (PROFILE.agariVideo || 'agari01') === ag.key;
+    const countLabel = isDefault ? 'デフォルト' : (owned ? '×'+count+' 所持' : '未入手');
+    return '<div onclick="'+(owned?'_toggleAgariEquip(''+ag.key+'')':'')+'"'
+      +' style="background:'+(owned?'#040d18':'#020508')+';border:1.5px solid '+(equipped?'#ffd700':owned?'#2a5a8a':'#111a22')+';'
+      +'border-radius:10px;padding:10px 6px;text-align:center;cursor:'+(owned?'pointer':'default')+';opacity:'+(owned?1:.45)+';position:relative;overflow:hidden;">'
+      +(equipped?'<div style="position:absolute;top:4px;right:5px;font-size:.45rem;color:#ffd700;font-weight:700;">装備中</div>':'')
+      +'<div style="font-size:2.2rem;margin-bottom:4px;">'+ag.icon+'</div>'
+      +'<div style="font-size:.58rem;font-weight:700;color:'+(owned?'#44aaff':'#2a4a6a')+';">'+ag.name+'</div>'
+      +'<div style="font-size:.48rem;color:'+(owned?'#3a6a9a':'#111a22')+';">'+countLabel+'</div>'
+      +'</div>';
+  }).join('');
+}
+function _toggleAgariEquip(key){
+  const ag = _AGARI_CATALOG.find(a=>a.key===key)||{};
+  const av = PROFILE.agariVideos || {};
+  if(!ag.isDefault && !(av[key] > 0)) return;
+  PROFILE.agariVideo = (PROFILE.agariVideo === key && !ag.isDefault) ? 'agari01' : key;
+  _updateAgariBookEquipped();
+  _renderAgariBookGrid();
+  _updateAgariBookDisplay();
+  saveProfileSilent();
+}
+
 function openSkinBook(){
   document.getElementById('profileScreen').classList.remove('active');
   document.getElementById('skinBookScreen').style.display='flex';
@@ -14232,6 +14388,8 @@ function loadProfile(){
         handSkins:     data.handSkins     ?? PROFILE.handSkins     ?? {},
         ring:          data.ring          ?? PROFILE.ring          ?? '',
         rings:         data.rings         ?? PROFILE.rings         ?? {},
+        agariVideo:    data.agariVideo    ?? PROFILE.agariVideo    ?? 'agari01',
+        agariVideos:   data.agariVideos   ?? PROFILE.agariVideos   ?? {},
         emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
         uid:           data.uid           || PROFILE.uid           || '',
         cpuUnlocks: Array.from(new Set([
@@ -14723,10 +14881,15 @@ function _convertSvrResult(r) {
   const res = { rarity: r.rarity, rd };
   if (r.rarity === 'legend') {
     if (r.skinKey) {
-      // レジェンドスキン当選
       const sk = _SKIN_CATALOG.find(s => s.key === r.skinKey);
       res.skin   = sk || { key: r.skinKey, name: r.skinKey, icon: '🤍' };
       res.isNew  = r.isNewSkin;
+    } else if (r.agariKey) {
+      const ag = _AGARI_CATALOG.find(a => a.key === r.agariKey);
+      res.agari  = ag || { key: r.agariKey, name: r.agariKey, icon: '🎬' };
+      res.isNew  = r.isNewAgari;
+      if(!PROFILE.agariVideos) PROFILE.agariVideos={};
+      PROFILE.agariVideos[r.agariKey] = (PROFILE.agariVideos[r.agariKey]||0)+1;
     } else if (r.abilityKey) {
       // レジェンド能力解放
       res.ability = { icon: r.abilityIcon, name: r.abilityName, tag: r.abilityTag, key: r.abilityKey };
@@ -14771,6 +14934,7 @@ function doPull10(){
     PROFILE.abilities  = d.abilities;
     PROFILE.gachaIcons = d.gachaIcons;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
+    if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
     const results = d.results.map(_convertSvrResult);
     saveProfileSilent();
     showGachaAnim10(results);
@@ -14795,6 +14959,7 @@ function doPull1(){
     PROFILE.abilities  = d.abilities;
     PROFILE.gachaIcons = d.gachaIcons;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
+    if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
     const res = _convertSvrResult(d.results[0]);
     saveProfileSilent();
     showGachaAnim1(res);
@@ -14825,6 +14990,17 @@ function showGachaAnim1(res){
             <div class="gacha-card-icon">${res.skin.icon}</div>
             <div class="gacha-card-name">${res.skin.name}</div>
             <div class="gacha-card-desc">手のスキン</div>
+            ${res.isNew?'<div class="gacha-card-new">NEW!</div>':'<div style="font-size:.55rem;color:#888;">ダブり</div>'}
+          </div>
+        </div>`;
+    } else if(res.agari){
+      cardHtml = `
+        <div class="rarity-legend" style="text-align:center;">
+          <div class="gacha-result-card">
+            <div class="gacha-rarity-label" style="color:#ffd700;">LEGEND</div>
+            <div class="gacha-card-icon">${res.agari.icon}</div>
+            <div class="gacha-card-name">${res.agari.name}</div>
+            <div class="gacha-card-desc">上がり演出</div>
             ${res.isNew?'<div class="gacha-card-new">NEW!</div>':'<div style="font-size:.55rem;color:#888;">ダブり</div>'}
           </div>
         </div>`;
@@ -14891,6 +15067,11 @@ function showGachaAnim10(results){
           ${res.isNew?'<div class="g-new">NEW</div>':''}
         </div>`;
       }
+      if(res.agari) return `<div class="gacha-mini-card rarity-legend">
+        <div class="g-icon">${res.agari.icon}</div>
+        <div class="g-name">${res.agari.name}</div>
+        ${res.isNew?'<div class="g-new">NEW</div>':''}
+      </div>`;
       if(res.ability) return `<div class="gacha-mini-card rarity-legend">
         <div class="g-icon">${res.ability.icon}</div>
         <div class="g-name">${res.ability.name}</div>
@@ -15948,6 +16129,8 @@ function saveProfileSilent(){
       emoteSets:       PROFILE.emoteSets     ||[['','','','']],
       ring:            PROFILE.ring          ||'',
       rings:           PROFILE.rings         ||{},
+      agariVideo:      PROFILE.agariVideo    ||'agari01',
+      agariVideos:     PROFILE.agariVideos   ||{},
     }),
   }).catch(()=>{});
 }
@@ -16620,8 +16803,19 @@ function toggleEmotePanel(){
   const panel=document.getElementById('emotePanel');
   if(!panel) return;
   const isOpen=panel.style.display==='flex';
-  panel.style.display=isOpen?'none':'flex';
-  if(!isOpen) renderEmotePanel();
+  if(isOpen){ panel.style.display='none'; return; }
+  if(panel.parentElement!==document.body) document.body.appendChild(panel);
+  const btn=document.getElementById('emoteBtn');
+  if(btn){
+    const r=btn.getBoundingClientRect();
+    panel.style.position='fixed';
+    panel.style.left=r.left+'px';
+    panel.style.top=(r.top-4)+'px';
+    panel.style.transform='translateY(-100%)';
+    panel.style.zIndex='9999';
+  }
+  panel.style.display='flex';
+  renderEmotePanel();
 }
 function renderEmotePanel(){
   const panel=document.getElementById('emotePanel');
@@ -17504,6 +17698,7 @@ function plantMineRinshan(ri){
               <div style="display:flex;align-items:center;gap:4px;margin:3px 0;"><span style="width:72px;flex-shrink:0;">マイターン</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:var(--gold);" oninput="SFX.setSeScale('myTurn',+this.value);saveSettings();"></div>
               <div style="display:flex;align-items:center;gap:4px;margin:3px 0;"><span style="width:72px;flex-shrink:0;">カウントダウン</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:var(--gold);" oninput="SFX.setSeScale('countdown',+this.value);saveSettings();"></div>
               <div style="display:flex;align-items:center;gap:4px;margin:3px 0;"><span style="width:72px;flex-shrink:0;">役満動画</span><input id="sliderYakuVid" type="range" min="0" max="1" step="0.05" value="0.1" style="flex:1;accent-color:var(--gold);" oninput="_yakumanVideoVol=+this.value;saveSettings();"></div>
+              <div style="display:flex;align-items:center;gap:4px;margin:3px 0;"><span style="width:72px;flex-shrink:0;">上がり動画</span><input id="sliderAgariVid" type="range" min="0" max="1" step="0.05" value="0.1" style="flex:1;accent-color:#44aaff;" oninput="_agariVideoVol=+this.value;saveSettings();"></div>
               <div style="border-top:1px solid #1a3a2a;margin:6px 0;padding-top:4px;color:#7acc99;font-size:.58rem;">🎤 アイコンボイス（MP3）</div>
               <div style="display:flex;align-items:center;gap:4px;margin:3px 0;"><span style="width:72px;flex-shrink:0;">ボイス音量</span><input id="sliderVoiceVol" type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#7acc99;" oninput="SFX.setSeScale('voice',+this.value);saveSettings();"></div>
             </div>
@@ -17759,6 +17954,32 @@ function plantMineRinshan(ri){
 </div>
 
 <!-- ===== スキン図鑑 ===== -->
+<!-- 上がり演出図鑑 -->
+<div id="agariBookScreen" style="
+  position:fixed;inset:0;z-index:15;
+  display:none;flex-direction:column;align-items:center;
+  background:#0b1520;overflow-y:auto;padding:50px 20px 80px;
+">
+  <button onclick="closeAgariBook()" style="
+    position:fixed;top:14px;left:14px;z-index:20;
+    background:#030a10;border:1px solid #2a4a3a;border-radius:8px;
+    color:#5a9a7a;font-size:.72rem;padding:7px 13px;cursor:pointer;">◀ 戻る</button>
+  <div style="margin-top:10px;text-align:center;margin-bottom:20px;">
+    <div style="font-size:clamp(1.2rem,4vw,1.8rem);font-weight:900;color:#44aaff;letter-spacing:.15em;">🎬 上がり演出図鑑</div>
+    <div style="font-size:.58rem;color:#3a6a9a;margin-top:4px;">演出をタップして装備・解除</div>
+  </div>
+  <div style="width:100%;max-width:480px;margin-bottom:16px;
+    background:#040d18;border:1.5px solid #2a5a8a;border-radius:12px;padding:12px 16px;
+    display:flex;align-items:center;gap:10px;">
+    <span style="font-size:1.2rem;">✨</span>
+    <div>
+      <div style="font-size:.6rem;color:#3a6a9a;letter-spacing:.08em;">装備中</div>
+      <div id="agariBookEquipped" style="font-size:.78rem;font-weight:700;color:#44aaff;">あがり！</div>
+    </div>
+  </div>
+  <div id="agariBookGrid" style="width:100%;max-width:480px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
+</div>
+
 <div id="skinBookScreen" style="
   position:fixed;inset:0;z-index:15;
   display:none;flex-direction:column;align-items:center;

@@ -12588,6 +12588,7 @@ function renderTable(){
   // 4p: 0=bottom, 1=right, 2=top, 3=left
   // オンライン時は操作プレイヤー(NET.myIdx)が常にbottomに来るようローテーション
   let seatMap; // seatMap[seatIdx] = playerIdx or -1 (empty)
+  // ※ グローバル変数 _globalSeatMap にも随時コピー（renderTable外から参照用）
   const myIdx = NET.online ? NET.myIdx : 0;
   if(numPlayers===1){
     // 1人: bottom=自分のみ、他は空席
@@ -12602,6 +12603,7 @@ function renderTable(){
     // 4人: bottom=自分, right=次, top=その次, left=その次
     seatMap=[myIdx, (myIdx+1)%4, (myIdx+2)%4, (myIdx+3)%4];
   }
+  _globalSeatMap = seatMap; // グローバルにも保持
   const seatClasses=['seat-bottom','seat-right','seat-top','seat-left'];
 
   for(let si=0;si<4;si++){
@@ -13680,13 +13682,14 @@ function matUrl(id){ const m=MAT_LIST.find(m=>m.id===id); return m?.url||null; }
 const _AGARI_VIDEO_URL = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/agari/agari01.webm';
 // renderAll() 前に座標を保存しておくための変数
 let _ronAgariPos = null; // {cx, cy} in tableWrapper local coords (scale前px)
+let _globalSeatMap = [0,-1,-1,-1]; // renderTable() が更新するグローバルseatMap
 
 // renderAll() 前に呼ぶ: last-discard 牌の座標を取得して保存
 function _captureRonTilePos(losidx){
   _ronAgariPos = null;
   const wrapper = document.getElementById('tableWrapper');
   if(!wrapper) return;
-  const si = (typeof seatMap !== 'undefined') ? seatMap.indexOf(losidx) : -1;
+  const si = _globalSeatMap ? _globalSeatMap.indexOf(losidx) : -1;
   if(si < 0) return;
   const discardAbs = document.querySelector(`.discard-abs[data-discard-side="${si}"]`);
   if(!discardAbs) return;
@@ -13717,6 +13720,7 @@ function _playRonAgariEffect(callback){
   vid.className = 'ron-agari-effect';
   vid.src = _AGARI_VIDEO_URL;
   vid.muted = true;
+  vid.autoplay = true;
   vid.playsInline = true;
   vid.loop = false;
   vid.style.cssText = [

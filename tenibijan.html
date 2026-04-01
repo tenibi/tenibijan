@@ -6776,6 +6776,10 @@ function applyHostState(msg){
       // 自動発火
       _triggerAutoAction(NET.myIdx, 350);
     }
+    // ロン時: renderAll()でDOMが再構築される前に振り込み牌の座標を取得
+    if(s.winModal && !s.winModal.isTsumo && s.winModal.losidx >= 0){
+      _captureRonTilePos(s.winModal.losidx);
+    }
     renderAll();
     if(s.winModal){
       showWinModalData(s.winModal);
@@ -9163,6 +9167,8 @@ function handleWin(widx,winTile,isTsumo,losidx){
   if(checkTobi()) return; // 飛び発生 → 即終了（winModalは出さない）
   const _yakuVideoUrls=numPlayers===1?[]:getYakumanVideoUrls(yakus);
   const _wmd={winnerId:w.id,hand:displayHand,winTile,isTsumo,losidx,yakus,score,han,yakuVideo:_yakuVideoUrls.length?_yakuVideoUrls:null};
+  // ロン時: renderAll()でDOMが再構築される前に振り込み牌の座標を取得
+  if(!isTsumo && losidx >= 0) _captureRonTilePos(losidx);
   renderAll();
   broadcastState({winModal:_wmd});
   if(_yakuVideoUrls.length){
@@ -11208,11 +11214,16 @@ function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han,_double
       mDoraArea.style.display='none';
     }
   }
-  timerStop(); document.getElementById('winOverlay').classList.add('show');
-  _startWinTimer();
-  // ロン時: 振り込み牌の上にエフェクト動画を再生
+  timerStop();
+  // ロン時: 振り込み牌の上でエフェクト動画を再生してから winOverlay を表示
   if(!isTsumo && losidx >= 0){
-    requestAnimationFrame(()=>_playRonAgariEffect(losidx));
+    _playRonAgariEffect(()=>{
+      document.getElementById('winOverlay').classList.add('show');
+      _startWinTimer();
+    });
+  } else {
+    document.getElementById('winOverlay').classList.add('show');
+    _startWinTimer();
   }
 }
 
@@ -13667,48 +13678,65 @@ function _isMatOwned(id){ if(id==='') return true; const m=MAT_LIST.find(m=>m.id
 function matUrl(id){ const m=MAT_LIST.find(m=>m.id===id); return m?.url||null; }
 // ── ロン上がりエフェクト動画 ──────────────────────────────
 const _AGARI_VIDEO_URL = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/agari/agari01.webm';
-function _playRonAgariEffect(losidx){
+// renderAll() 前に座標を保存しておくための変数
+let _ronAgariPos = null; // {cx, cy} in tableWrapper local coords (scale前px)
+
+// renderAll() 前に呼ぶ: last-discard 牌の座標を取得して保存
+function _captureRonTilePos(losidx){
+  _ronAgariPos = null;
   const wrapper = document.getElementById('tableWrapper');
   if(!wrapper) return;
-  // losidx → 画面上の座標 (seatMap を利用)
   const si = (typeof seatMap !== 'undefined') ? seatMap.indexOf(losidx) : -1;
   if(si < 0) return;
   const discardAbs = document.querySelector(`.discard-abs[data-discard-side="${si}"]`);
   if(!discardAbs) return;
   const lastTile = discardAbs.querySelector('.last-discard');
   if(!lastTile) return;
-
   const wRect = wrapper.getBoundingClientRect();
   if(!wRect.width) return;
   const scale = wRect.width / 1400;
-
   const tRect = lastTile.getBoundingClientRect();
-  const tileCX = (tRect.left + tRect.width  / 2 - wRect.left) / scale;
-  const tileCY = (tRect.top  + tRect.height / 2 - wRect.top)  / scale;
+  _ronAgariPos = {
+    cx: (tRect.left + tRect.width  / 2 - wRect.left) / scale,
+    cy: (tRect.top  + tRect.height / 2 - wRect.top)  / scale,
+  };
+}
 
-  // エフェクトサイズ（牌の約6倍）
-  const EW = 240, EH = 240;
+// callback: 動画再生終了 or 失敗時に呼ぶ
+function _playRonAgariEffect(callback){
+  const done = (()=>{ let called=false; return ()=>{ if(!called){ called=true; callback && callback(); } }; })();
 
+  const wrapper = document.getElementById('tableWrapper');
+  if(!wrapper || !_ronAgariPos){ done(); return; }
+
+  const {cx, cy} = _ronAgariPos;
+  _ronAgariPos = null;
+
+  const EW = 300, EH = 300;
   const vid = document.createElement('video');
   vid.className = 'ron-agari-effect';
   vid.src = _AGARI_VIDEO_URL;
   vid.muted = true;
-  vid.autoplay = true;
   vid.playsInline = true;
   vid.loop = false;
   vid.style.cssText = [
     'position:absolute',
-    `left:${tileCX - EW/2}px`,
-    `top:${tileCY - EH/2}px`,
+    `left:${cx - EW/2}px`,
+    `top:${cy - EH/2}px`,
     `width:${EW}px`,
     `height:${EH}px`,
     'object-fit:contain',
     'pointer-events:none',
     'z-index:50',
   ].join(';');
-  // 再生終了後は自動削除しない（nextRound まで表示継続）
+
+  const _fallback = setTimeout(()=>done(), 4000);
+  vid.addEventListener('ended', ()=>{ clearTimeout(_fallback); done(); });
+  vid.addEventListener('error', ()=>{ clearTimeout(_fallback); done(); });
+
   wrapper.appendChild(vid);
-  vid.play().catch(()=>{});
+  const p = vid.play();
+  if(p && typeof p.catch === 'function') p.catch(()=>done());
 }
 
 function applyMat(){

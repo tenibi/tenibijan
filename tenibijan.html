@@ -1389,7 +1389,7 @@ body{
 #profileScreen{
   position:relative;z-index:10;
   display:none;flex-direction:column;align-items:center;justify-content:center;
-  min-height:100vh;gap:16px;padding:50px 20px 150px;
+  min-height:100vh;gap:16px;padding:100px 20px 200px;
   background-color:var(--bg);
   background-size:cover;
   background-position:center;
@@ -1715,13 +1715,62 @@ body{
 
     <!-- 常設ガチャパネル -->
     <div id="gachaPanelStandard">
-      <div class="gacha-sub">LEGEND排出でランダムに能力が解放！白猫の手も！</div>
+      <div class="gacha-sub">LEGEND排出で能力解放・白猫の手・Lアイコンのどれか1つ！</div>
       <!-- レアリティ表 -->
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;justify-content:center;">
         <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#0a1a14;border:1px solid #2a4a3a;color:#5a8a7a;">NORMAL 89.9%</span>
         <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#0a0a24;border:1px solid #3333aa;color:#8888ff;">RARE 10%</span>
         <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#18081a;border:1px solid #8833aa;color:#cc66ff;">EPIC 1%</span>
         <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#1a0e00;border:1px solid #ffd700;color:#ffd700;">LEGEND 0.1%</span>
+      </div>
+      <!-- LEGENDラインナップ -->
+      <div style="margin-bottom:16px;background:#1a0e00;border:1px solid #ffd700;border-radius:12px;padding:12px 14px;">
+        <div style="font-size:.6rem;color:#ffd700;letter-spacing:.12em;margin-bottom:10px;text-align:center;">&#x1F451; LEGEND ラインナップ</div>
+        <!-- 能力 -->
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x26A1; 能力解放（各約33%・4種ランダム）</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
+            <span style="font-size:.85rem;">&#x1F311;</span>
+            <div><div style="font-size:.58rem;font-weight:700;color:#ffd700;">闇</div><div style="font-size:.48rem;color:#8a7040;">撹乱系</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
+            <span style="font-size:.85rem;">&#x1F3DB;&#xFE0F;</span>
+            <div><div style="font-size:.58rem;font-weight:700;color:#ffd700;">聖域</div><div style="font-size:.48rem;color:#8a7040;">防御系</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
+            <span style="font-size:.85rem;">&#x1F0CF;</span>
+            <div><div style="font-size:.58rem;font-weight:700;color:#ffd700;">スチール</div><div style="font-size:.48rem;color:#8a7040;">奪取系</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
+            <span style="font-size:.85rem;">&#x1F535;</span>
+            <div><div style="font-size:.58rem;font-weight:700;color:#ffd700;">ピンズー教</div><div style="font-size:.48rem;color:#8a7040;">情報系</div></div>
+          </div>
+        </div>
+        <!-- 手スキン -->
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F489; 手スキン（約33%）</div>
+        <div style="display:flex;align-items:center;gap:8px;background:#0a0800;border:1px solid #6a5010;border-radius:8px;padding:6px 10px;margin-bottom:10px;">
+          <span style="font-size:1.2rem;">&#x1F90D;</span>
+          <div>
+            <div style="font-size:.6rem;font-weight:700;color:#ffd700;">白猫の手</div>
+            <div style="font-size:.48rem;color:#8a7040;">白猫の手で牌を切る</div>
+          </div>
+        </div>
+        <!-- レジェンドアイコン -->
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F5BC;&#xFE0F; レジェンドアイコン（約33%・3種）</div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L01</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L02</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L03</div>
+          </div>
+        </div>
       </div>
       <!-- コイン残高 -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;justify-content:center;">
@@ -10221,6 +10270,8 @@ function nextRound(){
   _yakumanVideoToken++;
   const existingVidOv = document.getElementById('yakumanVideoOverlay');
   if(existingVidOv) existingVidOv.remove();
+  // ロンエフェクト動画を削除
+  document.querySelectorAll('.ron-agari-effect').forEach(v=>v.remove());
   // キャッシュ済みアイコンボイスAudioのコールバックもクリア（残留コールバック防止）
   Object.values(_iconSeCache||{}).forEach(a=>{ try{ a.onended=null; a.onerror=null; a.pause(); }catch(e){} });
   // 役満動画でミュートされていた場合BGMを復元
@@ -11159,6 +11210,10 @@ function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han,_double
   }
   timerStop(); document.getElementById('winOverlay').classList.add('show');
   _startWinTimer();
+  // ロン時: 振り込み牌の上にエフェクト動画を再生
+  if(!isTsumo && losidx >= 0){
+    requestAnimationFrame(()=>_playRonAgariEffect(losidx));
+  }
 }
 
 // ============================================================
@@ -13471,7 +13526,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}};
 
 // ── タイトル背景リスト ──────────────────────────────
 const TITLE_BG_LIST = [
@@ -13610,6 +13665,52 @@ const MAT_LIST = [
 ];
 function _isMatOwned(id){ if(id==='') return true; const m=MAT_LIST.find(m=>m.id===id); const mats=PROFILE.ownedMats||[]; return !!(m&&(m.free||mats.includes(id))); }
 function matUrl(id){ const m=MAT_LIST.find(m=>m.id===id); return m?.url||null; }
+// ── ロン上がりエフェクト動画 ──────────────────────────────
+const _AGARI_VIDEO_URL = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/agari/agari01.webm';
+function _playRonAgariEffect(losidx){
+  const wrapper = document.getElementById('tableWrapper');
+  if(!wrapper) return;
+  // losidx → 画面上の座標 (seatMap を利用)
+  const si = (typeof seatMap !== 'undefined') ? seatMap.indexOf(losidx) : -1;
+  if(si < 0) return;
+  const discardAbs = document.querySelector(`.discard-abs[data-discard-side="${si}"]`);
+  if(!discardAbs) return;
+  const lastTile = discardAbs.querySelector('.last-discard');
+  if(!lastTile) return;
+
+  const wRect = wrapper.getBoundingClientRect();
+  if(!wRect.width) return;
+  const scale = wRect.width / 1400;
+
+  const tRect = lastTile.getBoundingClientRect();
+  const tileCX = (tRect.left + tRect.width  / 2 - wRect.left) / scale;
+  const tileCY = (tRect.top  + tRect.height / 2 - wRect.top)  / scale;
+
+  // エフェクトサイズ（牌の約6倍）
+  const EW = 240, EH = 240;
+
+  const vid = document.createElement('video');
+  vid.className = 'ron-agari-effect';
+  vid.src = _AGARI_VIDEO_URL;
+  vid.muted = true;
+  vid.autoplay = true;
+  vid.playsInline = true;
+  vid.loop = false;
+  vid.style.cssText = [
+    'position:absolute',
+    `left:${tileCX - EW/2}px`,
+    `top:${tileCY - EH/2}px`,
+    `width:${EW}px`,
+    `height:${EH}px`,
+    'object-fit:contain',
+    'pointer-events:none',
+    'z-index:50',
+  ].join(';');
+  // 再生終了後は自動削除しない（nextRound まで表示継続）
+  wrapper.appendChild(vid);
+  vid.play().catch(()=>{});
+}
+
 function applyMat(){
   const url=matUrl(PROFILE.matId||'');
   const table=document.getElementById('mahjongTable');
@@ -14040,6 +14141,8 @@ function loadProfile(){
       const p=JSON.parse(s);
       const {coins:_c, abilities:_ab, ability:_abl, tbbCoins:_tbb0, ...pSafe} = p; // coins/abilities/ability/tbbCoins はDBのみで管理
       PROFILE=Object.assign({abilities:[],totalPulls:0,coins:0},pSafe);
+      // matIdキーが存在しない（=一度もマット設定したことがない既存ユーザー）はmat00に移行
+      if(!('matId' in p)) PROFILE.matId='mat00';
     }
   }catch(e){}
   _applyProfile();
@@ -14574,17 +14677,24 @@ function _convertSvrResult(r) {
       const sk = _SKIN_CATALOG.find(s => s.key === r.skinKey);
       res.skin   = sk || { key: r.skinKey, name: r.skinKey, icon: '🤍' };
       res.isNew  = r.isNewSkin;
-    } else {
+    } else if (r.abilityKey) {
+      // レジェンド能力解放
       res.ability = { icon: r.abilityIcon, name: r.abilityName, tag: r.abilityTag, key: r.abilityKey };
       res.isNew   = r.isNewAbility;
+    } else if (r.iconId) {
+      // レジェンドアイコン当選
+      const info = GACHA_ICONS.find(i => i.id === r.iconId);
+      res.icon      = info || { id: r.iconId, label: r.iconId };
+      res.iconIsNew = r.iconIsNew;
+      res.isNew     = r.iconIsNew;
     }
   } else {
     res.label = r.label || rd.label;
-  }
-  if (r.iconId) {
-    const info = GACHA_ICONS.find(i => i.id === r.iconId);
-    res.icon      = info || { id: r.iconId, label: r.iconId };
-    res.iconIsNew = r.iconIsNew;
+    if (r.iconId) {
+      const info = GACHA_ICONS.find(i => i.id === r.iconId);
+      res.icon      = info || { id: r.iconId, label: r.iconId };
+      res.iconIsNew = r.iconIsNew;
+    }
   }
   return res;
 }
@@ -14668,20 +14778,26 @@ function showGachaAnim1(res){
             ${res.isNew?'<div class="gacha-card-new">NEW!</div>':'<div style="font-size:.55rem;color:#888;">ダブり</div>'}
           </div>
         </div>`;
-    } else {
+    } else if(res.ability){
       cardHtml = `
-        <div class="rarity-${res.rarity}" style="text-align:center;">
+        <div class="rarity-legend" style="text-align:center;">
           <div class="gacha-result-card">
-            <div class="gacha-rarity-label" style="color:${res.rd.color};">${res.rd.label}</div>
+            <div class="gacha-rarity-label" style="color:#ffd700;">LEGEND</div>
             <div class="gacha-card-icon">${res.ability.icon}</div>
             <div class="gacha-card-name">${res.ability.name}</div>
             <div class="gacha-card-desc">${res.ability.tag}</div>
             ${res.isNew?'<div class="gacha-card-new">NEW!</div>':'<div style="font-size:.55rem;color:#888;">ダブり</div>'}
           </div>
-          ${res.icon?`<div style="margin-top:8px;display:inline-block;">
-            <img src="${gachaIconUrl(res.icon.id)}" style="width:80px;height:112px;object-fit:contain;border-radius:8px;border:2px solid ${res.rd.color};background:#fff;" alt="${res.icon.id}">
-            <div style="font-size:.55rem;color:${res.rd.color};margin-top:2px;">${res.icon.label} ${res.iconIsNew?'<span style="background:#2a1a00;color:#ffd700;padding:1px 4px;border-radius:3px;font-size:.5rem;">NEW</span>':''}</div>
-          </div>`:''}
+        </div>`;
+    } else if(res.icon){
+      cardHtml = `
+        <div class="rarity-legend" style="text-align:center;">
+          <div class="gacha-result-card">
+            <div class="gacha-rarity-label" style="color:#ffd700;">LEGEND</div>
+            <img src="${gachaIconUrl(res.icon.id)}" style="width:80px;height:112px;object-fit:contain;border-radius:8px;border:2px solid #ffd700;margin:4px 0;background:#fff;" alt="${res.icon.id}">
+            <div class="gacha-card-name">${res.icon.label}</div>
+            ${res.iconIsNew?'<div class="gacha-card-new">NEW!</div>':'<div style="font-size:.55rem;color:#888;">ダブり</div>'}
+          </div>
         </div>`;
     }
   } else {
@@ -14725,13 +14841,17 @@ function showGachaAnim10(results){
           ${res.isNew?'<div class="g-new">NEW</div>':''}
         </div>`;
       }
-      return `<div class="gacha-mini-card rarity-legend">
+      if(res.ability) return `<div class="gacha-mini-card rarity-legend">
         <div class="g-icon">${res.ability.icon}</div>
         <div class="g-name">${res.ability.name}</div>
         ${res.isNew?'<div class="g-new">NEW</div>':''}
-        ${res.icon?`<img src="${gachaIconUrl(res.icon.id)}" style="width:40px;height:56px;object-fit:contain;border-radius:4px;margin-top:4px;" alt="${res.icon.id}">`:''}
-        ${res.iconIsNew?'<div class="g-new" style="font-size:.42rem;">🖼NEW</div>':''}
       </div>`;
+      if(res.icon) return `<div class="gacha-mini-card rarity-legend">
+        <img src="${gachaIconUrl(res.icon.id)}" style="width:40px;height:56px;object-fit:contain;border-radius:4px;" alt="${res.icon.id}">
+        <div class="g-name">${res.icon.label}</div>
+        ${res.iconIsNew?'<div class="g-new">NEW</div>':''}
+      </div>`;
+      return `<div class="gacha-mini-card rarity-legend"><div class="g-name">LEGEND</div></div>`;
     }
     return `<div class="gacha-mini-card rarity-${res.rarity}">
       ${res.icon?`<img src="${gachaIconUrl(res.icon.id)}" style="width:40px;height:56px;object-fit:contain;border-radius:4px;" alt="${res.icon.id}">`:'<div class="g-icon" style="font-size:1rem;opacity:.5;">·</div>'}

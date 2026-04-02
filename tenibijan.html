@@ -6634,9 +6634,10 @@ function handleGuestAction(msg, senderIdx){
           if(!G.mineOwners) G.mineOwners={};
           G.mineOwners[si]=senderIdx;
           G.mineCount++;
-          if(myMineCount(senderIdx)>=3) G.minePlantPlayers=(G.minePlantPlayers||[]).filter(i=>i!==senderIdx);
+          if(G.mineStock&&G.mineStock[senderIdx]>0) G.mineStock[senderIdx]--;
+          if((G.mineStock&&G.mineStock[senderIdx]||0)<=0) G.minePlantPlayers=(G.minePlantPlayers||[]).filter(i=>i!==senderIdx);
           SFX.minePlant();
-          addLog(`💣 地雷を仕掛けた！（${myMineCount(NET.myIdx)}/3カ所）`,'log-dora');
+          addLog(`💣 地雷を仕掛けた！（残${(G.mineStock&&G.mineStock[NET.myIdx])||0}個）`,'log-dora');
           broadcastState();
         }
       }
@@ -6649,9 +6650,10 @@ function handleGuestAction(msg, senderIdx){
           if(!G.mineRinshanOwners) G.mineRinshanOwners={};
           G.mineRinshanOwners[ri]=senderIdx;
           G.mineCount++;
-          if(myMineCount(senderIdx)>=3) G.minePlantPlayers=(G.minePlantPlayers||[]).filter(i=>i!==senderIdx);
+          if(G.mineStock&&G.mineStock[senderIdx]>0) G.mineStock[senderIdx]--;
+          if((G.mineStock&&G.mineStock[senderIdx]||0)<=0) G.minePlantPlayers=(G.minePlantPlayers||[]).filter(i=>i!==senderIdx);
           SFX.minePlant();
-          addLog(`💣 嶺上牌に地雷を仕掛けた！（${myMineCount(NET.myIdx)}/3カ所）`,'log-dora');
+          addLog(`💣 嶺上牌に地雷を仕掛けた！（残${(G.mineStock&&G.mineStock[NET.myIdx])||0}個）`,'log-dora');
           broadcastState();
         }
       }
@@ -8030,6 +8032,14 @@ function nextTurn(pidx){
   G.phase='draw_wait'; // wait for humanPickWall()
   setTimeout(()=>{ _updateBombAutoPickBtn(); _updateBombFlagBtn(); _updateBombQueryBtn(); if(_bombAutoPickOn) _bombTryAutoPick(); }, 200); // 💣 BOMBモードボタン更新
   timerOnMyTurn(); // 制限時間モード: タイマー起動（autoDrawON時も）
+  // ペン能力 + 聴牌中はランダムに山牌を自動ドロー
+  const _penTenpaiAuto = G_ABILITY_MODE && PROFILE.ability==='pen' && !!(G.players[NET.myIdx]?.tenpai);
+  if(_penTenpaiAuto){
+    addLog('🖊️ テンパイ中のため山牌をランダムに引きます','log-new');
+    renderAll();broadcastState();
+    setTimeout(autoPickWall,350);
+    return;
+  }
   if(autoDrawEnabled){
     renderAll();broadcastState();
     setTimeout(autoPickWall,200);
@@ -8451,7 +8461,7 @@ function autoPickWall(){
     if(safe.length>0) available=safe;
   }
   const slotIdx=available[Math.floor(Math.random()*available.length)];
-  humanPickWall(slotIdx);
+  humanPickWall(slotIdx, true); // true = 自動引き（ペン+聴牌ブロックをスキップ）
 }
 function humanHakuSelectOpponent(pidx, tidx){
   if(!G.hakuSelectPlayers||!G.hakuSelectPlayers.includes(NET.myIdx)) return;
@@ -8844,11 +8854,11 @@ function toggleAutoDiscard(){
   }
 }
 
-function humanPickWall(slotIdx){
+function humanPickWall(slotIdx, _fromAuto){
   if(G.phase!=='draw_wait'||G.current!==NET.myIdx)return;
   if(G.lightMode)return; // 光モード中はツモ不可
-  // ペン能力 + 聴牌中は山牌選択ツモ不可
-  if(G_ABILITY_MODE && PROFILE.ability==='pen'){
+  // ペン能力 + 聴牌中は手動の山牌選択ツモ不可（自動引きは許可）
+  if(!_fromAuto && G_ABILITY_MODE && PROFILE.ability==='pen'){
     const _myP = G.players[NET.myIdx];
     if(_myP && _myP.tenpai) return;
   }
@@ -17643,9 +17653,10 @@ function plantMine(slotIdx){
   if(!G.mineOwners) G.mineOwners={};
   G.mineOwners[slotIdx]=NET.myIdx;
   G.mineCount++;
-  if(myMineCount(NET.myIdx)>=3) G.minePlantPlayers=(G.minePlantPlayers||[]).filter(i=>i!==NET.myIdx);
+  if(G.mineStock&&G.mineStock[NET.myIdx]>0) G.mineStock[NET.myIdx]--;
+  if((G.mineStock&&G.mineStock[NET.myIdx]||0)<=0) G.minePlantPlayers=(G.minePlantPlayers||[]).filter(i=>i!==NET.myIdx);
   SFX.minePlant();
-  addLog(`💣 地雷を仕掛けた！（${myMineCount(NET.myIdx)}/3カ所）`,'log-dora');
+  addLog(`💣 地雷を仕掛けた！（残${(G.mineStock&&G.mineStock[NET.myIdx])||0}個）`,'log-dora');
   broadcastState();
   renderAll();
 }
@@ -17663,9 +17674,10 @@ function plantMineRinshan(ri){
   if(!G.mineRinshanOwners) G.mineRinshanOwners={};
   G.mineRinshanOwners[ri]=NET.myIdx;
   G.mineCount++;
-  if(myMineCount(NET.myIdx)>=3) G.minePlantPlayers=(G.minePlantPlayers||[]).filter(i=>i!==NET.myIdx);
+  if(G.mineStock&&G.mineStock[NET.myIdx]>0) G.mineStock[NET.myIdx]--;
+  if((G.mineStock&&G.mineStock[NET.myIdx]||0)<=0) G.minePlantPlayers=(G.minePlantPlayers||[]).filter(i=>i!==NET.myIdx);
   SFX.minePlant();
-  addLog(`💣 嶺上牌に地雷を仕掛けた！（${myMineCount(NET.myIdx)}/3カ所）`,'log-dora');
+  addLog(`💣 嶺上牌に地雷を仕掛けた！（残${(G.mineStock&&G.mineStock[NET.myIdx])||0}個）`,'log-dora');
   broadcastState();
   renderAll();
 }

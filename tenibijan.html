@@ -3012,7 +3012,7 @@ body{
           <span style="font-size:1.05rem;">📋</span>
           <span style="font-size:.72rem;font-weight:700;color:#88ccff;letter-spacing:.1em;">デイリーミッション</span>
         </div>
-        <span style="font-size:.55rem;color:#3a6a8a;letter-spacing:.06em;">毎日0時リセット</span>
+        <span id="dailyMissionTimerText" style="font-size:.55rem;color:#3a6a8a;letter-spacing:.06em;">毎日0時リセット</span>
       </div>
       <div id="dailyMissionList" style="display:flex;flex-direction:column;gap:8px;">
         <div style="font-size:.6rem;color:#3a5a6a;text-align:center;padding:8px 0;">
@@ -9346,31 +9346,9 @@ function handleWin(widx,winTile,isTsumo,losidx){
   // _captureRonTilePos()もrAFの後に呼び、正確な牌座標を取得する
   requestAnimationFrame(()=>{
     _captureRonTilePos(losidx, isTsumo, widx);
-    if(_yakuVideoUrls.length){
-      // 役満動画の前にロン/ツモのアイコンボイスを再生してから動画へ
-      const _capturedToken = _yakumanVideoToken;
-      const _playVidWithVoice = () => {
-        if(_capturedToken !== _yakumanVideoToken) return;
-        playYakumanVideo(_yakuVideoUrls, ()=>{ showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han); });
-      };
-      const _voiceAction = isTsumo ? 'tsumo' : 'ron';
-      const _iconId = _getPlayerIconId(widx);
-      const _voiceUrl = (ICON_SE_MAP[_iconId]||{})[_voiceAction];
-      if(_voiceUrl){
-        const _va = _iconSeCache[_voiceUrl] || (()=>{ const a=new Audio(_voiceUrl); a.preload='auto'; _iconSeCache[_voiceUrl]=a; return a; })();
-        _va.onended = null; _va.onerror = null; // 前回のコールバックをクリア
-        _va.currentTime = 0;
-        const _vs = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
-        _va.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction) : 1) * _vs);
-        _va.onended = _playVidWithVoice;
-        _va.onerror = _playVidWithVoice;
-        _va.play().catch(_playVidWithVoice);
-      } else {
-        _playVidWithVoice();
-      }
-    } else {
-      showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han);
-    }
+    // 正しい順序: 上がり動画 → 役満動画 → winOverlay
+    // 役満動画URLはshowWinModalに渡し、_playRonAgariEffectのコールバック内で再生する
+    showWinModal(w,displayHand,winTile,isTsumo,losidx,yakus,score,han,null,_yakuVideoUrls.length?_yakuVideoUrls:null);
   });
 }
 
@@ -11336,31 +11314,9 @@ function showWinModalData(d){
     return;
   }
   const w=G.players.find(p=>p.id===d.winnerId)||G.players[0];
-  if(d.yakuVideo){
-    const _capturedToken2 = _yakumanVideoToken;
-    const _playVidWithVoice2 = () => {
-      if(_capturedToken2 !== _yakumanVideoToken) return;
-      playYakumanVideo(d.yakuVideo, ()=>{ showWinModal(w,d.hand,d.winTile,d.isTsumo,d.losidx,d.yakus,d.score,d.han); });
-    };
-    const _voiceAction2 = d.isTsumo ? 'tsumo' : 'ron';
-    const _winnerpidx = G.players.indexOf(w);
-    const _iconId2 = _winnerpidx >= 0 ? _getPlayerIconId(_winnerpidx) : '';
-    const _voiceUrl2 = (ICON_SE_MAP[_iconId2]||{})[_voiceAction2];
-    if(_voiceUrl2){
-      const _va2 = _iconSeCache[_voiceUrl2] || (()=>{ const a=new Audio(_voiceUrl2); a.preload='auto'; _iconSeCache[_voiceUrl2]=a; return a; })();
-      _va2.onended = null; _va2.onerror = null; // 前回のコールバックをクリア
-      _va2.currentTime = 0;
-      const _vs2 = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
-      _va2.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(_voiceAction2) : 1) * _vs2);
-      _va2.onended = _playVidWithVoice2;
-      _va2.onerror = _playVidWithVoice2;
-      _va2.play().catch(_playVidWithVoice2);
-    } else {
-      _playVidWithVoice2();
-    }
-    return;
-  }
-  showWinModal(w,d.hand,d.winTile,d.isTsumo,d.losidx,d.yakus,d.score,d.han);
+  // 正しい順序: 上がり動画 → 役満動画 → winOverlay
+  // 役満動画URLをshowWinModalに渡し、_playRonAgariEffectのコールバック内で再生する
+  showWinModal(w,d.hand,d.winTile,d.isTsumo,d.losidx,d.yakus,d.score,d.han,null,d.yakuVideo||null);
   // ダブロンの場合はタイトルに表示（既にshowWinModal内で処理されるが、ゲスト側向け）
   if(d.doubleRon && d.doubleRonNames){
     const sub = document.getElementById('mSub');
@@ -11371,7 +11327,7 @@ function showWinModalData(d){
     if(title) title.textContent = '🀄🀄 ダブロン！';
   }
 }
-function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han,_doubleRonModals){
+function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han,_doubleRonModals,_yakuVideoUrls){
   const ln=losidx>=0?G.players[losidx].name:'';
   const isDouble = _doubleRonModals && _doubleRonModals.length > 1;
   document.getElementById('mTitle').textContent=isTsumo?'🀄 ツモ上がり！':(isDouble?'🀄🀄 ダブロン！':'🀄 ロン上がり！');
@@ -11411,10 +11367,17 @@ function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han,_double
     }
   }
   timerStop();
-  // 上がり時: エフェクト動画を再生してから winOverlay を表示
+  // 正しい順序: 上がり動画 → 役満動画 → winOverlay
   _playRonAgariEffect(()=>{
-    document.getElementById('winOverlay').classList.add('show');
-    _startWinTimer();
+    if(_yakuVideoUrls && _yakuVideoUrls.length){
+      playYakumanVideo(_yakuVideoUrls, ()=>{
+        document.getElementById('winOverlay').classList.add('show');
+        _startWinTimer();
+      });
+    } else {
+      document.getElementById('winOverlay').classList.add('show');
+      _startWinTimer();
+    }
   });
 }
 
@@ -14635,6 +14598,25 @@ function loadProfile(){
     .catch(()=>{ /* サーバー未接続時はlocalStorageのデータをそのまま使う */ });
 }
 
+// ── デイリーミッション カウントダウンタイマー（常時表示）──────────
+let _dailyMissionTimerInterval = null;
+function _startDailyMissionTimer() {
+  const update = () => {
+    const now = new Date();
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const jstTomorrow = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate() + 1, 0, 0, 0));
+    const diffMs = jstTomorrow - now;
+    const h = Math.floor(diffMs / 3600000);
+    const m = Math.floor((diffMs % 3600000) / 60000);
+    const s = Math.floor((diffMs % 60000) / 1000);
+    const dmTimer = document.getElementById('dailyMissionTimerText');
+    if (dmTimer) dmTimer.textContent = `⏰ リセットまで ${h}時間${m}分${s}秒`;
+  };
+  update();
+  if (_dailyMissionTimerInterval) clearInterval(_dailyMissionTimerInterval);
+  _dailyMissionTimerInterval = setInterval(update, 1000);
+}
+
 // ── ログインボーナス ──────────────────────────────────────────────
 // 次の日本時間0時までの残り時間をカウントダウン表示
 let _loginBonusTimerInterval = null;
@@ -14653,6 +14635,9 @@ function _startLoginBonusTimer() {
     const m = Math.floor((diffMs % 3600000) / 60000);
     const s = Math.floor((diffMs % 60000) / 1000);
     timerText.textContent = `次のボーナスまで ${h}時間${m}分${s}秒`;
+    // デイリーミッションパネルにも同じカウントダウンを表示
+    const dmTimer = document.getElementById('dailyMissionTimerText');
+    if (dmTimer) dmTimer.textContent = `⏰ リセットまで ${h}時間${m}分${s}秒`;
   };
   update();
   if (_loginBonusTimerInterval) clearInterval(_loginBonusTimerInterval);
@@ -14796,17 +14781,14 @@ function renderDailyMissions() {
         🎁 受け取る（+${m.reward}<img src='https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true' style='width:12px;height:12px;object-fit:contain;vertical-align:middle;margin-left:2px;'>）
       </button>`;
     } else if (m.id === 'suki') {
-      // 未達成の好きミッション: 「好き」ボタンを未達成ラベルの左に表示
-      statusHtml = `<div style="display:flex;align-items:center;gap:6px;">
-        <button onclick="doSukiMission()" id="sukiBtn" style="
-          padding:6px 14px;border-radius:8px;font-size:.68rem;font-weight:700;cursor:pointer;
-          border:1.5px solid #cc3388;background:linear-gradient(135deg,#1a0010,#280018);
-          color:#ff88bb;white-space:nowrap;transition:all .2s;"
-          onmouseover="this.style.boxShadow='0 0 12px #cc338866'" onmouseout="this.style.boxShadow=''">
-          ❤️ 好き！
-        </button>
-        <span style="font-size:.58rem;color:#3a6a5a;">未達成</span>
-      </div>`;
+      // 未達成のsukiミッション: 「好き！」ボタンで達成 → 受け取りボタンに切り替わる
+      statusHtml = `<button onclick="doSukiMission()" id="sukiBtn" style="
+        padding:6px 14px;border-radius:8px;font-size:.68rem;font-weight:700;cursor:pointer;
+        border:1.5px solid #cc3388;background:linear-gradient(135deg,#1a0010,#280018);
+        color:#ff88bb;white-space:nowrap;transition:all .2s;"
+        onmouseover="this.style.boxShadow='0 0 12px #cc338866'" onmouseout="this.style.boxShadow=''">
+        ❤️ 好き！
+      </button>`;
     } else {
       statusHtml = `<span style="font-size:.58rem;color:#3a6a5a;">未達成</span>`;
     }
@@ -14836,6 +14818,7 @@ function _updateSukiBtn() {
 function loadDailyMissions() {
   const token = localStorage.getItem('jwt_token');
   if (!token) return;
+  _startDailyMissionTimer(); // カウントダウン常時起動
   authFetch('/api/daily-missions')
     .then(r => r.json())
     .then(d => {
@@ -14924,9 +14907,11 @@ function _triggerDailyMission(missionId) {
 
 // 好きボタン
 function doSukiMission() {
-  const { done, pending } = _dailyMissionState;
+  const { done, pending, missions } = _dailyMissionState;
   // 受取済み
   if (done.includes('suki')) return;
+  // 今日のミッションに含まれていない場合は何もしない
+  if (!missions || !missions.some(m => m.id === 'suki')) return;
   // pending（達成済み・未受取） → claim
   if (pending.includes('suki')) {
     claimDailyMission('suki');

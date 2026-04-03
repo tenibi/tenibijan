@@ -12247,11 +12247,12 @@ function _initWallCanvasEvents(wc){
   let _penCommitted=null; // 確定済みストロークバッファ（epUp と同じパターン）
   function _ensureWallCommitted(){
     if(!_penCommitted||_penCommitted.width!==wc.width||_penCommitted.height!==wc.height){
-      const prev=_penCommitted;
       _penCommitted=document.createElement('canvas');
       _penCommitted.width=wc.width; _penCommitted.height=wc.height;
-      // サイズ変更時は以前の内容を引き継ぐ
-      if(prev) _penCommitted.getContext('2d').drawImage(prev,0,0);
+      // ★バグ修正: 前回の内容を引き継がない
+      // サイズ変更時に prev の内容を drawImage していたため、前局のストロークが
+      // _penCommitted → window._activePenOC 経由で次局の renderWall に混入し、
+      // 全牌に前局の絵が描画されるバグの原因となっていた。
     }
   }
   let _penOC=null; // offscreen canvas

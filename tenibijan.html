@@ -7635,6 +7635,7 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   // _wallCanvasInited=false で _initWallCanvasEvents を再呼び出しさせ
   // クロージャ内の _penCommitted/_penOC も null からリセットさせる（ホスト・ゲスト共通）。
   window._activePenOC=null;
+  window._activeDoraOC=null;
   _wallCanvasInited=false;
   // 前局の白変換を元に戻す（players再生成前に処理）
   if(G.players){
@@ -11828,6 +11829,7 @@ function _initWallExpandEvents(ec){
       _epCommitted = document.createElement('canvas');
       _epCommitted.width = ec.width;
       _epCommitted.height = ec.height;
+      // ★バグ修正: 前局のストロークが混入するのを防ぐため引き継がない
     }
   }
 

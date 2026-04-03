@@ -7613,9 +7613,11 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   if(_bapBtn && !(numPlayers===1 && G && G._soloStage)) _bapBtn.style.display = 'none';
   // ペンモードOFFにリセット（局をまたいでペン状態が残らないよう）
   if(_penModeOn){ _penModeOn=false; const pb=document.getElementById('penToggleBtn');if(pb)pb.classList.remove('pen-active'); const pt=document.getElementById('penToolbarFloat');if(pt)pt.style.display='none'; const wc=document.getElementById('wallCanvas');if(wc){wc.classList.remove('pen-on');wc.classList.remove('pick-on');} const wo=document.getElementById('wallExpandOverlay');if(wo)wo.classList.remove('show'); }
-  // ペン確定バッファをリセット: _activePenOC=null + _wallCanvasInited=false で
-  // 次の renderWall 時に _initWallCanvasEvents が再呼び出しされ、
-  // クロージャ内の _penCommitted/_penOC が null から再生成される（ホスト・ゲスト共通）
+  // ペン確定バッファを無条件リセット（ペンモードOFF状態で局をまたいだ場合も含む）:
+  // penUp/epUp が window._activePenOC=_penCommitted をセットしたまま局が進むと
+  // 次局の renderWall() が前局のストロークをそのまま描画するバグの原因となる。
+  // _wallCanvasInited=false で _initWallCanvasEvents を再呼び出しさせ
+  // クロージャ内の _penCommitted/_penOC も null からリセットさせる（ホスト・ゲスト共通）。
   window._activePenOC=null;
   _wallCanvasInited=false;
   // 前局の白変換を元に戻す（players再生成前に処理）
@@ -11821,8 +11823,7 @@ function _initWallExpandEvents(ec){
     if(!_epOC || _epOC.width !== ec.width){
       _epOC = document.createElement('canvas');
       _epOC.width = ec.width; _epOC.height = ec.height;
-      // _epCommitted からの引き継ぎを削除: 前ターン確定ストロークが混入するバグの原因
-      // 確定済み描画は G.penDrawings に保存・renderWallExpand で表示されるため引き継ぎ不要
+      // _epCommitted からの引き継ぎを削除: 前局ストロークが混入するバグの原因
     }
     window._activePenOC = _epOC;
     const ctx = _epOC.getContext('2d');
@@ -12249,9 +12250,8 @@ function _initWallCanvasEvents(wc){
   function _getPenOC(){
     if(!_penOC||_penOC.width!==wc.width||_penOC.height!==wc.height){
       _penOC=document.createElement('canvas');
+      // _penCommitted からの引き継ぎを削除: 前局ストロークが混入するバグの原因
       _penOC.width=wc.width; _penOC.height=wc.height;
-      // _penCommitted からの引き継ぎを削除: 前ターン確定ストロークが混入するバグの原因
-      // 確定済み描画は G.penDrawings に保存・renderWall で表示されるため引き継ぎ不要
     }
     window._activePenOC=_penOC;
     return _penOC;

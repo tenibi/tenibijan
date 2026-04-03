@@ -6987,11 +6987,16 @@ function applyHostState(msg){
       _triggerAutoAction(NET.myIdx, 350);
     }
     // ★バグ修正: ゲストは startRound() を呼ばないため、ホストが新局を開始した際に
-    // window._activePenOC と _wallCanvasInited をここでリセットする。
-    // リセットしないと前局の _penCommitted（全牌描画バッファ）が残ったまま
+    // window 内のすべてのペン描画バッファをリセットする。
+    // リセットしないと前局のストローク（_penCommitted 等）が残ったまま
     // renderWall() に混入し、前局の絵が全体に再描画されるバグが発生する。
     if(s._newRound){
       window._activePenOC = null;
+      window._activeDoraOC = null;
+      window._penCommitted = null;
+      window._penOC = null;
+      window._epCommitted = null;
+      window._epOC = null;
       _wallCanvasInited = false;
     }
     renderAll();

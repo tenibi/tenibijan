@@ -341,6 +341,7 @@ body{
 .lobby-title p{font-size:.7rem;color:#5a7a6a;letter-spacing:.25em;text-align:center;margin-top:4px;}
 .lobby-tiles{display:flex;gap:6px;font-size:2.2rem;animation:float 3s ease-in-out infinite;justify-content:center;}
 @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+@keyframes _loginBonusIn{from{transform:translateX(-50%) scale(.7);opacity:0;}to{transform:translateX(-50%) scale(1);opacity:1;}}
 .lobby-card{
   background:linear-gradient(135deg,rgba(9,20,34,0.82),rgba(6,14,24,0.82));
   border:1px solid #1a3a2a;border-radius:14px;padding:20px 26px;
@@ -1717,7 +1718,7 @@ body{
 
     <!-- 常設ガチャパネル -->
     <div id="gachaPanelStandard">
-      <div class="gacha-sub">LEGEND排出で能力解放・白猫の手・あがり動画・Lアイコンのどれか1つ！</div>
+      <div class="gacha-sub">LEGEND排出で全11種から完全均等抽選（各1/11）！</div>
       <!-- レアリティ表 -->
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;justify-content:center;">
         <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#0a1a14;border:1px solid #2a4a3a;color:#5a8a7a;">NORMAL 89.9%</span>
@@ -1729,7 +1730,7 @@ body{
       <div style="margin-bottom:16px;background:#1a0e00;border:1px solid #ffd700;border-radius:12px;padding:12px 14px;">
         <div style="font-size:.6rem;color:#ffd700;letter-spacing:.12em;margin-bottom:10px;text-align:center;">&#x1F451; LEGEND ラインナップ</div>
         <!-- 能力 -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x26A1; 能力解放（各約33%・4種ランダム）</div>
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x26A1; 能力解放（各1/11・4種）</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
             <span style="font-size:.85rem;">&#x1F311;</span>
@@ -1749,7 +1750,7 @@ body{
           </div>
         </div>
         <!-- あがり動画 -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F3AC; あがり動画（約33%・3種）</div>
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F3AC; あがり動画（各1/11・3種）</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
             <span style="font-size:.85rem;">&#x1F3B4;</span>
@@ -1765,7 +1766,7 @@ body{
           </div>
         </div>
         <!-- 手スキン -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F489; 手スキン（約33%）</div>
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F489; 手スキン（1/11）</div>
         <div style="display:flex;align-items:center;gap:8px;background:#0a0800;border:1px solid #6a5010;border-radius:8px;padding:6px 10px;margin-bottom:10px;">
           <span style="font-size:1.2rem;">&#x1F90D;</span>
           <div>
@@ -1774,7 +1775,7 @@ body{
           </div>
         </div>
         <!-- レジェンドアイコン -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F5BC;&#xFE0F; レジェンドアイコン（約33%・3種）</div>
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F5BC;&#xFE0F; レジェンドアイコン（各1/11・3種）</div>
         <div style="display:flex;gap:8px;justify-content:center;">
           <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
             <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
@@ -2059,7 +2060,7 @@ body{
     </div>
 
     <!-- ビッツ宣伝バナー -->
-    <a href="https://www.twitch.tv/imteddybeerbear" target="_blank" rel="noopener" style="text-decoration:none;display:block;margin-bottom:16px;">
+    <a href="https://www.twitch.tv/imteddybeerbear" target="_blank" rel="noopener" onclick="_triggerDailyMission('twitch_open')" style="text-decoration:none;display:block;margin-bottom:16px;">
       <div style="
         background:linear-gradient(135deg,#0d0a20,#1a0a30,#0a0d20);
         border:1.5px solid #6a3a9a;border-radius:12px;
@@ -2778,6 +2779,11 @@ body{
         <button class="pcnt-btn active" id="modeAbilityOn" onclick="setAbilityMode(true)">⚡ 能力あり</button>
         <button class="pcnt-btn" id="modeAbilityOff" onclick="setAbilityMode(false)">♟ 能力なし</button>
       </div>
+      <div style="margin-top:6px;margin-bottom:2px;font-size:.58rem;color:#5a8a6a;letter-spacing:.1em;">局数</div>
+      <div class="pcnt" style="margin-bottom:8px;">
+        <button class="pcnt-btn active" id="modeHanchan" onclick="setRoundMode(false)">🀄 半荘</button>
+        <button class="pcnt-btn" id="modeTonpuu" onclick="setRoundMode(true)">🀀 東風</button>
+      </div>
       <div style="margin-top:6px;margin-bottom:2px;font-size:.58rem;color:#5a8a6a;letter-spacing:.1em;">制限時間</div>
       <div class="pcnt" style="margin-bottom:8px;">
         <button class="pcnt-btn" id="modeTimeOn" onclick="setTimeMode(true)">⏱ あり</button>
@@ -2937,6 +2943,52 @@ body{
       </div>
     </div>
 
+  <!-- ★ デイリーミッション -->
+  <div id="dailyMissionPanel" style="
+    width:100%;box-sizing:border-box;
+    background:linear-gradient(135deg,#0a1820,#060f18);
+    border:1px solid #1a3a5a;border-radius:14px;
+    padding:14px 16px;margin-bottom:10px;
+  ">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:7px;">
+        <span style="font-size:1.05rem;">📋</span>
+        <span style="font-size:.72rem;font-weight:700;color:#88ccff;letter-spacing:.1em;">デイリーミッション</span>
+      </div>
+      <span style="font-size:.55rem;color:#3a6a8a;letter-spacing:.06em;">毎日0時リセット</span>
+    </div>
+    <div id="dailyMissionList" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:.6rem;color:#3a5a6a;text-align:center;padding:8px 0;">
+        読み込み中<span class="thinking-dots"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★ 好きボタン（デイリーミッション用） -->
+  <div id="sukiMissionPanel" style="
+    width:100%;box-sizing:border-box;
+    background:linear-gradient(135deg,#180a12,#0f0618);
+    border:1px solid #4a1a3a;border-radius:14px;
+    padding:14px 16px;margin-bottom:10px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  ">
+    <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+      <span style="font-size:1.2rem;flex-shrink:0;">❤️</span>
+      <div>
+        <div style="font-size:.65rem;font-weight:700;color:#ff88bb;">手にビに「好き」と言う</div>
+        <div style="font-size:.55rem;color:#6a3a5a;margin-top:2px;">ミッション達成でコイン獲得！</div>
+      </div>
+    </div>
+    <button id="sukiBtn" onclick="doSukiMission()" style="
+      padding:8px 18px;border-radius:10px;font-size:.72rem;font-weight:700;cursor:pointer;
+      border:1.5px solid #cc3388;background:linear-gradient(135deg,#1a0010,#280018);
+      color:#ff88bb;white-space:nowrap;flex-shrink:0;
+      transition:all .2s;
+    " onmouseover="this.style.boxShadow='0 0 12px #cc338866'" onmouseout="this.style.boxShadow=''">
+      ❤️ 好き！
+    </button>
+  </div>
+
     <div id="rankWaitPanel">
       <div style="font-size:.58rem;color:#5a7a6a;text-align:center;margin-bottom:14px;line-height:1.8;">
         能力あり・3人対戦・制限時間ありで<br>マッチングします。
@@ -2989,6 +3041,11 @@ body{
       <div class="pcnt" style="margin-bottom:6px;">
         <button class="pcnt-btn" id="rlsModeTimeOn" onclick="setRoomTimeMode(true);updateRoomLobbyUI()">⏱ あり</button>
         <button class="pcnt-btn active" id="rlsModeTimeOff" onclick="setRoomTimeMode(false);updateRoomLobbyUI()">∞ なし</button>
+      </div>
+      <div style="font-size:.6rem;color:#5a7a6a;text-align:center;margin-bottom:4px;">局数</div>
+      <div class="pcnt" style="margin-bottom:6px;">
+        <button class="pcnt-btn active" id="rlsModeHanchan" onclick="setRoomTonpuuMode(false);updateRoomLobbyUI()">🀄 半荘</button>
+        <button class="pcnt-btn" id="rlsModeTonpuu" onclick="setRoomTonpuuMode(true);updateRoomLobbyUI()">🀀 東風</button>
       </div>
       <div style="font-size:.6rem;color:#5a7a6a;text-align:center;margin-bottom:4px;">飛び</div>
       <div class="pcnt" style="margin-bottom:0;">
@@ -3855,6 +3912,7 @@ async function attemptRejoin(){
         NET.myIdx       = msg.myIdx;
         NET.online      = true;
         G_ABILITY_MODE  = msg.abilityMode ?? true;
+        G_TONPUU_MODE   = msg.tonpuuMode === true;
         // ★ランクマッチフラグを復元
         if(msg.isRankMatch){
           NET.isRankMatch = true;
@@ -4678,6 +4736,7 @@ let NET={
   roomAbilityMode:true, // ルームマッチ能力あり/なし
   roomTimeMode:false,   // ルームマッチ制限時間あり/なし
   roomTobiMode:true,    // ルームマッチ飛びあり/なし
+  roomTonpuuMode:false, // ルームマッチ東風/半荘
   online:false,     // playing online?
   roomCode:null,
   isRankMatch:false, // ランクマッチ中か
@@ -5683,10 +5742,20 @@ function setRoomTobiMode(on){
   document.getElementById('rlsModeTobiOn')?.classList.toggle('active',on);
   document.getElementById('rlsModeTobiOff')?.classList.toggle('active',!on);
 }
+function setRoomTonpuuMode(on){
+  NET.roomTonpuuMode=on;
+  document.getElementById('rlsModeTonpuu')?.classList.toggle('active', on);
+  document.getElementById('rlsModeHanchan')?.classList.toggle('active',!on);
+}
 function setTobiMode(on){
   G_TOBI_MODE=on;
   document.getElementById('modeTobiOn')?.classList.toggle('active',on);
   document.getElementById('modeTobiOff')?.classList.toggle('active',!on);
+}
+function setRoundMode(tonpuu){
+  G_TONPUU_MODE=tonpuu;
+  document.getElementById('modeTonpuu')?.classList.toggle('active', tonpuu);
+  document.getElementById('modeHanchan')?.classList.toggle('active',!tonpuu);
 }
 async function createRoom(){
   setOnlineStatus('接続中…');
@@ -5767,6 +5836,24 @@ async function createRoom(){
         _handleRejoin(conn, msg);
       }
     });
+
+    // ★ ロビー中の切断クリーンアップ
+    // attachConnHandlers は NET.online=false のときに何もしないため、
+    // ロビー専用の close ハンドラでゲストを NET.conns から除去する
+    conn.on('close', ()=>{
+      if(NET.online) return; // ゲーム中は attachConnHandlers 側で処理
+      const idx = NET.conns.indexOf(conn);
+      if(idx === -1) return;
+      NET.conns.splice(idx, 1);
+      NET.guestNames.splice(idx, 1);
+      NET.guestAbilities.splice(idx, 1);
+      NET.guestIconIds.splice(idx, 1);
+      NET.guestEmotes.splice(idx, 1);
+      NET.guestReady.splice(idx, 1);
+      NET.guestIsCpu.splice(idx, 1);
+      _broadcastMemberUpdate();
+      updateRoomLobbyUI();
+    });
   });
   NET.peer.on('error', e=>{setOnlineStatus('エラー: '+e.message);});
 }
@@ -5836,6 +5923,8 @@ function updateRoomLobbyUI(){
     document.getElementById('rlsModeTimeOff')?.classList.toggle('active', !NET.roomTimeMode);
     document.getElementById('rlsModeTobiOn')?.classList.toggle('active', NET.roomTobiMode);
     document.getElementById('rlsModeTobiOff')?.classList.toggle('active', !NET.roomTobiMode);
+    document.getElementById('rlsModeTonpuu')?.classList.toggle('active', NET.roomTonpuuMode);
+    document.getElementById('rlsModeHanchan')?.classList.toggle('active', !NET.roomTonpuuMode);
     const startBtn = document.getElementById('rlsStartBtn');
     if(startBtn){
       const totalSlots = NET.conns.length; // CPU含む全ゲストスロット数
@@ -6063,10 +6152,11 @@ function hostStartGame(){
     })),
     // 末尾にCPUスロット（connsには含まれない純粋CPU）は既にconns側に入っているので不要
   ];
-  realConns.forEach(c=>{if(c&&c.open)c.send({type:'gameStart',totalPlayers,abilityMode:NET.roomAbilityMode,timeMode:NET.roomTimeMode,tobiMode:NET.roomTobiMode,membersInfo});});
+  realConns.forEach(c=>{if(c&&c.open)c.send({type:'gameStart',totalPlayers,abilityMode:NET.roomAbilityMode,timeMode:NET.roomTimeMode,tobiMode:NET.roomTobiMode,tonpuuMode:NET.roomTonpuuMode,membersInfo});});
   // ゲーム開始後はサーバーから部屋を削除する（新規参加を防ぐ）
   if(NET.roomCode) authFetch('/room/'+NET.roomCode, {method:'DELETE'}).catch(()=>{});
   if(NET.roomTimeMode) G_TIME_MODE=true;
+  G_TONPUU_MODE = NET.roomTonpuuMode;
   hideRoomLobby();
   setTimeout(()=>startOnlineGame(),300);
 }
@@ -6185,7 +6275,7 @@ function _handleRejoin(conn, msg){
   addLog(`🔄 ${p.name} が対局に復帰しました！`,'log-new');
 
   // 承認メッセージを送信
-  conn.send({type:'rejoinAck', myIdx:originalIdx, abilityMode:G_ABILITY_MODE, isRankMatch:NET.isRankMatch||false, matchId:RANK.matchId||null});
+  conn.send({type:'rejoinAck', myIdx:originalIdx, abilityMode:G_ABILITY_MODE, tonpuuMode:G_TONPUU_MODE, isRankMatch:NET.isRankMatch||false, matchId:RANK.matchId||null});
   // 最新ゲーム状態を送信（手牌含む全state）
   broadcastState();
   renderAll();
@@ -6374,6 +6464,7 @@ function onNetData(msg, senderIdx){
       G_ABILITY_MODE=msg.abilityMode;
       if(msg.timeMode) G_TIME_MODE=true;
       G_TOBI_MODE = msg.tobiMode !== false; // デフォルトtrue（ランクは常にtrue）
+      G_TONPUU_MODE = msg.tonpuuMode === true;
       
       console.log('gameStart受信:', {myIdx: NET.myIdx, isHost: NET.isHost, membersInfo: msg.membersInfo});
       
@@ -6796,6 +6887,7 @@ function applyHostState(msg){
     numPlayers=s.numPlayers;
     pendingAction=s.pendingAction;
     if(s.tobiMode !== undefined) G_TOBI_MODE = s.tobiMode;
+    if(s.tonpuuMode !== undefined) G_TONPUU_MODE = s.tonpuuMode;
     selIdx=-1;
     // Bug4修正: ゲストのPeerIDリストをホストから受け取って保持（ホスト昇格時に使用）
     if(s.guestPeerIds) NET.guestPeerIds = s.guestPeerIds;
@@ -6885,6 +6977,7 @@ function _buildStateSnapshot(extra={}){
     players:G.players,numPlayers,pendingAction,
     guestPeerIds:NET.guestPeerIds,
     tobiMode:G_TOBI_MODE,
+    tonpuuMode:G_TONPUU_MODE,
     discardAnimPidx:_broadcastDiscardAnimPidx,
     _lastActionId:NET._lastActionId,
     ...extra
@@ -7098,8 +7191,10 @@ function startOnlineGame(){
   if(!NET.isRankMatch){
     G_ABILITY_MODE=NET.roomAbilityMode;
     G_TOBI_MODE=NET.roomTobiMode;
+    G_TONPUU_MODE=NET.roomTonpuuMode;
   } else {
     G_TOBI_MODE=true; // ランクマッチは飛びあり固定
+    G_TONPUU_MODE=false; // ランクマッチは半荘固定
   }
   hideRoomLobby();
   document.getElementById('lobby').style.display='none';
@@ -9214,6 +9309,8 @@ function handleWin(widx,winTile,isTsumo,losidx){
   if(w.id === (G.players[NET.myIdx]||{}).id){
     _checkScoreTitles(w.score);
   }
+  // デイリーミッション達成チェック
+  checkDailyMissions_onWin(yakus, widx);
   saveScores();
   if(checkTobi()) return; // 飛び発生 → 即終了（winModalは出さない）
   const _yakuVideoUrls=numPlayers===1?[]:getYakumanVideoUrls(yakus);
@@ -10374,7 +10471,10 @@ function advanceRound(dealerWon){
   else{G.honba++;} // 親で上がり → 本場+1
   // numPlayers局で1周（3人なら3局、4人なら4局）
   if(G.roundNum>numPlayers){G.roundNum=1;G.roundWind=G.roundWind==='東'?'南':'東';}
-  if(G.roundWind==='南'&&G.roundNum>numPlayers){showFinalResult();return;}
+  // 東風戦: 東場終了で即終了
+  if(G_TONPUU_MODE && G.roundWind==='南'){showFinalResult();return;}
+  // 半荘戦: 南場終了で終了
+  if(!G_TONPUU_MODE && G.roundWind==='南'&&G.roundNum>numPlayers){showFinalResult();return;}
   startRound();
 }
 // 飛びチェック: -1000点以下のプレイヤーがいれば即終了
@@ -10394,10 +10494,14 @@ function isOyaFirst(){
   return dealer.score>=maxScore;
 }
 function checkEnd(){
-  if(G.roundWind==='南'&&G.roundNum>=numPlayers){
+  // 東風戦: 東場の最終局（オーラス）判定
+  const isLastRound = G_TONPUU_MODE
+    ? (G.roundWind==='東' && G.roundNum>=numPlayers)
+    : (G.roundWind==='南' && G.roundNum>=numPlayers);
+  if(isLastRound){
     // オーラスでラス親が上がった場合: ラス親が1位でなければ継続
     if(G._dealerWon && !isOyaFirst()){
-      // 連荘して試合継続（南を超えて延長戦）
+      // 連荘して試合継続（延長戦）
       addLog('📌 オーラス連荘：ラス親がトップでないため継続','log-win');
       return false;
     }
@@ -10432,6 +10536,8 @@ function _bombSendResult(stage, score){
   if(score > (PROFILE.bombBestScore??-Infinity)) PROFILE.bombBestScore = score;
   // ローカルランキングにも保存
   _saveBombLocalRanking(stage, score);
+  // デイリーミッション: 手にボムを1回プレイ
+  _triggerDailyMission('bomb_play');
 }
 
 function _soloShowFinalResult(cleared){
@@ -10489,6 +10595,9 @@ function showFinalResult(){
         if(d.earned>0) rewardEl.innerHTML=`<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;"> +${d.earned} 手にビコイン獲得！（合計 ${PROFILE.coins} 枚）<br><span style="font-size:.65rem;color:#5a7a6a;">${rankLabel}報酬：+${d.earned}枚</span>`;
         else rewardEl.innerHTML=`<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;"> +0 手にビコイン<br><span style="font-size:.65rem;color:#5a7a6a;">参加報酬：+0枚</span>`;
       }
+      // デイリーミッション: ルームマッチ1位 / ランクマッチ参加
+      if(NET.online && NET.isRankMatch) _triggerDailyMission('rank_play');
+      else if(myRank===1 && NET.online) _triggerDailyMission('room_win');
     } else {
       if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">コイン付与エラー: ${d.error||'不明'}</span>`;
     }
@@ -10656,6 +10765,9 @@ function showFinalResultData(sorted){
         else rewardEl.innerHTML=`<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;"> +0 手にビコイン<br><span style="font-size:.65rem;color:#5a7a6a;">参加報酬：+0枚</span>`;
       }
     }
+      // デイリーミッション: ランクマッチ参加 / ルームマッチ1位
+      if(NET.isRankMatch) _triggerDailyMission('rank_play');
+      else if(myRankG===1) _triggerDailyMission('room_win');
   }).catch(e=>{ if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">通信エラー: ${e.message}</span>`; });
   saveProfileSilent();
 
@@ -11102,6 +11214,8 @@ function backToLobby(){
     showSolo();
   }
   bgmToTitle();
+  // ロビーに戻ったときにデイリーミッション状態を更新
+  loadDailyMissions();
 }
 
 // ============================================================
@@ -11734,7 +11848,20 @@ function _initWallExpandEvents(ec){
     // 確定バッファに今のストロークを合成してから保存
     _ensureCommitted();
     if(_epOC){
-      _epCommitted.getContext('2d').drawImage(_epOC, 0, 0);
+      // ★バグ修正: 牌の領域のみにクリップして確定バッファに合成
+      const cc=_epCommitted.getContext('2d');
+      cc.save();
+      cc.beginPath();
+      if(G.deckSlots){
+        for(let _ci=0;_ci<G.deckSlots.length;_ci++){
+          if(!G.deckSlots[_ci]) continue;
+          const _cr=_wallTileRect(_ci);
+          cc.rect(_cr.x,_cr.y,_cr.w,_cr.h);
+        }
+      }
+      cc.clip();
+      cc.drawImage(_epOC, 0, 0);
+      cc.restore();
     }
 
     // G.penDrawings と _penImgCache に保存
@@ -12013,9 +12140,20 @@ const _doraImgCache={};
 
   // ペン描き込み中: offscreen canvas をリアルタイムプレビュー
   // _penOC は renderWall内では参照できないのでグローバル経由
+  // ★バグ修正: 牌の領域のみにクリップして描画（牌の外に線が残る不具合を防ぐ）
   if(window._activePenOC){
+    ctx.save();
+    ctx.beginPath();
+    for(let i=0;i<total;i++){
+      const slot=G.deckSlots[i];
+      if(!slot) continue;
+      const r=_wallTileRect(i);
+      ctx.rect(r.x,r.y,r.w,r.h);
+    }
+    ctx.clip();
     ctx.globalCompositeOperation='source-over';
     ctx.drawImage(window._activePenOC,0,0);
+    ctx.restore();
   }
 
   // イベント設定（初回のみ・かつ本物の wallCanvas のときのみ）
@@ -12159,7 +12297,21 @@ function _initWallCanvasEvents(wc){
     // 確定バッファに今のストロークを合成してから保存（epUp と同じパターン）
     _ensureWallCommitted();
     if(_penOC){
-      _penCommitted.getContext('2d').drawImage(_penOC,0,0);
+      // ★バグ修正: 牌の領域のみにクリップして確定バッファに合成
+      // （牌の外にはみ出た線が残り続ける不具合を防ぐ）
+      const cc=_penCommitted.getContext('2d');
+      cc.save();
+      cc.beginPath();
+      if(G.deckSlots){
+        for(let _ci=0;_ci<G.deckSlots.length;_ci++){
+          if(!G.deckSlots[_ci]) continue;
+          const _cr=_wallTileRect(_ci);
+          cc.rect(_cr.x,_cr.y,_cr.w,_cr.h);
+        }
+      }
+      cc.clip();
+      cc.drawImage(_penOC,0,0);
+      cc.restore();
     }
 
     // ★ _activePenOC を確定バッファに差し替えて null にしない
@@ -13887,6 +14039,7 @@ function applyMat(){
 let G_ABILITY_MODE = true; // 能力あり/なし
 let G_TIME_MODE    = false; // 制限時間モード
 let G_TOBI_MODE    = true;  // 飛びあり/なし（-1000点以下で即終了）
+let G_TONPUU_MODE  = false; // 東風戦/半荘戦（true=東風: 東場のみ）
 
 function _applyProfile(){
   applyMat();
@@ -14450,9 +14603,278 @@ function loadProfile(){
         }
       }catch(_){}
       _applyProfile();
+      checkLoginBonus();
+      loadDailyMissions();
       if(typeof refreshFriendBadge==='function') refreshFriendBadge();
     })
     .catch(()=>{ /* サーバー未接続時はlocalStorageのデータをそのまま使う */ });
+}
+
+// ── ログインボーナス ──────────────────────────────────────────────
+// 日本時間(UTC+9)の日付が変わると1日1回50コインもらえる
+function checkLoginBonus(){
+  const token = localStorage.getItem('jwt_token');
+  if(!token) return;
+  authFetch('/api/login-bonus', {method:'POST'})
+    .then(r=>r.json())
+    .then(d=>{
+      if(!d.ok || d.alreadyClaimed) return;
+      // ボーナスコインをPROFILEに反映
+      PROFILE.coins = d.coins;
+      updateProfileBadge();
+      if(typeof updateGachaCoinDisplay==='function') updateGachaCoinDisplay();
+      if(typeof updateShopCoinDisplay==='function') updateShopCoinDisplay();
+      // バナートースト表示
+      let toast = document.getElementById('_loginBonusToast');
+      if(!toast){
+        toast = document.createElement('div');
+        toast.id = '_loginBonusToast';
+        toast.style.cssText = [
+          'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:99999;',
+          'background:linear-gradient(135deg,#1a2e10,#0d1a08);',
+          'border:2px solid #c9a84c;border-radius:14px;',
+          'padding:16px 28px;text-align:center;min-width:240px;',
+          'box-shadow:0 6px 30px #000c;pointer-events:none;',
+          'transition:opacity .5s;',
+          'animation:_loginBonusIn .4s cubic-bezier(.34,1.56,.64,1);',
+        ].join('');
+        document.body.appendChild(toast);
+      }
+      toast.innerHTML =
+        '<div style="font-size:.58rem;color:#c9a84c;letter-spacing:.12em;margin-bottom:5px;">🎁 ログインボーナス</div>' +
+        '<div style="font-size:1.5rem;font-weight:900;color:#f0d47a;letter-spacing:.05em;">' +
+          '+' + d.earned +
+          '<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true"' +
+          ' style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-left:4px;">' +
+        '</div>' +
+        '<div style="font-size:.55rem;color:#8aaa6a;margin-top:5px;">明日また受け取れます</div>';
+      toast.style.opacity = '1';
+      clearTimeout(toast._tid);
+      toast._tid = setTimeout(()=>{ toast.style.opacity='0'; }, 3500);
+    })
+    .catch(()=>{ /* ボーナス取得失敗は無視 */ });
+}
+
+// ============================================================
+// デイリーミッション
+// ============================================================
+
+// ミッション定義（クライアント表示用・報酬はサーバーで管理）
+const DAILY_MISSION_DEFS = [
+  { id:'yakuman',     label:'役満を上がる',              icon:'🀄', reward:100 },
+  { id:'room_win',    label:'ルームマッチで1回1位になる', icon:'🥇', reward: 30 },
+  { id:'gift_send',   label:'フレンドにギフトを送る',     icon:'🎁', reward: 20 },
+  { id:'gacha_free',  label:'常設ガチャを1回引く',        icon:'🎰', reward: 20 },
+  { id:'bomb_play',   label:'手にボムを1回プレイ',        icon:'💣', reward: 20 },
+  { id:'twitch_open', label:'手にビのTwitchを開く',      icon:'💜', reward: 20 },
+  { id:'rank_play',   label:'ランクマッチを1試合プレイ',  icon:'⚔️', reward: 20 },
+  { id:'suki',        label:'手にビに「好き」と言う',     icon:'❤️', reward: 10 },
+];
+
+// ローカルで今日の達成状態をキャッシュ（pending = 上がったが未受取）
+let _dailyMissionState = {
+  done: [],        // サーバーで受取済みのmissionId[]
+  pending: [],     // ローカルで達成したが未クレームのmissionId[]
+  today: null,
+};
+
+// ロビー表示を更新する
+function renderDailyMissions() {
+  const list = document.getElementById('dailyMissionList');
+  if (!list) return;
+  const { done, pending } = _dailyMissionState;
+  _updateSukiBtn();
+  list.innerHTML = DAILY_MISSION_DEFS.map(m => {
+    const claimed  = done.includes(m.id);
+    const canClaim = !claimed && pending.includes(m.id);
+    const inProgress = !claimed && !pending.includes(m.id);
+    let statusHtml;
+    if (claimed) {
+      statusHtml = `<span style="font-size:.6rem;color:#3ada8a;font-weight:700;">✅ 受取済み</span>`;
+    } else if (canClaim) {
+      statusHtml = `<button onclick="claimDailyMission('${m.id}')" style="
+        padding:5px 14px;border-radius:8px;font-size:.65rem;font-weight:700;cursor:pointer;
+        border:1.5px solid #c9a84c;background:linear-gradient(135deg,#1a1000,#261800);color:#f0d47a;
+        animation:_loginBonusIn .3s ease;">
+        🎁 受け取る（+${m.reward}<img src='https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true' style='width:12px;height:12px;object-fit:contain;vertical-align:middle;margin-left:2px;'>）
+      </button>`;
+    } else {
+      statusHtml = `<span style="font-size:.58rem;color:#3a6a5a;">未達成</span>`;
+    }
+    return `<div style="
+      display:flex;align-items:center;justify-content:space-between;
+      background:#060f18;border:1px solid ${claimed?'#1a4a2a':canClaim?'#4a3a10':'#0e2030'};
+      border-radius:10px;padding:10px 12px;gap:8px;
+    ">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span style="font-size:1.2rem;flex-shrink:0;">${m.icon}</span>
+        <div>
+          <div style="font-size:.65rem;font-weight:700;color:${claimed?'#4a8a6a':canClaim?'#f0d47a':'#7aaacc'};">${m.label}</div>
+          <div style="font-size:.55rem;color:#3a6a5a;margin-top:2px;">報酬: +${m.reward}<img src='https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true' style='width:10px;height:10px;object-fit:contain;vertical-align:middle;margin-left:2px;'></div>
+        </div>
+      </div>
+      <div style="flex-shrink:0;">${statusHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+// 好きボタンの表示状態を更新
+function _updateSukiBtn() {
+  const btn = document.getElementById('sukiBtn');
+  if (!btn) return;
+  const { done, pending } = _dailyMissionState;
+  if (done.includes('suki')) {
+    btn.textContent = '✅ 受取済み'; btn.disabled = true; btn.style.color = '#3ada8a';
+    btn.style.borderColor = '#1a4a2a';
+  } else if (pending.includes('suki')) {
+    btn.textContent = '🎁 受け取る（+10）'; btn.disabled = false; btn.style.color = '#f0d47a';
+    btn.style.borderColor = '#c9a84c'; btn.style.animation = '_loginBonusIn .3s ease';
+  } else {
+    btn.textContent = '❤️ 好き！'; btn.disabled = false; btn.style.color = '#ff88bb';
+    btn.style.borderColor = '#cc3388'; btn.style.animation = '';
+  }
+}
+
+// サーバーからミッション状態を読み込む
+function loadDailyMissions() {
+  const token = localStorage.getItem('jwt_token');
+  if (!token) return;
+  authFetch('/api/daily-missions')
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      // 日付が変わっていたらpendingもリセット
+      const storedToday = _dailyMissionState.today;
+      if (storedToday !== d.today) {
+        _dailyMissionState.pending = [];
+      }
+      _dailyMissionState.done = d.done || [];
+      _dailyMissionState.today = d.today;
+      renderDailyMissions();
+    })
+    .catch(() => {});
+}
+
+// ミッション報酬を受け取る
+function claimDailyMission(missionId) {
+  authFetch('/api/daily-missions/claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ missionId }),
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.alreadyClaimed) {
+        _dailyMissionState.done.push(missionId);
+        renderDailyMissions();
+        return;
+      }
+      if (!d.ok) return;
+      // コイン反映
+      PROFILE.coins = d.coins ?? PROFILE.coins;
+      _dailyMissionState.done = d.done || [..._dailyMissionState.done, missionId];
+      _dailyMissionState.pending = _dailyMissionState.pending.filter(id => id !== missionId);
+      updateProfileBadge();
+      if (typeof updateGachaCoinDisplay === 'function') updateGachaCoinDisplay();
+      if (typeof updateShopCoinDisplay === 'function') updateShopCoinDisplay();
+      renderDailyMissions();
+      // トースト通知
+      _showDailyMissionClaimToast(missionId, d.earned);
+    })
+    .catch(() => {});
+}
+
+// 達成トースト表示
+function _showDailyMissionClaimToast(missionId, earned) {
+  const def = DAILY_MISSION_DEFS.find(m => m.id === missionId);
+  let toast = document.getElementById('_dailyMissionToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = '_dailyMissionToast';
+    toast.style.cssText = [
+      'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:99999;',
+      'background:linear-gradient(135deg,#0a1820,#060f18);',
+      'border:2px solid #4a9aff;border-radius:14px;',
+      'padding:16px 28px;text-align:center;min-width:240px;',
+      'box-shadow:0 6px 30px #000c;pointer-events:none;',
+      'transition:opacity .5s;',
+      'animation:_loginBonusIn .4s cubic-bezier(.34,1.56,.64,1);',
+    ].join('');
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML =
+    '<div style="font-size:.58rem;color:#88ccff;letter-spacing:.12em;margin-bottom:5px;">📋 デイリーミッション達成！</div>' +
+    '<div style="font-size:.7rem;color:#aaddff;margin-bottom:5px;">' + (def ? def.label : missionId) + '</div>' +
+    '<div style="font-size:1.5rem;font-weight:900;color:#f0d47a;letter-spacing:.05em;">' +
+      '+' + earned +
+      '<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true"' +
+      ' style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-left:4px;">' +
+    '</div>';
+  toast.style.opacity = '1';
+  clearTimeout(toast._tid);
+  toast._tid = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+}
+
+// ミッション達成トリガー汎用ヘルパー（pending に追加 → renderDailyMissions）
+function _triggerDailyMission(missionId) {
+  const { done, pending } = _dailyMissionState;
+  if (done.includes(missionId) || pending.includes(missionId)) return;
+  _dailyMissionState.pending.push(missionId);
+  renderDailyMissions();
+  _showDailyMissionAchievedToast(missionId);
+}
+
+// 好きボタン
+function doSukiMission() {
+  const { done, pending } = _dailyMissionState;
+  // 受取済み
+  if (done.includes('suki')) return;
+  // pending（達成済み・未受取） → claim
+  if (pending.includes('suki')) {
+    claimDailyMission('suki');
+    return;
+  }
+  // 未達成 → 達成させる
+  _triggerDailyMission('suki');
+}
+
+// ゲーム中の達成チェック（handleWin内から呼ぶ）
+function checkDailyMissions_onWin(yakus, widx) {
+  // 自分の上がりのみ対象
+  if (widx !== NET.myIdx) return;
+  const { done, pending } = _dailyMissionState;
+  // 役満を上がるミッション
+  const isYakuman = yakus.some(y => y.han >= 13);
+  if (isYakuman) {
+    setTimeout(() => _triggerDailyMission('yakuman'), 1200);
+  }
+}
+
+// インゲーム達成通知（「受け取れます」バナー）
+function _showDailyMissionAchievedToast(missionId) {
+  const def = DAILY_MISSION_DEFS.find(m => m.id === missionId);
+  let toast = document.getElementById('_dailyMissionAchToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = '_dailyMissionAchToast';
+    toast.style.cssText = [
+      'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:99999;',
+      'background:linear-gradient(135deg,#0a1820,#051018);',
+      'border:2px solid #88ccff;border-radius:14px;',
+      'padding:14px 24px;text-align:center;min-width:240px;',
+      'box-shadow:0 6px 30px #000c;pointer-events:none;',
+      'transition:opacity .5s;',
+      'animation:_loginBonusIn .4s cubic-bezier(.34,1.56,.64,1);',
+    ].join('');
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML =
+    '<div style="font-size:.58rem;color:#88ccff;letter-spacing:.12em;margin-bottom:4px;">📋 ミッション達成！</div>' +
+    '<div style="font-size:.72rem;font-weight:700;color:#aaddff;">' + (def ? def.icon + ' ' + def.label : missionId) + '</div>' +
+    '<div style="font-size:.58rem;color:#5a9a7a;margin-top:5px;">ロビーで報酬を受け取ろう！</div>';
+  toast.style.opacity = '1';
+  clearTimeout(toast._tid);
+  toast._tid = setTimeout(() => { toast.style.opacity = '0'; }, 4000);
 }
 
 function selectIcon(el,icon){ } // legacy (emoji icons removed)
@@ -14889,12 +15311,16 @@ function pullOnce(){
   const rd = RARITY_TABLE.find(r=>r.rarity===rarity);
   let result = {rarity, rd};
   if(rarity === 'legend'){
-    // LEGEND排出プール: 能力・スキン・あがり動画・Lアイコン の均等抽選
+    // LEGEND排出プール: 全ラインナップ完全均等抽選（1/ラインナップ数）
     const legendPool = [];
-    // 能力
+    // 能力解放 (4種)
     GACHA_ABILITIES.forEach(ab => legendPool.push({type:'ability', data:ab}));
-    // あがり動画 (02〜04)
+    // あがり動画 (02〜04, 3種)
     _AGARI_CATALOG.filter(a => !a.isDefault).forEach(ag => legendPool.push({type:'agari', data:ag}));
+    // 手スキン 白猫 (1種)
+    legendPool.push({type:'skin', data:{key:'siroinekonote', name:'白猫の手', icon:'🐱'}});
+    // レジェンドアイコン (3種)
+    GACHA_ICONS.filter(i=>i.rarity==='legend').forEach(ic => legendPool.push({type:'icon', data:ic}));
     const pick = legendPool[Math.floor(Math.random()*legendPool.length)];
     if(pick.type === 'agari'){
       const ag = pick.data;
@@ -14902,6 +15328,17 @@ function pullOnce(){
       if(!PROFILE.agariVideos) PROFILE.agariVideos={};
       result.isNew = !(PROFILE.agariVideos[ag.key]);
       PROFILE.agariVideos[ag.key] = (PROFILE.agariVideos[ag.key]||0)+1;
+    } else if(pick.type === 'skin'){
+      result.skin = pick.data;
+      if(!PROFILE.handSkins) PROFILE.handSkins={};
+      result.isNew = !(PROFILE.handSkins[pick.data.key]);
+      PROFILE.handSkins[pick.data.key] = (PROFILE.handSkins[pick.data.key]||0)+1;
+    } else if(pick.type === 'icon'){
+      result.icon = pick.data;
+      if(!PROFILE.gachaIcons) PROFILE.gachaIcons=[];
+      result.iconIsNew = !PROFILE.gachaIcons.includes(pick.data.id);
+      result.isNew = result.iconIsNew;
+      if(result.iconIsNew) PROFILE.gachaIcons.push(pick.data.id);
     } else {
       const ab = pick.data;
       const alreadyHas = PROFILE.abilities.includes(ab.key);
@@ -14913,15 +15350,19 @@ function pullOnce(){
     result.label = NORMAL_LABELS[Math.floor(Math.random()*NORMAL_LABELS.length)];
     result.isNew = false;
   }
-  // アイコン排出（全レアリティ対象：NORMAL→C、RARE→R、EPIC→E、LEGEND→L）
-  const availIcons = GACHA_ICONS.filter(i=>i.rarity===rarity);
-  if(availIcons.length > 0){
-    const icon = availIcons[Math.floor(Math.random()*availIcons.length)];
-    result.icon = icon;
-    if(!PROFILE.gachaIcons) PROFILE.gachaIcons=[];
-    result.iconIsNew = !PROFILE.gachaIcons.includes(icon.id);
-    if(result.iconIsNew) PROFILE.gachaIcons.push(icon.id);
+  // アイコン排出: LEGENDはプール内で処理済み、他レアリティはレアリティ対応アイコン
+  if(rarity !== 'legend'){
+    const availIcons = GACHA_ICONS.filter(i=>i.rarity===rarity);
+    if(availIcons.length > 0){
+      const icon = availIcons[Math.floor(Math.random()*availIcons.length)];
+      result.icon = icon;
+      if(!PROFILE.gachaIcons) PROFILE.gachaIcons=[];
+      result.iconIsNew = !PROFILE.gachaIcons.includes(icon.id);
+      if(result.iconIsNew) PROFILE.gachaIcons.push(icon.id);
+    }
   }
+  PROFILE.totalPulls = (PROFILE.totalPulls||0)+1;
+  return result;
   PROFILE.totalPulls = (PROFILE.totalPulls||0)+1;
   return result;
 }
@@ -15017,6 +15458,8 @@ function doPull1(){
     renderGachaCollection();
     updateGachaStat();
     updateGachaCoinDisplay();
+    // デイリーミッション: 常設ガチャ1回引く
+    _triggerDailyMission('gacha_free');
   }).catch(()=>{});
 }
 
@@ -16054,6 +16497,8 @@ async function doSendGift(){
 
     msg.style.color = '#55cc55';
     msg.textContent = `${_giftTarget.name} に送りました！`;
+    // デイリーミッション: フレンドにギフトを送る
+    _triggerDailyMission('gift_send');
     setTimeout(()=>closeGiftModal(), 1400);
   }catch(e){
     msg.textContent = '通信エラーが発生しました';

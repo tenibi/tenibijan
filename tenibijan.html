@@ -2551,6 +2551,14 @@ body{
       <span>フレンド</span>
       <span id="friendBadge" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ff4444;"></span>
     </button>
+    <button onclick="doGoogleLogout()" style="
+      background:#030a10;border:1px solid #3a1a1a;border-radius:7px;
+      color:#8a5a5a;font-size:.65rem;padding:6px 10px;cursor:pointer;
+      transition:all .15s;align-self:stretch;
+      display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;" title="Googleログアウト">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;opacity:0.7;">
+      <span>ログアウト</span>
+    </button>
   </div>
 
   <!-- タイトル設定パネル -->
@@ -17878,6 +17886,13 @@ function _shopToast(msg){
 // Googleログインへリダイレクト
 function doGoogleLogin(){
   window.location.href = BACKEND + '/auth/google';
+}
+
+// Googleログアウト
+function doGoogleLogout(){
+  if(!confirm('ログアウトしますか？')) return;
+  localStorage.removeItem('jwt_token');
+  window.location.reload();
 }
 
 // TwitchログインへリダイレクT（トークンをURLパラメータで渡す）

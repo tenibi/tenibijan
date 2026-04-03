@@ -2990,6 +2990,7 @@ body{
         <div>
           <div style="font-size:.7rem;font-weight:700;color:#f0d47a;letter-spacing:.08em;">ログインボーナス</div>
           <div style="font-size:.55rem;color:#6a5a2a;margin-top:2px;">1日1回 +50<img src='https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true' style='width:10px;height:10px;object-fit:contain;vertical-align:middle;margin-left:2px;'></div>
+          <div id="loginBonusTimer" style="display:none;font-size:.52rem;color:#4a7a5a;margin-top:3px;letter-spacing:.04em;">⏰ <span id="loginBonusTimerText"></span></div>
         </div>
       </div>
       <button id="loginBonusBtn" onclick="claimLoginBonus()" style="
@@ -14635,6 +14636,34 @@ function loadProfile(){
 }
 
 // ── ログインボーナス ──────────────────────────────────────────────
+// 次の日本時間0時までの残り時間をカウントダウン表示
+let _loginBonusTimerInterval = null;
+function _startLoginBonusTimer() {
+  const timerDiv = document.getElementById('loginBonusTimer');
+  const timerText = document.getElementById('loginBonusTimerText');
+  if (!timerDiv || !timerText) return;
+  timerDiv.style.display = 'block';
+  const update = () => {
+    const now = new Date();
+    // 日本時間の次の0時を計算（UTC+9）
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const jstTomorrow = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate() + 1, 0, 0, 0));
+    const diffMs = jstTomorrow - now;
+    const h = Math.floor(diffMs / 3600000);
+    const m = Math.floor((diffMs % 3600000) / 60000);
+    const s = Math.floor((diffMs % 60000) / 1000);
+    timerText.textContent = `次のボーナスまで ${h}時間${m}分${s}秒`;
+  };
+  update();
+  if (_loginBonusTimerInterval) clearInterval(_loginBonusTimerInterval);
+  _loginBonusTimerInterval = setInterval(update, 1000);
+}
+function _stopLoginBonusTimer() {
+  if (_loginBonusTimerInterval) { clearInterval(_loginBonusTimerInterval); _loginBonusTimerInterval = null; }
+  const timerDiv = document.getElementById('loginBonusTimer');
+  if (timerDiv) timerDiv.style.display = 'none';
+}
+
 // ボタンの表示状態を更新する
 function _updateLoginBonusBtn(claimed) {
   const btn = document.getElementById('loginBonusBtn');
@@ -14646,6 +14675,7 @@ function _updateLoginBonusBtn(claimed) {
     btn.style.borderColor = '#1a4a2a';
     btn.style.background = '#050f08';
     btn.style.animation = '';
+    _startLoginBonusTimer();
   } else {
     btn.disabled = false;
     btn.innerHTML = '🎁 受け取る（+50<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:12px;height:12px;object-fit:contain;vertical-align:middle;margin-left:2px;">）';
@@ -14653,6 +14683,7 @@ function _updateLoginBonusBtn(claimed) {
     btn.style.borderColor = '#c9a84c';
     btn.style.background = 'linear-gradient(135deg,#1a1000,#261800)';
     btn.style.animation = '_loginBonusIn .4s ease';
+    _stopLoginBonusTimer();
   }
 }
 
@@ -14746,15 +14777,11 @@ function renderDailyMissions() {
     list.innerHTML = '<div style="font-size:.6rem;color:#3a5a6a;text-align:center;padding:8px 0;">読み込み中<span class="thinking-dots"></span></div>';
     return;
   }
-  // sukiミッションを確実に含める（サーバー返却分にない場合も追加）
+  // サーバーから受け取った2件をそのまま使用（icon・rewardをローカル定義で補完）
   let displayMissions = missions.map(m => {
     const def = DAILY_MISSION_DEFS.find(d => d.id === m.id) || {};
-    return { ...m, icon: def.icon || '📋' };
+    return { ...m, icon: def.icon || '📋', reward: m.reward ?? def.reward ?? 50 };
   });
-  if (!displayMissions.find(m => m.id === 'suki')) {
-    const sukiDef = DAILY_MISSION_DEFS.find(d => d.id === 'suki');
-    if (sukiDef) displayMissions.push({ id: 'suki', label: sukiDef.label, icon: sukiDef.icon, reward: sukiDef.reward });
-  }
   list.innerHTML = displayMissions.map(m => {
     const claimed  = done.includes(m.id);
     const canClaim = !claimed && pending.includes(m.id);

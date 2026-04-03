@@ -6986,6 +6986,14 @@ function applyHostState(msg){
       // 自動発火
       _triggerAutoAction(NET.myIdx, 350);
     }
+    // ★バグ修正: ゲストは startRound() を呼ばないため、ホストが新局を開始した際に
+    // window._activePenOC と _wallCanvasInited をここでリセットする。
+    // リセットしないと前局の _penCommitted（全牌描画バッファ）が残ったまま
+    // renderWall() に混入し、前局の絵が全体に再描画されるバグが発生する。
+    if(s._newRound){
+      window._activePenOC = null;
+      _wallCanvasInited = false;
+    }
     renderAll();
     if(s.winModal){
       const _wmWinIdx = G.players.findIndex(p=>p.id===s.winModal.winnerId);
@@ -7785,7 +7793,8 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
     if(mineHuman){ if(!G.minePlantPlayers) G.minePlantPlayers=[]; if(!G.minePlantPlayers.includes(mineHuman)) G.minePlantPlayers.push(mineHuman); }
   }
   renderAll();
-  broadcastState();
+  // _newRound:true を付与してゲスト側で _activePenOC/_wallCanvasInited をリセットさせる
+  broadcastState({_newRound:true});
   // nextTurn に処理を委譲してツモ待ち・CPU代打を統一管理
   nextTurn(G.dealer);
 }

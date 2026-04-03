@@ -2943,6 +2943,28 @@ body{
       </div>
     </div>
 
+  <!-- ★ ログインボーナス -->
+  <div id="loginBonusCard" style="
+    width:100%;box-sizing:border-box;
+    background:linear-gradient(135deg,#1a1500,#100e00);
+    border:1px solid #3a3010;border-radius:14px;
+    padding:14px 16px;margin-bottom:10px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  ">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.5rem;">🎁</span>
+      <div>
+        <div style="font-size:.7rem;font-weight:700;color:#f0d47a;letter-spacing:.08em;">ログインボーナス</div>
+        <div style="font-size:.55rem;color:#6a5a2a;margin-top:2px;">1日1回 +50<img src='https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true' style='width:10px;height:10px;object-fit:contain;vertical-align:middle;margin-left:2px;'></div>
+      </div>
+    </div>
+    <button id="loginBonusBtn" onclick="claimLoginBonus()" style="
+      padding:8px 18px;border-radius:10px;font-size:.72rem;font-weight:700;cursor:pointer;
+      border:1.5px solid #c9a84c;background:linear-gradient(135deg,#1a1000,#261800);
+      color:#f0d47a;white-space:nowrap;flex-shrink:0;transition:all .2s;
+    ">読み込み中...</button>
+  </div>
+
   <!-- ★ デイリーミッション -->
   <div id="dailyMissionPanel" style="
     width:100%;box-sizing:border-box;
@@ -14611,22 +14633,55 @@ function loadProfile(){
 }
 
 // ── ログインボーナス ──────────────────────────────────────────────
-// 日本時間(UTC+9)の日付が変わると1日1回50コインもらえる
-function checkLoginBonus(){
+// ボタンの表示状態を更新する
+function _updateLoginBonusBtn(claimed) {
+  const btn = document.getElementById('loginBonusBtn');
+  if (!btn) return;
+  if (claimed) {
+    btn.disabled = true;
+    btn.textContent = '✅ 受取済み';
+    btn.style.color = '#3ada8a';
+    btn.style.borderColor = '#1a4a2a';
+    btn.style.background = '#050f08';
+    btn.style.animation = '';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = '🎁 受け取る（+50<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:12px;height:12px;object-fit:contain;vertical-align:middle;margin-left:2px;">）';
+    btn.style.color = '#f0d47a';
+    btn.style.borderColor = '#c9a84c';
+    btn.style.background = 'linear-gradient(135deg,#1a1000,#261800)';
+    btn.style.animation = '_loginBonusIn .4s ease';
+  }
+}
+
+// ログイン時にGETで状態確認してボタンを更新（自動受取しない）
+function checkLoginBonus() {
   const token = localStorage.getItem('jwt_token');
-  if(!token) return;
-  authFetch('/api/login-bonus', {method:'POST'})
-    .then(r=>r.json())
-    .then(d=>{
-      if(!d.ok || d.alreadyClaimed) return;
-      // ボーナスコインをPROFILEに反映
+  if (!token) return;
+  authFetch('/api/login-bonus')
+    .then(r => r.json())
+    .then(d => { _updateLoginBonusBtn(d.alreadyClaimed); })
+    .catch(() => { _updateLoginBonusBtn(false); });
+}
+
+// ボタンを押したときに呼ばれる受取関数
+function claimLoginBonus() {
+  const btn = document.getElementById('loginBonusBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '受取中...'; }
+  authFetch('/api/login-bonus', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.alreadyClaimed) { _updateLoginBonusBtn(true); return; }
+      if (!d.ok) { _updateLoginBonusBtn(false); return; }
+      // コイン反映
       PROFILE.coins = d.coins;
       updateProfileBadge();
-      if(typeof updateGachaCoinDisplay==='function') updateGachaCoinDisplay();
-      if(typeof updateShopCoinDisplay==='function') updateShopCoinDisplay();
-      // バナートースト表示
+      if (typeof updateGachaCoinDisplay === 'function') updateGachaCoinDisplay();
+      if (typeof updateShopCoinDisplay === 'function') updateShopCoinDisplay();
+      _updateLoginBonusBtn(true);
+      // トースト表示
       let toast = document.getElementById('_loginBonusToast');
-      if(!toast){
+      if (!toast) {
         toast = document.createElement('div');
         toast.id = '_loginBonusToast';
         toast.style.cssText = [
@@ -14650,9 +14705,9 @@ function checkLoginBonus(){
         '<div style="font-size:.55rem;color:#8aaa6a;margin-top:5px;">明日また受け取れます</div>';
       toast.style.opacity = '1';
       clearTimeout(toast._tid);
-      toast._tid = setTimeout(()=>{ toast.style.opacity='0'; }, 3500);
+      toast._tid = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
     })
-    .catch(()=>{ /* ボーナス取得失敗は無視 */ });
+    .catch(() => { _updateLoginBonusBtn(false); });
 }
 
 // ============================================================
@@ -14676,18 +14731,27 @@ let _dailyMissionState = {
   done: [],        // サーバーで受取済みのmissionId[]
   pending: [],     // ローカルで達成したが未クレームのmissionId[]
   today: null,
+  missions: [],    // サーバーから取得した今日の2件
 };
 
 // ロビー表示を更新する
 function renderDailyMissions() {
   const list = document.getElementById('dailyMissionList');
   if (!list) return;
-  const { done, pending } = _dailyMissionState;
+  const { done, pending, missions } = _dailyMissionState;
   _updateSukiBtn();
-  list.innerHTML = DAILY_MISSION_DEFS.map(m => {
+  // サーバーから取得した今日の2件を使用（アイコンはローカル定義から補完）
+  if (!missions || missions.length === 0) {
+    list.innerHTML = '<div style="font-size:.6rem;color:#3a5a6a;text-align:center;padding:8px 0;">読み込み中<span class="thinking-dots"></span></div>';
+    return;
+  }
+  const displayMissions = missions.map(m => {
+    const def = DAILY_MISSION_DEFS.find(d => d.id === m.id) || {};
+    return { ...m, icon: def.icon || '📋' };
+  });
+  list.innerHTML = displayMissions.map(m => {
     const claimed  = done.includes(m.id);
     const canClaim = !claimed && pending.includes(m.id);
-    const inProgress = !claimed && !pending.includes(m.id);
     let statusHtml;
     if (claimed) {
       statusHtml = `<span style="font-size:.6rem;color:#3ada8a;font-weight:700;">✅ 受取済み</span>`;
@@ -14750,6 +14814,7 @@ function loadDailyMissions() {
       }
       _dailyMissionState.done = d.done || [];
       _dailyMissionState.today = d.today;
+      _dailyMissionState.missions = d.missions || [];  // 今日の2件を保存
       renderDailyMissions();
     })
     .catch(() => {});

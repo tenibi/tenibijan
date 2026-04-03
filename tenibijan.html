@@ -6845,8 +6845,7 @@ function handleGuestAction(msg, senderIdx){
         const _afterMerge=()=>{
           _doneCount++;
           if(_doneCount<_pendingMerge) return;
-          // ★バグ3修正: 変更されたキーのキャッシュのみ削除（全削除は不要かつゴーストの原因）
-          Object.keys(msg.changedKeys).forEach(k=>delete _penImgCache[k]);
+          Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
           renderWall(); renderDoraCanvas();
           netBroadcastAll({type:'penSync', changedKeys: _mergedKeys});
         };
@@ -6881,9 +6880,7 @@ function handleGuestAction(msg, senderIdx){
         for(const k of Object.keys(msg.changedKeys)){
           G.penDrawings[k]=msg.changedKeys[k];
         }
-        // ★バグ3修正: 変更されたキーのキャッシュのみ削除（全削除すると未変更牌の画像も再ロードされ、
-        // 非同期onloadのタイミングずれで別の牌に絵が一瞬表示されるゴーストが発生していた）
-        Object.keys(msg.changedKeys).forEach(k=>delete _penImgCache[k]);
+        Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
         renderWall(); renderDoraCanvas();
       }
       break;
@@ -7615,7 +7612,13 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   const _bapBtn = document.getElementById('bombAutoPickBtn');
   if(_bapBtn && !(numPlayers===1 && G && G._soloStage)) _bapBtn.style.display = 'none';
   // ペンモードOFFにリセット（局をまたいでペン状態が残らないよう）
-  if(_penModeOn){ _penModeOn=false; window._activePenOC=null; const pb=document.getElementById('penToggleBtn');if(pb)pb.classList.remove('pen-active'); const pt=document.getElementById('penToolbarFloat');if(pt)pt.style.display='none'; const wc=document.getElementById('wallCanvas');if(wc){wc.classList.remove('pen-on');wc.classList.remove('pick-on');} const wo=document.getElementById('wallExpandOverlay');if(wo)wo.classList.remove('show'); }
+  if(_penModeOn){ _penModeOn=false; const pb=document.getElementById('penToggleBtn');if(pb)pb.classList.remove('pen-active'); const pt=document.getElementById('penToolbarFloat');if(pt)pt.style.display='none'; const wc=document.getElementById('wallCanvas');if(wc){wc.classList.remove('pen-on');wc.classList.remove('pick-on');} const wo=document.getElementById('wallExpandOverlay');if(wo)wo.classList.remove('show'); }
+  // ペン確定バッファ(_penCommitted/_penOC)をリセット:
+  // _wallCanvasInited=false にすることで次の renderWall 時に _initWallCanvasEvents が再呼び出しされ
+  // クロージャ内の _penCommitted/_penOC が null から再生成される。
+  // これにより前ターンのストロークが _getPenOC() 経由で次ターン開始時に混入するバグを修正。
+  window._activePenOC=null;
+  _wallCanvasInited=false;
   // 前局の白変換を元に戻す（players再生成前に処理）
   if(G.players){
     G.players.forEach(p=>{
@@ -11848,25 +11851,10 @@ function _initWallExpandEvents(ec){
     e.preventDefault(); e.stopPropagation();
     _epActive = false;
 
-    // ★バグ2修正（拡大canvas側）: 確定バッファへの合成を先に行い、diffOCを作ってから保存する
+    // 確定バッファに今のストロークを合成してから保存
     _ensureCommitted();
-
-    // 新ストロークのみのdiffを作る
-    let epDiffOC=null;
     if(_epOC){
-      epDiffOC=document.createElement('canvas');
-      epDiffOC.width=_epOC.width; epDiffOC.height=_epOC.height;
-      const dctx=epDiffOC.getContext('2d');
-      dctx.drawImage(_epOC,0,0);
-      if(_epCommitted){
-        dctx.globalCompositeOperation='destination-out';
-        dctx.drawImage(_epCommitted,0,0);
-        dctx.globalCompositeOperation='source-over';
-      }
-    }
-
-    // 確定バッファに今のストロークを合成（牌の領域のみクリップ）
-    if(_epOC){
+      // ★バグ修正: 牌の領域のみにクリップして確定バッファに合成
       const cc=_epCommitted.getContext('2d');
       cc.save();
       cc.beginPath();
@@ -11882,8 +11870,8 @@ function _initWallExpandEvents(ec){
       cc.restore();
     }
 
-    // G.penDrawings と _penImgCache に保存（diffのみ送信）
-    if(epDiffOC) _saveWallPenDrawingsFromOC(epDiffOC, _epSlots);
+    // G.penDrawings と _penImgCache に保存
+    _saveWallPenDrawingsFromOC(_epOC, _epSlots);
 
     // ★ _activePenOC を確定バッファに差し替えて null にしない
     //   → renderWall/_renderWallExpand が確定済み絵を描き続ける
@@ -12262,9 +12250,11 @@ function _initWallCanvasEvents(wc){
   function _getPenOC(){
     if(!_penOC||_penOC.width!==wc.width||_penOC.height!==wc.height){
       _penOC=document.createElement('canvas');
-      // ★バグ修正: サイズを先に設定してからdrawImage（逆順だとcanvasがリセットされて描画が消える）
       _penOC.width=wc.width; _penOC.height=wc.height;
-      if(_penCommitted) _penOC.getContext('2d').drawImage(_penCommitted,0,0);
+      // 確定済み内容(_penCommitted)の引き継ぎを削除:
+      // _penCommitted には前ターンのストロークが残っており、新ターンの描き始めに
+      // コピーされることで「何も描いていないのに前の絵が出る」バグの原因となっていた。
+      // 確定済み描画は G.penDrawings に保存・renderWall で表示されるため OC への引き継ぎは不要。
     }
     window._activePenOC=_penOC;
     return _penOC;
@@ -12310,28 +12300,13 @@ function _initWallCanvasEvents(wc){
     if(!_penModeOn||!_wallPenActive) return;
     e.preventDefault();
     _wallPenActive=false;
+    _saveWallPenDrawingsFromOC(_penOC, _strokeSlots);
 
-    // ★バグ2修正: 確定バッファへの合成を先に行い、diffOC（新ストロークのみ）を作ってから保存する。
-    // 旧コードでは _penOC（過去ストローク累積）を直接 _saveWallPenDrawingsFromOC に渡していたため、
-    // ゲストが送る newStrokeDataUrl が「累積全部」になり、ホスト側でまた重ねてマージされ描画が増殖していた。
+    // 確定バッファに今のストロークを合成してから保存（epUp と同じパターン）
     _ensureWallCommitted();
-
-    // 新ストロークのみのdiffを作る: _penOC から確定済み(_penCommitted)を destination-out で引く
-    let diffOC=null;
     if(_penOC){
-      diffOC=document.createElement('canvas');
-      diffOC.width=_penOC.width; diffOC.height=_penOC.height;
-      const dctx=diffOC.getContext('2d');
-      dctx.drawImage(_penOC,0,0);
-      if(_penCommitted){
-        dctx.globalCompositeOperation='destination-out';
-        dctx.drawImage(_penCommitted,0,0);
-        dctx.globalCompositeOperation='source-over';
-      }
-    }
-
-    // 確定バッファに今のストロークを合成（牌の領域のみクリップ）
-    if(_penOC){
+      // ★バグ修正: 牌の領域のみにクリップして確定バッファに合成
+      // （牌の外にはみ出た線が残り続ける不具合を防ぐ）
       const cc=_penCommitted.getContext('2d');
       cc.save();
       cc.beginPath();
@@ -12346,9 +12321,6 @@ function _initWallCanvasEvents(wc){
       cc.drawImage(_penOC,0,0);
       cc.restore();
     }
-
-    // diffOCを使って保存・同期（新ストロークのみ送信されるので増殖しない）
-    if(diffOC) _saveWallPenDrawingsFromOC(diffOC, _strokeSlots);
 
     // ★ _activePenOC を確定バッファに差し替えて null にしない
     //   → 画像キャッシュ読み込み完了前も確定済み描画が表示され続ける

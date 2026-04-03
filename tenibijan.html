@@ -7636,6 +7636,10 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   // クロージャ内の _penCommitted/_penOC も null からリセットさせる（ホスト・ゲスト共通）。
   window._activePenOC=null;
   window._activeDoraOC=null;
+  window._penCommitted=null; // 山牌の確定バッファをリセット
+  window._penOC=null;        // 山牌の描画中バッファをリセット
+  window._epCommitted=null;  // 拡大山牌の確定バッファをリセット
+  window._epOC=null;         // 拡大山牌の描画中バッファをリセット
   _wallCanvasInited=false;
   // 前局の白変換を元に戻す（players再生成前に処理）
   if(G.players){
@@ -11820,15 +11824,16 @@ function _initWallExpandEvents(ec){
   let _epActive = false, _epLX = 0, _epLY = 0, _epSlots = new Set();
   // _epOC: ストローク中のリアルタイム描画バッファ
   // _epCommitted: 確定済み全ストロークの累積バッファ（消去しない）
-  let _epOC = null;
-  let _epCommitted = null; // ← ストローク完了後も保持する確定バッファ
+  // ★バグ修正: startRound からリセットできるよう window に公開
+  window._epOC = null;
+  window._epCommitted = null; // ← ストローク完了後も保持する確定バッファ
 
   // 確定バッファを初期化（サイズ変更時も対応）
   function _ensureCommitted(){
-    if(!_epCommitted || _epCommitted.width !== ec.width){
-      _epCommitted = document.createElement('canvas');
-      _epCommitted.width = ec.width;
-      _epCommitted.height = ec.height;
+    if(!window._epCommitted || window._epCommitted.width !== ec.width){
+      window._epCommitted = document.createElement('canvas');
+      window._epCommitted.width = ec.width;
+      window._epCommitted.height = ec.height;
       // ★バグ修正: 前局のストロークが混入するのを防ぐため引き継がない
     }
   }
@@ -11839,13 +11844,13 @@ function _initWallExpandEvents(ec){
     _epActive = true; _epSlots.clear();
     const p = getPos(e); _epLX = p.x; _epLY = p.y;
     _ensureCommitted();
-    if(!_epOC || _epOC.width !== ec.width){
-      _epOC = document.createElement('canvas');
-      _epOC.width = ec.width; _epOC.height = ec.height;
+    if(!window._epOC || window._epOC.width !== ec.width){
+      window._epOC = document.createElement('canvas');
+      window._epOC.width = ec.width; window._epOC.height = ec.height;
       // _epCommitted からの引き継ぎを削除: 前局ストロークが混入するバグの原因
     }
-    window._activePenOC = _epOC;
-    const ctx = _epOC.getContext('2d');
+    window._activePenOC = window._epOC;
+    const ctx = window._epOC.getContext('2d');
     ctx.strokeStyle = ctx.fillStyle = _penColor; ctx.lineWidth = _penSize;
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.arc(p.x, p.y, ctx.lineWidth/2, 0, Math.PI*2); ctx.fill();
@@ -11856,8 +11861,8 @@ function _initWallExpandEvents(ec){
     if(!_penModeOn || !_epActive) return;
     e.preventDefault(); e.stopPropagation();
     const p = getPos(e);
-    if(!_epOC) return;
-    const ctx = _epOC.getContext('2d');
+    if(!window._epOC) return;
+    const ctx = window._epOC.getContext('2d');
     ctx.strokeStyle = _penColor; ctx.lineWidth = _penSize;
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(_epLX, _epLY); ctx.lineTo(p.x, p.y); ctx.stroke();
@@ -11872,9 +11877,9 @@ function _initWallExpandEvents(ec){
 
     // 確定バッファに今のストロークを合成してから保存
     _ensureCommitted();
-    if(_epOC){
+    if(window._epOC){
       // ★バグ修正: 牌の領域のみにクリップして確定バッファに合成
-      const cc=_epCommitted.getContext('2d');
+      const cc=window._epCommitted.getContext('2d');
       cc.save();
       cc.beginPath();
       if(G.deckSlots){
@@ -11885,18 +11890,18 @@ function _initWallExpandEvents(ec){
         }
       }
       cc.clip();
-      cc.drawImage(_epOC, 0, 0);
+      cc.drawImage(window._epOC, 0, 0);
       cc.restore();
     }
 
     // G.penDrawings と _penImgCache に保存
-    _saveWallPenDrawingsFromOC(_epOC, _epSlots);
+    _saveWallPenDrawingsFromOC(window._epOC, _epSlots);
 
     // ★ _activePenOC を確定バッファに差し替えて null にしない
     //   → renderWall/_renderWallExpand が確定済み絵を描き続ける
-    window._activePenOC = _epCommitted;
+    window._activePenOC = window._epCommitted;
 
-    _epOC = null;
+    window._epOC = null;
     _epSlots = new Set();
     renderWallExpand();
     renderWall(); // 元の卓も更新
@@ -12255,26 +12260,27 @@ function _initWallCanvasEvents(wc){
   let _strokeSlots=new Set();
   // ── ペン用 offscreen canvas（透明背景にストロークのみ）
   // wc と同サイズ。ストロークはここに描いて、renderWall時に multiply 合成する
-  let _penCommitted=null; // 確定済みストロークバッファ（epUp と同じパターン）
+  // ★バグ修正: startRound からリセットできるよう window に公開
+  window._penCommitted=null; // 確定済みストロークバッファ（epUp と同じパターン）
   function _ensureWallCommitted(){
-    if(!_penCommitted||_penCommitted.width!==wc.width||_penCommitted.height!==wc.height){
-      _penCommitted=document.createElement('canvas');
-      _penCommitted.width=wc.width; _penCommitted.height=wc.height;
+    if(!window._penCommitted||window._penCommitted.width!==wc.width||window._penCommitted.height!==wc.height){
+      window._penCommitted=document.createElement('canvas');
+      window._penCommitted.width=wc.width; window._penCommitted.height=wc.height;
       // ★バグ修正: 前回の内容を引き継がない
       // サイズ変更時に prev の内容を drawImage していたため、前局のストロークが
       // _penCommitted → window._activePenOC 経由で次局の renderWall に混入し、
       // 全牌に前局の絵が描画されるバグの原因となっていた。
     }
   }
-  let _penOC=null; // offscreen canvas
+  window._penOC=null; // offscreen canvas
   function _getPenOC(){
-    if(!_penOC||_penOC.width!==wc.width||_penOC.height!==wc.height){
-      _penOC=document.createElement('canvas');
+    if(!window._penOC||window._penOC.width!==wc.width||window._penOC.height!==wc.height){
+      window._penOC=document.createElement('canvas');
       // _penCommitted からの引き継ぎを削除: 前局ストロークが混入するバグの原因
-      _penOC.width=wc.width; _penOC.height=wc.height;
+      window._penOC.width=wc.width; window._penOC.height=wc.height;
     }
-    window._activePenOC=_penOC;
-    return _penOC;
+    window._activePenOC=window._penOC;
+    return window._penOC;
   }
   const penDown=(e)=>{
     if(!_penModeOn) return;
@@ -12321,10 +12327,10 @@ function _initWallCanvasEvents(wc){
 
     // 確定バッファに今のストロークを合成してから保存（epUp と同じパターン）
     _ensureWallCommitted();
-    if(_penOC){
+    if(window._penOC){
       // ★バグ修正: 牌の領域のみにクリップして確定バッファに合成
       // （牌の外にはみ出た線が残り続ける不具合を防ぐ）
-      const cc=_penCommitted.getContext('2d');
+      const cc=window._penCommitted.getContext('2d');
       cc.save();
       cc.beginPath();
       if(G.deckSlots){
@@ -12335,15 +12341,15 @@ function _initWallCanvasEvents(wc){
         }
       }
       cc.clip();
-      cc.drawImage(_penOC,0,0);
+      cc.drawImage(window._penOC,0,0);
       cc.restore();
     }
 
     // ★ _activePenOC を確定バッファに差し替えて null にしない
     //   → 画像キャッシュ読み込み完了前も確定済み描画が表示され続ける
-    window._activePenOC=_penCommitted;
+    window._activePenOC=window._penCommitted;
 
-    _penOC=null;
+    window._penOC=null;
     _strokeSlots=new Set();
     renderWall();
   };

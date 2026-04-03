@@ -5718,6 +5718,11 @@ function resumeGame(){
     if(G.phase === 'draw'){
       G.phase = 'draw_wait';
       timerOnMyTurn();
+      const _penTenpaiAuto = G_ABILITY_MODE && PROFILE.ability==='pen' && !!(G.players[NET.myIdx]?.tenpai);
+      if(_penTenpaiAuto){
+        addLog('🖊️ テンパイ中のため山牌をランダムに引きます','log-new');
+        broadcastState(); setTimeout(autoPickWall,350); return;
+      }
       if(autoDrawEnabled){ broadcastState(); setTimeout(autoPickWall, 200); return; }
       addLog('山牌を選んでクリックしてください','log-new');
     } else if(G.phase === 'discard'){
@@ -6935,6 +6940,13 @@ function applyHostState(msg){
       if(G.deck.length===0){handleExhausted();return;}
       G.phase='draw_wait';
       timerOnMyTurn();
+      const _penTenpaiAuto = G_ABILITY_MODE && PROFILE.ability==='pen' && !!(G.players[NET.myIdx]?.tenpai);
+      if(_penTenpaiAuto){
+        addLog('🖊️ テンパイ中のため山牌をランダムに引きます','log-new');
+        renderAll();
+        setTimeout(autoPickWall,350);
+        return;
+      }
       if(autoDrawEnabled){
         renderAll();
         setTimeout(autoPickWall,200);
@@ -12376,6 +12388,11 @@ function _saveWallPenDrawingsFromOC(oc, changedSlots){
     const key=tile._pkey;
     if(!hasContent){ delete _penImgCache[key]; continue; }
     pending++;
+    // ★バグ修正: ゲストがホストに送る値は「新ストロークのみ」にする。
+    // ゲストがローカルでマージ済みの画像を送ると、ホスト側でも同じ過去の
+    // ストロークが重ねてマージされ、描画が指数的に増殖するバグが起きる。
+    // ホスト役の場合はローカルマージ結果をそのまま送信してよい（マージ済み=正）。
+    const newStrokeDataUrl=tmp.toDataURL('image/webp',0.65);
     if(G.penDrawings[key]){
       const prevImg=new Image();
       prevImg.onload=()=>{
@@ -12386,20 +12403,21 @@ function _saveWallPenDrawingsFromOC(oc, changedSlots){
         mc.globalCompositeOperation='source-over';
         mc.drawImage(tmp,0,0);
         G.penDrawings[key]=merged.toDataURL('image/webp',0.65);
-        toSync[key]=G.penDrawings[key];
+        // ゲストは新ストロークのみ送信（ホスト側でマージするため）
+        toSync[key]= amIHost() ? G.penDrawings[key] : newStrokeDataUrl;
         delete _penImgCache[key];
         trySync();
       };
       prevImg.onerror=()=>{
-        G.penDrawings[key]=tmp.toDataURL('image/webp',0.65);
-        toSync[key]=G.penDrawings[key];
+        G.penDrawings[key]=newStrokeDataUrl;
+        toSync[key]=newStrokeDataUrl;
         delete _penImgCache[key];
         trySync();
       };
       prevImg.src=G.penDrawings[key];
     } else {
-      G.penDrawings[key]=tmp.toDataURL('image/webp',0.65);
-      toSync[key]=G.penDrawings[key];
+      G.penDrawings[key]=newStrokeDataUrl;
+      toSync[key]=newStrokeDataUrl;
       delete _penImgCache[key];
       trySync(); // 修正: done++ では _syncPenDrawings が呼ばれなかった
     }

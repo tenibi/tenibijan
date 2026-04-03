@@ -6998,6 +6998,7 @@ function applyHostState(msg){
       window._epCommitted = null;
       window._epOC = null;
       _wallCanvasInited = false;
+      Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
     }
     renderAll();
     if(s.winModal){
@@ -10489,7 +10490,18 @@ function nextRound(){
   // mScoreの色をリセット（罰符表示後に通常の金色に戻す）
   const ms=document.getElementById('mScore');if(ms)ms.style.color='';
   // ゲストはstartRoundを実行しない（ホストからのstateUpdateを待つ）
-  if(NET.online && !amIHost()) return;
+  if(NET.online && !amIHost()){
+    // ★バグ修正: ゲスト側でも次局へ進むタイミングですべてのペン描画バッファをリセットする
+    window._activePenOC = null;
+    window._activeDoraOC = null;
+    window._penCommitted = null;
+    window._penOC = null;
+    window._epCommitted = null;
+    window._epOC = null;
+    _wallCanvasInited = false;
+    Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+    return;
+  }
   // ホスト: ゲストのモーダルも閉じるよう通知
   if(NET.online && amIHost()) netSend({type:'nextRound'});
   if(checkTobi())return;

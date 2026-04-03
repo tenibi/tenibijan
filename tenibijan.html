@@ -6845,7 +6845,8 @@ function handleGuestAction(msg, senderIdx){
         const _afterMerge=()=>{
           _doneCount++;
           if(_doneCount<_pendingMerge) return;
-          Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+          // ★バグ3修正: 変更されたキーのキャッシュのみ削除（全削除は不要かつゴーストの原因）
+          Object.keys(msg.changedKeys).forEach(k=>delete _penImgCache[k]);
           renderWall(); renderDoraCanvas();
           netBroadcastAll({type:'penSync', changedKeys: _mergedKeys});
         };
@@ -6880,7 +6881,9 @@ function handleGuestAction(msg, senderIdx){
         for(const k of Object.keys(msg.changedKeys)){
           G.penDrawings[k]=msg.changedKeys[k];
         }
-        Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+        // ★バグ3修正: 変更されたキーのキャッシュのみ削除（全削除すると未変更牌の画像も再ロードされ、
+        // 非同期onloadのタイミングずれで別の牌に絵が一瞬表示されるゴーストが発生していた）
+        Object.keys(msg.changedKeys).forEach(k=>delete _penImgCache[k]);
         renderWall(); renderDoraCanvas();
       }
       break;
@@ -11845,10 +11848,25 @@ function _initWallExpandEvents(ec){
     e.preventDefault(); e.stopPropagation();
     _epActive = false;
 
-    // 確定バッファに今のストロークを合成してから保存
+    // ★バグ2修正（拡大canvas側）: 確定バッファへの合成を先に行い、diffOCを作ってから保存する
     _ensureCommitted();
+
+    // 新ストロークのみのdiffを作る
+    let epDiffOC=null;
     if(_epOC){
-      // ★バグ修正: 牌の領域のみにクリップして確定バッファに合成
+      epDiffOC=document.createElement('canvas');
+      epDiffOC.width=_epOC.width; epDiffOC.height=_epOC.height;
+      const dctx=epDiffOC.getContext('2d');
+      dctx.drawImage(_epOC,0,0);
+      if(_epCommitted){
+        dctx.globalCompositeOperation='destination-out';
+        dctx.drawImage(_epCommitted,0,0);
+        dctx.globalCompositeOperation='source-over';
+      }
+    }
+
+    // 確定バッファに今のストロークを合成（牌の領域のみクリップ）
+    if(_epOC){
       const cc=_epCommitted.getContext('2d');
       cc.save();
       cc.beginPath();
@@ -11864,8 +11882,8 @@ function _initWallExpandEvents(ec){
       cc.restore();
     }
 
-    // G.penDrawings と _penImgCache に保存
-    _saveWallPenDrawingsFromOC(_epOC, _epSlots);
+    // G.penDrawings と _penImgCache に保存（diffのみ送信）
+    if(epDiffOC) _saveWallPenDrawingsFromOC(epDiffOC, _epSlots);
 
     // ★ _activePenOC を確定バッファに差し替えて null にしない
     //   → renderWall/_renderWallExpand が確定済み絵を描き続ける
@@ -12244,9 +12262,9 @@ function _initWallCanvasEvents(wc){
   function _getPenOC(){
     if(!_penOC||_penOC.width!==wc.width||_penOC.height!==wc.height){
       _penOC=document.createElement('canvas');
-      // 確定済み内容を引き継ぐ
-      if(_penCommitted) _penOC.getContext('2d').drawImage(_penCommitted,0,0);
+      // ★バグ修正: サイズを先に設定してからdrawImage（逆順だとcanvasがリセットされて描画が消える）
       _penOC.width=wc.width; _penOC.height=wc.height;
+      if(_penCommitted) _penOC.getContext('2d').drawImage(_penCommitted,0,0);
     }
     window._activePenOC=_penOC;
     return _penOC;
@@ -12292,13 +12310,28 @@ function _initWallCanvasEvents(wc){
     if(!_penModeOn||!_wallPenActive) return;
     e.preventDefault();
     _wallPenActive=false;
-    _saveWallPenDrawingsFromOC(_penOC, _strokeSlots);
 
-    // 確定バッファに今のストロークを合成してから保存（epUp と同じパターン）
+    // ★バグ2修正: 確定バッファへの合成を先に行い、diffOC（新ストロークのみ）を作ってから保存する。
+    // 旧コードでは _penOC（過去ストローク累積）を直接 _saveWallPenDrawingsFromOC に渡していたため、
+    // ゲストが送る newStrokeDataUrl が「累積全部」になり、ホスト側でまた重ねてマージされ描画が増殖していた。
     _ensureWallCommitted();
+
+    // 新ストロークのみのdiffを作る: _penOC から確定済み(_penCommitted)を destination-out で引く
+    let diffOC=null;
     if(_penOC){
-      // ★バグ修正: 牌の領域のみにクリップして確定バッファに合成
-      // （牌の外にはみ出た線が残り続ける不具合を防ぐ）
+      diffOC=document.createElement('canvas');
+      diffOC.width=_penOC.width; diffOC.height=_penOC.height;
+      const dctx=diffOC.getContext('2d');
+      dctx.drawImage(_penOC,0,0);
+      if(_penCommitted){
+        dctx.globalCompositeOperation='destination-out';
+        dctx.drawImage(_penCommitted,0,0);
+        dctx.globalCompositeOperation='source-over';
+      }
+    }
+
+    // 確定バッファに今のストロークを合成（牌の領域のみクリップ）
+    if(_penOC){
       const cc=_penCommitted.getContext('2d');
       cc.save();
       cc.beginPath();
@@ -12313,6 +12346,9 @@ function _initWallCanvasEvents(wc){
       cc.drawImage(_penOC,0,0);
       cc.restore();
     }
+
+    // diffOCを使って保存・同期（新ストロークのみ送信されるので増殖しない）
+    if(diffOC) _saveWallPenDrawingsFromOC(diffOC, _strokeSlots);
 
     // ★ _activePenOC を確定バッファに差し替えて null にしない
     //   → 画像キャッシュ読み込み完了前も確定済み描画が表示され続ける

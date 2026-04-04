@@ -1030,10 +1030,17 @@ body{
 /* ガチャ演出オーバーレイ */
 #gachaAnim{
   position:fixed;inset:0;z-index:200;pointer-events:none;
-  display:none;align-items:center;justify-content:center;
+  display:none;align-items:flex-start;justify-content:center;
   flex-direction:column;gap:16px;
+  overflow-y:auto;padding:16px 0 24px;box-sizing:border-box;
 }
 #gachaAnim.show{display:flex;}
+#gachaResultInner{
+  position:relative;z-index:2;
+  width:100%;max-width:560px;
+  max-height:none;
+  padding:0 12px;box-sizing:border-box;
+}
 .gacha-flash{
   position:absolute;inset:0;
   animation:gFlash .4s ease-out forwards;
@@ -2041,9 +2048,9 @@ body{
 <div id="gachaAnim">
   <div class="gacha-flash" id="gachaFlash"></div>
   <div id="gachaResultInner"></div>
-  <button onclick="closeGachaAnim()" style="position:relative;z-index:3;margin-top:12px;
+  <button onclick="closeGachaAnim()" style="position:sticky;bottom:12px;z-index:3;margin-top:12px;
     background:#030a10;border:1px solid #1a3a2a;border-radius:8px;
-    color:#5a7a6a;font-size:.75rem;padding:10px 24px;cursor:pointer;">閉じる</button>
+    color:#5a7a6a;font-size:.75rem;padding:10px 24px;cursor:pointer;flex-shrink:0;">閉じる</button>
 </div>
 
 <!-- CPU SELECT SCREEN -->
@@ -15802,40 +15809,48 @@ function showGachaAnim10(results){
   flash.style.animation='none'; void flash.offsetWidth;
   flash.style.animation='gFlash .5s ease-out forwards';
 
+  const is100 = results.length >= 100;
+  const miniStyle = is100 ? 'style="padding:4px 2px;border-radius:5px;border-width:1.5px;gap:1px;"' : '';
+  const iconStyle = is100 ? 'style="font-size:.9rem;"' : '';
+  const nameStyle = is100 ? 'style="font-size:.38rem;"' : '';
+  const imgStyle  = is100 ? 'style="width:24px;height:34px;object-fit:contain;border-radius:3px;"' : 'style="width:40px;height:56px;object-fit:contain;border-radius:4px;"';
   const cards = results.map(res=>{
     if(res.rarity==='legend'){
       if(res.skin){
-        return `<div class="gacha-mini-card rarity-legend">
-          <div class="g-icon">${res.skin.icon}</div>
-          <div class="g-name">${res.skin.name}</div>
+        return `<div class="gacha-mini-card rarity-legend" ${miniStyle}>
+          <div class="g-icon" ${iconStyle}>${res.skin.icon}</div>
+          <div class="g-name" ${nameStyle}>${res.skin.name}</div>
           ${res.isNew?'<div class="g-new">NEW</div>':''}
         </div>`;
       }
-      if(res.agari) return `<div class="gacha-mini-card rarity-legend">
-        <div class="g-icon">${res.agari.icon}</div>
-        <div class="g-name">${res.agari.name}</div>
+      if(res.agari) return `<div class="gacha-mini-card rarity-legend" ${miniStyle}>
+        <div class="g-icon" ${iconStyle}>${res.agari.icon}</div>
+        <div class="g-name" ${nameStyle}>${res.agari.name}</div>
         ${res.isNew?'<div class="g-new">NEW</div>':''}
       </div>`;
-      if(res.ability) return `<div class="gacha-mini-card rarity-legend">
-        <div class="g-icon">${res.ability.icon}</div>
-        <div class="g-name">${res.ability.name}</div>
+      if(res.ability) return `<div class="gacha-mini-card rarity-legend" ${miniStyle}>
+        <div class="g-icon" ${iconStyle}>${res.ability.icon}</div>
+        <div class="g-name" ${nameStyle}>${res.ability.name}</div>
         ${res.isNew?'<div class="g-new">NEW</div>':''}
       </div>`;
-      if(res.icon) return `<div class="gacha-mini-card rarity-legend">
-        <img src="${gachaIconUrl(res.icon.id)}" style="width:40px;height:56px;object-fit:contain;border-radius:4px;" alt="${res.icon.id}">
-        <div class="g-name">${res.icon.label}</div>
+      if(res.icon) return `<div class="gacha-mini-card rarity-legend" ${miniStyle}>
+        <img src="${gachaIconUrl(res.icon.id)}" ${imgStyle} alt="${res.icon.id}">
+        <div class="g-name" ${nameStyle}>${res.icon.label}</div>
         ${res.iconIsNew?'<div class="g-new">NEW</div>':''}
       </div>`;
-      return `<div class="gacha-mini-card rarity-legend"><div class="g-name">LEGEND</div></div>`;
+      return `<div class="gacha-mini-card rarity-legend" ${miniStyle}><div class="g-name" ${nameStyle}>LEGEND</div></div>`;
     }
-    return `<div class="gacha-mini-card rarity-${res.rarity}">
-      ${res.icon?`<img src="${gachaIconUrl(res.icon.id)}" style="width:40px;height:56px;object-fit:contain;border-radius:4px;" alt="${res.icon.id}">`:'<div class="g-icon" style="font-size:1rem;opacity:.5;">·</div>'}
-      <div class="g-name">${res.icon?res.icon.label:(res.label||res.rd.label)}</div>
+    return `<div class="gacha-mini-card rarity-${res.rarity}" ${miniStyle}>
+      ${res.icon?`<img src="${gachaIconUrl(res.icon.id)}" ${imgStyle} alt="${res.icon.id}">`:`<div class="g-icon" ${iconStyle} style="opacity:.5;">·</div>`}
+      <div class="g-name" ${nameStyle}>${res.icon?res.icon.label:(res.label||res.rd.label)}</div>
       ${res.iconIsNew?'<div class="g-new">NEW</div>':''}
     </div>`;
   }).join('');
 
-  inner.innerHTML = `<div class="gacha-multi-grid">${cards}</div>`;
+  const gridStyle = is100
+    ? 'display:grid;grid-template-columns:repeat(10,1fr);gap:3px;width:100%;max-width:560px;'
+    : '';
+  inner.innerHTML = `<div class="gacha-multi-grid" ${is100?'style="'+gridStyle+'"':''}>${cards}</div>`;
   anim.classList.add('show');
   anim.style.pointerEvents='all';
   anim.style.background='rgba(0,0,0,.88)';

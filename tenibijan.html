@@ -90,9 +90,9 @@ function scaleTable(){
       /* 縦画面: リーチ・オープンリーチボタンだけ2倍（action-areaの1.667倍に対し追加で×1.2） */
       '.btn-riichi, .btn-open-riichi { transform: scale(1.2) !important; transform-origin: center center !important; margin: 0 12px !important; }'+
       /* 縦画面: 手牌上リーチ・離席ラベルを2.5倍スケール・位置調整 */
-      '.seat-bottom .hand-outer-riichi-label { font-size: 3.4375rem !important; top: -90px !important; left: calc(700px - 211px) !important; transform: translateX(-50%) !important; }'+
+      '.seat-bottom .hand-outer-riichi-label { font-size: 3.4375rem !important; }'+
       '.seat-bottom .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; left: 570px !important; }'+
-      '.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label { font-size: 3.4375rem !important; top: -90px !important; }'+
+      '.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label { font-size: 3.4375rem !important; }'+
       '.seat-top .hand-outer-afk-label,.seat-left .hand-outer-afk-label,.seat-right .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; }'+
       '#humanMeldArea { left: 50% !important; transform: translateX(-50%) !important; bottom: 8px !important; }'+
       '#humanMeldArea .meld-group .tile { width: 80px !important; height: 106px !important; font-size: 5.5rem !important; border-width: 3px !important; border-radius: 8px !important; }'+
@@ -12987,18 +12987,9 @@ function renderTable(){
     const handOuter = document.createElement('div');
     handOuter.style.cssText='position:relative;display:inline-flex;align-items:flex-end;gap:0;';
 
-    // ── リーチ/オープンリーチ: 手牌の上中央に絶対配置 ──
+    // ── リーチ/オープンリーチ: 点数パネルの上に表示 ──
     const isOR = p.riichi && p.openRiichi;
     const isDOR = p.riichi && p.openRiichi && p.doubleRiichi;
-    if(p.riichi){
-      const rLabel = document.createElement('div');
-      rLabel.className='hand-outer-riichi-label';
-      rLabel.style.cssText='position:absolute;top:-38px;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:5;font-size:1.375rem;font-weight:700;pointer-events:none;';
-      if(isDOR)      rLabel.innerHTML='<span style="color:#ee99ff;background:#1a0030;border:1px solid #aa55ff;border-radius:3px;padding:1px 4px;">Ｄオープンリーチ</span>';
-      else if(isOR)  rLabel.innerHTML='<span style="color:#cc88ff;background:#1a0020;border:1px solid #8844cc;border-radius:3px;padding:1px 4px;">オープンリーチ</span>';
-      else           rLabel.innerHTML='<span style="color:#ff8888;background:#1a0000;border:1px solid #cc4444;border-radius:3px;padding:1px 4px;">リーチ</span>';
-      handOuter.appendChild(rLabel);
-    }
 
     // ── 離席: 手牌の左上に絶対配置 ──
     if((isHuman && playerAFK) || p.isCpu){
@@ -13072,6 +13063,17 @@ function renderTable(){
     rightPanel.style.cssText='display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-left:8px;flex-shrink:0;';
     rightPanel.classList.add('player-score-panel');
     if(si===0) rightPanel.classList.add('bottom-score-panel');
+
+    // ── リーチ表示: 点数ステータスの上 ──
+    if(p.riichi){
+      const rLabel = document.createElement('div');
+      rLabel.className='hand-outer-riichi-label';
+      rLabel.style.cssText='white-space:nowrap;font-size:1.375rem;font-weight:700;pointer-events:none;text-align:center;margin-bottom:2px;';
+      if(isDOR)      rLabel.innerHTML='<span style="color:#ee99ff;background:#1a0030;border:1px solid #aa55ff;border-radius:3px;padding:1px 4px;">Ｄオープンリーチ</span>';
+      else if(isOR)  rLabel.innerHTML='<span style="color:#cc88ff;background:#1a0020;border:1px solid #8844cc;border-radius:3px;padding:1px 4px;">オープンリーチ</span>';
+      else           rLabel.innerHTML='<span style="color:#ff8888;background:#1a0000;border:1px solid #cc4444;border-radius:3px;padding:1px 4px;">リーチ</span>';
+      rightPanel.appendChild(rLabel);
+    }
 
     // 場風・持ち点: 横並び・高さ48px
     const scoreRow = document.createElement('div');

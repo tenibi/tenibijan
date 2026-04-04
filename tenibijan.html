@@ -2542,6 +2542,14 @@ body{
       background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
       color:#5a8a6a;font-size:1rem;padding:6px 10px;cursor:pointer;
       transition:all .15s;align-self:stretch;" title="設定">⚙️</button>
+    <button onclick="_openTwitchAndMission()" style="
+      background:#030a10;border:1px solid #2a1a4a;border-radius:7px;
+      color:#9b59b6;font-size:.65rem;padding:6px 10px;cursor:pointer;
+      transition:all .15s;align-self:stretch;
+      display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;" title="手にビTwitch">
+      <span style="font-size:1rem;">💜</span>
+      <span>Twitch</span>
+    </button>
     <button onclick="openFriendScreen()" style="
       background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
       color:#5a8a6a;font-size:.65rem;padding:6px 10px;cursor:pointer;
@@ -14964,6 +14972,12 @@ function _showDailyMissionClaimToast(missionId, earned) {
   toast.style.opacity = '1';
   clearTimeout(toast._tid);
   toast._tid = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+}
+
+// タイトル画面TwitchボタンクリックでTwitchを開き＆デイリーミッションをクリア
+function _openTwitchAndMission() {
+  window.open('https://www.twitch.tv/imteddybeerbear', '_blank', 'noopener');
+  _triggerDailyMission('twitch_open');
 }
 
 // ミッション達成トリガー汎用ヘルパー（pending に追加 → renderDailyMissions）

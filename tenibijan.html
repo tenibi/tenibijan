@@ -14671,7 +14671,29 @@ function loadProfile(){
       });
       const {coins:_coins, abilities:_ab, ability:_abl, tbbCoins:_tbb, ...profileToCache} = PROFILE; // coins/abilities/ability/tbbCoins はlocalStorageに保存しない
       try{ localStorage.setItem('mjProfile',JSON.stringify(profileToCache)); }catch(e){}
-      // localStorage の cpuUnlocks.unlocked をDBにマージ（旧データ移行）
+      // ── 既存ユーザーDB移行（1回のみ） ──────────────────────────────
+      // migration_doneがfalseの場合、localStorageのhandSkins/agariVideosをDBへ移行する
+      if(!data.migrationDone){
+        try{
+          const lsRaw=localStorage.getItem('mjProfile');
+          const lsData=lsRaw?JSON.parse(lsRaw):{};
+          // 移行対象: ローカルに残っているhandSkins/agariVideos（DB取得前の値）
+          const migrateHandSkins=lsData.handSkins||{};
+          const migrateAgariVideos=lsData.agariVideos||{};
+          authFetch('/api/profile/migrate',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({handSkins:migrateHandSkins, agariVideos:migrateAgariVideos}),
+          }).then(r=>r.json()).then(d=>{
+            if(d.ok&&!d.skipped){
+              // 移行成功: DBの最新値でPROFILEを上書き
+              if(d.handSkins)  PROFILE.handSkins  = d.handSkins;
+              if(d.agariVideos) PROFILE.agariVideos = d.agariVideos;
+              _applyProfile();
+            }
+          }).catch(()=>{});
+        }catch(_){}
+      }      // localStorage の cpuUnlocks.unlocked をDBにマージ（旧データ移行）
       try{
         const lsCpu = localStorage.getItem('cpuUnlocks');
         if(lsCpu){
@@ -16803,11 +16825,11 @@ function saveProfileSilent(){
   try{ localStorage.setItem('mjProfile',JSON.stringify(profileToCache4)); }catch(e){}
   updateProfileBadge();
   // サーバー（Neon PostgreSQL）に保存（coins/totalPullsはサーバー管理のため送信しない）
+  // abilities / handSkins / agariVideos はサーバーDB管理のため送信しない
   authFetch('/api/profile',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      abilities:       PROFILE.abilities,
       gachaIcons:      PROFILE.gachaIcons||[],
       iconId:          PROFILE.iconId||'',
       ability:         PROFILE.ability||'',
@@ -16819,12 +16841,10 @@ function saveProfileSilent(){
       bombBestStage:   PROFILE.bombBestStage ||0,
       bombBestScore:   PROFILE.bombBestScore ??0,
       handSkin:        PROFILE.handSkin      ||'',
-      handSkins:       PROFILE.handSkins     ||{},
       emoteSets:       PROFILE.emoteSets     ||[['','','','']],
       ring:            PROFILE.ring          ||'',
       rings:           PROFILE.rings         ||{},
       agariVideo:      PROFILE.agariVideo    ||'agari01',
-      agariVideos:     PROFILE.agariVideos   ||{},
     }),
   }).catch(()=>{});
 }

@@ -1816,7 +1816,7 @@ body{
       </div>
       <div class="gacha-btn-wrap">
         <button class="gacha-pull-btn gacha-pull-10" onclick="doPull10()">🎰 10連ガチャ（<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">10枚）</button>
-        <button class="gacha-pull-btn gacha-pull-10" style="background:linear-gradient(135deg,#1a0a20,#0a0510);border-color:#aa33ff;color:#dd99ff;" onclick="doPull100()">🎰 100連ガチャ（<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）</button>
+        <button class="gacha-pull-btn gacha-pull-100" style="background:linear-gradient(135deg,#1a0a20,#0a0510);border-color:#aa33ff;color:#dd99ff;" onclick="doPull100()">🎰 100連ガチャ（<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）</button>
       </div>
       <!-- 所持能力コレクション -->
       <div class="gacha-collection" style="display:none;">
@@ -15677,13 +15677,13 @@ function doPull100(){
     PROFILE.gachaIcons = d.gachaIcons;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
     if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
-    const results = d.results.map(_convertSvrResult);
+    const results = (d.results||[]).map(_convertSvrResult);
     saveProfileSilent();
     showGachaAnim10(results);
     renderGachaCollection();
     updateGachaStat();
     updateGachaCoinDisplay();
-  }).catch(()=>{});
+  }).catch(err=>{console.error('100連エラー',err);});
 }
 
 function doPull1(){

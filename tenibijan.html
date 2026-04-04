@@ -1030,7 +1030,7 @@ body{
 /* ガチャ演出オーバーレイ */
 #gachaAnim{
   position:fixed;inset:0;z-index:200;pointer-events:none;
-  display:none;align-items:flex-start;justify-content:center;
+  display:none;align-items:center;justify-content:flex-start;
   flex-direction:column;gap:16px;
   overflow-y:auto;padding:16px 0 24px;box-sizing:border-box;
 }
@@ -1040,6 +1040,7 @@ body{
   width:100%;max-width:560px;
   max-height:none;
   padding:0 12px;box-sizing:border-box;
+  display:flex;justify-content:center;
 }
 .gacha-flash{
   position:absolute;inset:0;
@@ -1077,7 +1078,7 @@ body{
 /* 10連ガチャ結果グリッド */
 .gacha-multi-grid{
   display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
-  max-width:520px;width:100%;
+  max-width:520px;width:100%;margin:0 auto;
 }
 .gacha-mini-card{
   border-radius:8px;border:2px solid;padding:8px 4px;

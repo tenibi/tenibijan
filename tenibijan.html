@@ -3882,6 +3882,10 @@ function showRejoinPanel(){
 
 // ── 再接続オーバーレイ制御 ────────────────────────────────────
 function showReconnectOverlay(msg){
+  // ★修正: オーバーレイ表示前に必ずセッションを保存する
+  // （hostDisconnect メッセージ経由や myIdx<=1 の昇格直後など、
+  //   saveRejoinSession が呼ばれていないタイミングでも確実に保存する）
+  saveRejoinSession();
   const ov = document.getElementById('reconnectOverlay');
   if(!ov) return;
   const msgEl = document.getElementById('reconnectMsg');
@@ -4090,7 +4094,7 @@ const TILE_IMG={
     if(!t)return'?';
     
     if(t.suit==='honor'){
-      if(t.num==='白')return '';
+      if(t.num==='白')return '🀆️';
       const url=TILE_IMG.honor[t.num];
       if(url)return `<img src="${url}" class="tile-img" alt="${t.num}">`;
       return EMJ.honor[t.num]||t.num;
@@ -5884,6 +5888,22 @@ async function createRoom(){
     conn.on('open',()=>{
       if(conn.peer) peerRegistryAdd(conn.peer, guestIdx, conn);
       if(!isGameActive){
+        // ★ ロビー中: 同じ PeerID からの重複接続（退室→再入室）を除去する
+        // conn.peer は open 後に確定するため、ここで重複チェックを行う
+        for(let _di = NET.conns.length - 1; _di >= 0; _di--){
+          const _dc = NET.conns[_di];
+          if(_dc !== conn && _dc && _dc.peer === conn.peer){
+            // 古い接続を削除してスロットごと除去
+            NET.conns.splice(_di, 1);
+            NET.guestNames.splice(_di, 1);
+            NET.guestAbilities.splice(_di, 1);
+            NET.guestIconIds.splice(_di, 1);
+            NET.guestEmotes.splice(_di, 1);
+            NET.guestReady.splice(_di, 1);
+            NET.guestIsCpu.splice(_di, 1);
+            try{ _dc.close(); }catch(e){}
+          }
+        }
         // ロビー中の通常参加
         const md = _buildMemberData();
         conn.send({type:'joined',myIdx:guestIdx,abilityMode:NET.roomAbilityMode,
@@ -6213,7 +6233,7 @@ function hostStartGame(){
     return !!NET.guestReady[i];
   });
   if(!allReady) return;
-  const totalPlayers = 1 + NET.conns.length + cpuCount; // ホスト + 実ゲスト + CPU
+  const totalPlayers = 1 + NET.conns.length; // ホスト + ゲスト（NET.connsにCPUスロットも含む）
   const membersInfo = [
     {name: PROFILE.name||'あなた', iconId: PROFILE.iconId||'', ability: PROFILE.ability||'', isCpu:false},
     ...NET.conns.map((c,i)=>({
@@ -6242,6 +6262,16 @@ function copyRoomCode(){
 async function joinRoom(){
   const code = document.getElementById('roomInput').value.trim();
   if(code.length!==6){setOnlineStatus('6桁の部屋番号を入力してください');return;}
+
+  // ★修正: 同じ部屋番号の復帰セッションがあれば復帰フローへ転送
+  // （復帰ボタンが表示されていない場合でも、部屋番号を入力するだけで復帰できる）
+  const _existingSession = loadRejoinSession();
+  if(_existingSession && !_existingSession.isRankMatch && _existingSession.code === code){
+    setOnlineStatus('前の対局への復帰を試みます…');
+    await attemptRejoin();
+    return;
+  }
+
   setOnlineStatus('サーバーで部屋を検索中…');
   NET.isHost = false;
   NET.myIdx = 1; // ホストから上書きされる
@@ -6508,6 +6538,9 @@ function onNetData(msg, senderIdx){
       // ホストが明示的に切断を通知 → 即座にホスト昇格処理
       // ★修正: 切断したのは「現在のホスト」なので、そのプレイヤーの idx を正確に特定する
       // 旧コード: promoteGuestToHost() → デフォルト disconnectedPidx=0 で常にP0がCPU化されるバグ
+      // ★修正: hostDisconnect 受信時に saveRejoinSession を呼ぶ
+      // （PeerJS の close イベント経由と異なり onPeerDisconnected が呼ばれないため）
+      saveRejoinSession();
       let _disconnectedHostIdx = 0;
       const _hostPeerId = NET.currentHostPeerId || NET.conn?.peer;
       if(_hostPeerId && G && G.players){
@@ -11406,6 +11439,15 @@ function showWinModalData(d){
     return;
   }
   const w=G.players.find(p=>p.id===d.winnerId)||G.players[0];
+  // ゲスト側: ホストはhandleWin内でcheckDailyMissions_onWinが呼ばれる。
+  // ゲストはbroadcastState受信→showWinModalDataのみ通るためここで補完する。
+  // _triggerDailyMissionはdone/pendingで冪等なので二重発火しても安全。
+  if(!NET.isHost && d.yakus && Array.isArray(d.yakus)){
+    const _winnerIdx=G.players.findIndex(p=>p.id===d.winnerId);
+    if(_winnerIdx===NET.myIdx && d.yakus.some(y=>y.han>=13)){
+      setTimeout(()=>_triggerDailyMission('yakuman'),1200);
+    }
+  }
   // 正しい順序: 上がり動画 → 役満動画 → winOverlay
   // 役満動画URLをshowWinModalに渡し、_playRonAgariEffectのコールバック内で再生する
   showWinModal(w,d.hand,d.winTile,d.isTsumo,d.losidx,d.yakus,d.score,d.han,null,d.yakuVideo||null);
@@ -11705,8 +11747,9 @@ function renderDiscardZoom(){
         return `<div class="tile back" style="width:${TW}px;height:${TH}px;font-size:${TF*0.86}rem;${isLast?'border-color:#ff6644;':''}${isYamiTarget?'cursor:pointer;border-color:#aa66ff;':''}" ${isYamiTarget?`onclick="lightDispelDiscardYami(${pidx},${di});renderDiscardZoom()"`:''}>🌑</div>`;
       }
       const isStealTarget2 = G.stealMode && pidx!==NET.myIdx && !t._yami;
-      const clickAttr = isStealTarget2 ? `onclick="humanSteal(${pidx},${di});closeDiscardZoom()"` : '';
-      const stealStyle = isStealTarget2 ? 'cursor:pointer;border-color:#88ff88;box-shadow:0 0 8px #44ff4466;' : '';
+      const isHakuDiscardZoom = G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx) && !t._isHaku && !t._yami;
+      const clickAttr = isStealTarget2 ? `onclick="humanSteal(${pidx},${di});closeDiscardZoom()"` : isHakuDiscardZoom ? `onclick="humanHakuSelectDiscard(${pidx},${di})"` : '';
+      const stealStyle = isStealTarget2 ? 'cursor:pointer;border-color:#88ff88;box-shadow:0 0 8px #44ff4466;' : isHakuDiscardZoom ? 'cursor:pointer;border-color:#aaaaff;box-shadow:0 0 8px #aaaaff66;' : '';
       return `<div class="tile ${tc(t)}" style="width:${TW}px;height:${TH}px;font-size:${TF}rem;position:relative;${isLast?'border-color:#ff6644;':''}${isRiichi?'border-color:#ffaa00;':''}${isDora?'box-shadow:0 0 20px #ffcc0099;border-color:#f0c030;background:linear-gradient(160deg,#fffbe8,#f5e87a);':''}${isYami?'opacity:.6;border-color:#553377;':''}${stealStyle}" ${clickAttr}>${isYami?`<span style="font-size:.4em;position:absolute;top:2px;left:2px;">🌑</span>`:''}${emj(t)}</div>`;
     }).join('');
     return `<div style="margin-bottom:18px;">
@@ -13267,9 +13310,19 @@ function renderTable(){
           })(pidx,i);
         } else if(G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx)&&pidx!==NET.myIdx&&!p.riichi){
           // 白選択モード: 相手の手牌を選択可能
-          bt.className='tile back steal-target';
-          bt.textContent='🀫';
-          bt.onclick=()=>humanHakuSelectOpponent(pidx,i);
+          // ただし既に白に変換済みの牌は表向きで🀆️表示
+          if(p.hand[i]&&p.hand[i]._isHaku){
+            bt.className='tile honor haku-converted';
+            bt.textContent='🀆️';
+          } else {
+            bt.className='tile back steal-target';
+            bt.textContent='🀫';
+            bt.onclick=()=>humanHakuSelectOpponent(pidx,i);
+          }
+        } else if(p.hand[i]&&p.hand[i]._isHaku){
+          // 白能力で変換された牌: 表向きで🀆️表示
+          bt.className='tile honor haku-converted';
+          bt.textContent='🀆️';
         } else {
           bt.className='tile back';
           bt.textContent='🀫';
@@ -17621,8 +17674,8 @@ function showEmoteOverlay(pidx, emoteId){
   const panel = allPanels[si];
   if(!panel) return;
 
-  // 既存オーバーレイ削除
-  const old = panel.querySelector('.emote-overlay');
+  // 同じプレイヤーの既存オーバーレイだけ削除（他プレイヤーのエモートには影響しない）
+  const old = panel.querySelector('.emote-overlay[data-pidx="'+pidx+'"]');
   if(old) old.remove();
   if(_emoteTimers[pidx]) clearTimeout(_emoteTimers[pidx]);
 
@@ -17632,9 +17685,11 @@ function showEmoteOverlay(pidx, emoteId){
     orb.style.position = 'relative';
     const overlay = document.createElement('div');
     overlay.className = 'emote-overlay';
+    overlay.dataset.pidx = pidx; // プレイヤー識別子を付与
     overlay.innerHTML = `<img src="${emoteUrl(emoteId)}" alt="emote">`;
     orb.appendChild(overlay);
-    _emoteTimers[pidx] = setTimeout(()=>{ overlay.remove(); }, 3500);
+    // 3秒固定表示・他プレイヤーの操作に影響されない
+    _emoteTimers[pidx] = setTimeout(()=>{ overlay.remove(); }, 3000);
   }
   // エモートボイスを再生
   const vcUrl = EMOTE_VOICE_MAP[emoteId];

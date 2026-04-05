@@ -14957,6 +14957,10 @@ function loadDailyMissions() {
       _dailyMissionState.done = d.done || [];
       _dailyMissionState.today = d.today;
       _dailyMissionState.missions = d.missions || [];  // 今日の2件を保存
+      // サーバーで受取済みのものはpendingから除去（ページリロード後の状態不整合を防ぐ）
+      _dailyMissionState.pending = _dailyMissionState.pending.filter(
+        id => !_dailyMissionState.done.includes(id)
+      );
       renderDailyMissions();
     })
     .catch(() => {});
@@ -15039,18 +15043,19 @@ function _triggerDailyMission(missionId) {
 
 // 好きボタン
 function doSukiMission() {
-  const { done, pending, missions } = _dailyMissionState;
+  const { done, pending } = _dailyMissionState;
   // 受取済み
   if (done.includes('suki')) return;
-  // 今日のミッションに含まれていない場合は何もしない
-  if (!missions || !missions.some(m => m.id === 'suki')) return;
   // pending（達成済み・未受取） → claim
   if (pending.includes('suki')) {
     claimDailyMission('suki');
     return;
   }
-  // 未達成 → 達成させる → 再描画で受け取りボタンに切り替わる
-  _triggerDailyMission('suki');
+  // 未達成 → 達成 → そのままclaimまで実行
+  _dailyMissionState.pending.push('suki');
+  renderDailyMissions();
+  _showDailyMissionAchievedToast('suki');
+  claimDailyMission('suki');
 }
 
 // ゲーム中の達成チェック（handleWin内から呼ぶ）
@@ -15662,6 +15667,8 @@ function doPull10(){
     renderGachaCollection();
     updateGachaStat();
     updateGachaCoinDisplay();
+    // デイリーミッション: 常設ガチャ1回引く
+    _triggerDailyMission('gacha_free');
   }).catch(()=>{});
 }
 
@@ -15691,6 +15698,8 @@ function doPull100(){
     renderGachaCollection();
     updateGachaStat();
     updateGachaCoinDisplay();
+    // デイリーミッション: 常設ガチャ1回引く
+    _triggerDailyMission('gacha_free');
   }).catch(err=>{console.error('100連エラー',err);});
 }
 

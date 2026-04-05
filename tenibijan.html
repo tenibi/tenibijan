@@ -11966,7 +11966,6 @@ function _initWallExpandEvents(ec){
     const si  = _wallSlotAt(p.x, p.y);
     if(si < 0 || G.deckSlots[si] === null) return;
     if(G.minePlantPlayers&&G.minePlantPlayers.includes(NET.myIdx)){ plantMine(si); renderWallExpand(); }
-    else if(G.lightMode === 'pick'){ lightRevealWall(si); renderWallExpand(); }
     else if(G.lightMode==='pick'){
       if(_lightPending&&_lightPending.type==='wall'&&_lightPending.si===si){ lightRevealWall(si); _lightPending=null; closeWallExpand(); }
       else { _lightPending={type:'wall',si}; renderWallExpand(); renderActions(); }
@@ -13256,6 +13255,16 @@ function renderTable(){
           bt.textContent='🀫';
           bt.dataset.lpidx=pidx;
           bt.dataset.lidx=i;
+          // DOM再構築後もイベントが消えないよう直接onclickで登録
+          (function(_pidx,_i){
+            bt.onclick=function(){
+              if(_lightPending&&_lightPending.type==='hand'&&_lightPending.pidx===_pidx&&_lightPending.idx===_i){
+                lightRevealHand(_pidx,_i); _lightPending=null;
+              } else {
+                _lightPending={type:'hand',pidx:_pidx,idx:_i}; renderActions();
+              }
+            };
+          })(pidx,i);
         } else if(G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx)&&pidx!==NET.myIdx&&!p.riichi){
           // 白選択モード: 相手の手牌を選択可能
           bt.className='tile back steal-target';
@@ -13620,23 +13629,6 @@ function _positionDiscards(table){
   });
 
 
-  // Light hand target delegation
-  if(G.lightMode==='pick'){
-    table.querySelectorAll('.light-target-tile[data-lpidx]').forEach(el=>{
-      el.addEventListener('click',()=>{
-        const pidx=parseInt(el.dataset.lpidx);
-        const idx=parseInt(el.dataset.lidx);
-        if(_lightPending&&_lightPending.type==='hand'&&_lightPending.pidx===pidx&&_lightPending.idx===idx){
-          lightRevealHand(pidx,idx); _lightPending=null;
-        } else {
-          // 前の選択を解除して新しい牌を選択
-          table.querySelectorAll('.light-selected-tile').forEach(t=>t.classList.replace('light-selected-tile','light-target-tile'));
-          el.classList.replace('light-target-tile','light-selected-tile');
-          _lightPending={type:'hand',pidx,idx}; renderActions();
-        }
-      });
-    });
-  }
 }
 
 function renderActions(){

@@ -18659,13 +18659,6 @@ function checkNewCharPresent() {
   // 未ログインはスキップ
   if(!localStorage.getItem('jwt_token')) return;
 
-  // アイコン画像をセット
-  const base = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/';
-  ['L06','L07','L08','L09'].forEach(id => {
-    const img = document.getElementById('ncpImg_'+id);
-    if(img) img.src = base + id + '.png';
-  });
-
   _ncpSelectedId = null;
   const btn = document.getElementById('ncpConfirmBtn');
   if(btn){ btn.disabled = true; btn.textContent = 'キャラを選んでください'; }
@@ -19245,25 +19238,25 @@ function _showNcpToast(iconId) {
     <div class="ncp-desc">下から好きなキャラを１枚選んでください<br>このプレゼントは一度限りです</div>
     <div class="ncp-grid">
       <div class="ncp-card" id="ncpCard_L06" onclick="selectNewChar('L06')">
-        <img id="ncpImg_L06" src="" alt="L06" onerror="this.style.display='none'">
+        <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/L06.png" alt="L06">
         <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
         <div class="ncp-card-label">L06</div>
         <div class="ncp-card-check">✓</div>
       </div>
       <div class="ncp-card" id="ncpCard_L07" onclick="selectNewChar('L07')">
-        <img id="ncpImg_L07" src="" alt="L07" onerror="this.style.display='none'">
+        <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/L07.png" alt="L07">
         <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
         <div class="ncp-card-label">L07</div>
         <div class="ncp-card-check">✓</div>
       </div>
       <div class="ncp-card" id="ncpCard_L08" onclick="selectNewChar('L08')">
-        <img id="ncpImg_L08" src="" alt="L08" onerror="this.style.display='none'">
+        <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/L08.png" alt="L08">
         <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
         <div class="ncp-card-label">L08</div>
         <div class="ncp-card-check">✓</div>
       </div>
       <div class="ncp-card" id="ncpCard_L09" onclick="selectNewChar('L09')">
-        <img id="ncpImg_L09" src="" alt="L09" onerror="this.style.display='none'">
+        <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/L09.png" alt="L09">
         <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
         <div class="ncp-card-label">L09</div>
         <div class="ncp-card-check">✓</div>

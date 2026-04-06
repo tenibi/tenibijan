@@ -351,6 +351,92 @@ body{
 .lobby-tiles{display:flex;gap:6px;font-size:2.2rem;animation:float 3s ease-in-out infinite;justify-content:center;}
 @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
 @keyframes _loginBonusIn{from{transform:translateX(-50%) scale(.7);opacity:0;}to{transform:translateX(-50%) scale(1);opacity:1;}}
+
+/* ===== 新キャラプレゼントモーダル ===== */
+#newCharPresentModal{
+  position:fixed;inset:0;z-index:9000;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.92);backdrop-filter:blur(6px);
+}
+#newCharPresentModal.show{display:flex;}
+.ncp-inner{
+  width:95%;max-width:560px;
+  background:linear-gradient(150deg,#060e18,#0a1428);
+  border:2px solid #c9a84c;border-radius:20px;
+  padding:28px 20px 24px;
+  display:flex;flex-direction:column;align-items:center;
+  animation:_ncpIn .45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes _ncpIn{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ncp-tag{
+  font-size:.55rem;font-weight:700;letter-spacing:.18em;
+  background:linear-gradient(90deg,#c9a84c,#f0d47a);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  border:1px solid #c9a84c55;border-radius:20px;padding:3px 12px;
+  margin-bottom:10px;
+}
+.ncp-title{
+  font-size:clamp(1.1rem,4vw,1.5rem);font-weight:900;
+  color:#f0d47a;letter-spacing:.1em;
+  text-shadow:0 0 20px #c9a84c88;
+  margin-bottom:6px;text-align:center;
+}
+.ncp-desc{
+  font-size:.62rem;color:#7a9a8a;letter-spacing:.06em;
+  margin-bottom:22px;text-align:center;
+}
+.ncp-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:14px;width:100%;margin-bottom:22px;
+}
+.ncp-card{
+  position:relative;
+  background:#040c18;border:2px solid #2a4a3a;
+  border-radius:14px;overflow:hidden;cursor:pointer;
+  transition:all .2s;aspect-ratio:3/4;
+  display:flex;align-items:center;justify-content:center;
+}
+.ncp-card:hover{border-color:#c9a84c;box-shadow:0 0 20px #c9a84c44;transform:translateY(-3px);}
+.ncp-card.selected{border-color:#f0d47a;box-shadow:0 0 28px #c9a84c88;}
+.ncp-card img{
+  width:100%;height:100%;object-fit:contain;
+  display:block;background:#040c18;
+}
+.ncp-card-label{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(0deg,#000000cc,transparent);
+  font-size:.6rem;font-weight:700;color:#f0d47a;
+  text-align:center;padding:10px 6px 6px;
+  letter-spacing:.08em;
+}
+.ncp-card-check{
+  position:absolute;top:8px;right:8px;
+  width:24px;height:24px;border-radius:50%;
+  background:#c9a84c;color:#000;
+  font-size:.85rem;font-weight:900;
+  display:none;align-items:center;justify-content:center;
+}
+.ncp-card.selected .ncp-card-check{display:flex;}
+.ncp-select-btn{
+  width:100%;max-width:280px;padding:14px;
+  background:linear-gradient(135deg,#6a3808,#3a1805);
+  border:2px solid var(--gold);border-radius:10px;
+  color:#f0d47a;font-family:inherit;font-size:.95rem;font-weight:900;
+  letter-spacing:.2em;cursor:pointer;transition:all .25s;
+}
+.ncp-select-btn:hover:not(:disabled){
+  background:linear-gradient(135deg,#8a4810,#5a2808);
+  box-shadow:0 0 20px #c9a84c55;transform:translateY(-2px);
+}
+.ncp-select-btn:disabled{opacity:.4;cursor:default;}
+.ncp-legend-badge{
+  display:inline-block;
+  background:linear-gradient(135deg,#c9a84c,#f0d47a);
+  color:#1a0a00;font-size:.45rem;font-weight:900;
+  padding:2px 6px;border-radius:3px;letter-spacing:.06em;
+  margin-bottom:8px;
+}
 .lobby-card{
   background:linear-gradient(135deg,rgba(9,20,34,0.82),rgba(6,14,24,0.82));
   border:1px solid #1a3a2a;border-radius:14px;padding:20px 26px;
@@ -1620,7 +1706,20 @@ body{
     display:none;position:fixed;bottom:auto;left:auto;
     background:#040d14;border:1px solid #1a3a2a;border-radius:10px;
     padding:6px;gap:6px;z-index:9999;
-    flex-wrap:wrap;width:100px;
+    flex-direction:column;width:auto;
+  }
+  /* クールダウン中エモートボタン */
+  #emoteBtn.emote-cooldown{
+    opacity:.45;pointer-events:none;position:relative;
+  }
+  .emote-pick-btn.emote-cooldown-dim{
+    opacity:.3;pointer-events:none;position:relative;
+  }
+  .emote-cooldown-bar{
+    position:absolute;bottom:0;left:0;height:3px;
+    background:linear-gradient(90deg,#44ff88,#2a8a5a);
+    border-radius:0 0 7px 7px;
+    transition:width .1s linear;
   }
   .emote-pick-btn{
     width:42px;height:42px;border-radius:7px;
@@ -3191,7 +3290,7 @@ body{
         <button id="emoteBtn" onclick="toggleEmotePanel()">😊 エモート</button>
         <div id="emotePanel" style="display:none;position:fixed;
           background:#040d14;border:1px solid #1a3a2a;border-radius:10px;
-          padding:6px;gap:6px;z-index:9999;flex-wrap:wrap;width:100px;">
+          padding:6px;gap:6px;z-index:9999;flex-direction:column;width:auto;">
         </div>
       </div>
       <button id="bombAutoPickBtn" onclick="toggleBombAutoPick()" style="
@@ -4110,7 +4209,7 @@ const TILE_IMG={
     if(!t)return'?';
     
     if(t.suit==='honor'){
-      if(t.num==='白')return '🀆️';
+      if(t.num==='白'&&t._isHaku)return '🀆️';
       const url=TILE_IMG.honor[t.num];
       if(url)return `<img src="${url}" class="tile-img" alt="${t.num}">`;
       return EMJ.honor[t.num]||t.num;
@@ -7606,6 +7705,7 @@ function initGame(){
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,
      _soloStage:1}; // ソロモード: ステージ数
   startRound();
+  updateEmoteAreaVisibility();
 }
 
 function makePlayer(id,dealer){
@@ -14734,6 +14834,7 @@ function loadProfile(){
         agariVideos:   data.agariVideos   ?? PROFILE.agariVideos   ?? {},
         emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
         uid:           data.uid           || PROFILE.uid           || '',
+        newCharPresentDone: data.newCharPresentDone ?? PROFILE.newCharPresentDone ?? false,
         cpuUnlocks: Array.from(new Set([
           ...(Array.isArray(data.cpuUnlocks)      ? data.cpuUnlocks      : []),
           ...(Array.isArray(PROFILE.cpuUnlocks)   ? PROFILE.cpuUnlocks   : []),
@@ -14780,6 +14881,7 @@ function loadProfile(){
       _applyProfile();
       checkLoginBonus();
       loadDailyMissions();
+      checkNewCharPresent();
       if(typeof refreshFriendBadge==='function') refreshFriendBadge();
     })
     .catch(()=>{ /* サーバー未接続時はlocalStorageのデータをそのまま使う */ });
@@ -17689,29 +17791,62 @@ function renderEmotePanel(){
   if(!panel) return;
   const slots=_activeSlots();
   const hasAny=slots.some(s=>s);
+  const onCooldown = Date.now() < _emoteCooldownUntil;
   if(!hasAny){
     panel.innerHTML='<div style="font-size:.55rem;color:#4a7a6a;padding:4px;">エモート未設定<br>プロフィールで設定</div>';
     return;
   }
+  const cdClass = onCooldown ? ' emote-cooldown-dim' : '';
+  const remaining = Math.ceil((_emoteCooldownUntil - Date.now())/1000);
+  const cdOverlay = onCooldown ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;text-shadow:0 0 4px #000;pointer-events:none;">${remaining}</div>` : '';
   panel.innerHTML=slots.map((id,i)=>{
-    if(!id) return `<button class="emote-pick-btn" style="opacity:.2;pointer-events:none;" title="未設定">
+    if(!id) return `<button class="emote-pick-btn${cdClass}" style="opacity:.2;pointer-events:none;" title="未設定">
       <span style="font-size:.5rem;color:#2a4a3a;">${i+1}</span>
     </button>`;
-    return `<button class="emote-pick-btn" onclick="sendEmote('${id}')" title="スロット${i+1}">
-      <img src="${emoteUrl(id)}" alt="emote">
+    return `<button class="emote-pick-btn${cdClass}" style="position:relative;" onclick="sendEmote('${id}')" title="スロット${i+1}">
+      <img src="${emoteUrl(id)}" alt="emote">${cdOverlay}
     </button>`;
   }).join('');
 }
 
+// エモートクールダウン管理
+let _emoteCooldownUntil = 0;
+let _emoteCooldownTimer = null;
+
+function _startEmoteCooldown(){
+  _emoteCooldownUntil = Date.now() + 5000;
+  const btn = document.getElementById('emoteBtn');
+  if(btn) btn.classList.add('emote-cooldown');
+  // クールダウンバーを emoteBtn に追加
+  if(btn){
+    let bar = btn.querySelector('.emote-cooldown-bar');
+    if(!bar){ bar = document.createElement('div'); bar.className='emote-cooldown-bar'; btn.appendChild(bar); }
+    bar.style.width='100%';
+  }
+  if(_emoteCooldownTimer) clearInterval(_emoteCooldownTimer);
+  _emoteCooldownTimer = setInterval(()=>{
+    const remaining = _emoteCooldownUntil - Date.now();
+    const btn2 = document.getElementById('emoteBtn');
+    if(remaining <= 0){
+      clearInterval(_emoteCooldownTimer); _emoteCooldownTimer=null;
+      if(btn2){ btn2.classList.remove('emote-cooldown'); const b=btn2.querySelector('.emote-cooldown-bar'); if(b) b.remove(); }
+    } else {
+      const pct = (remaining/5000)*100;
+      if(btn2){ const b=btn2.querySelector('.emote-cooldown-bar'); if(b) b.style.width=pct+'%'; }
+    }
+  }, 80);
+}
+
 // エモートを送信
 function sendEmote(emoteId){
-  if(!NET.online) return;
+  if(Date.now() < _emoteCooldownUntil) return; // クールダウン中は無視
   const pidx = NET.myIdx;
-  netBroadcastAll({type:'emote', pidx, emoteId});
+  if(NET.online) netBroadcastAll({type:'emote', pidx, emoteId});
   showEmoteOverlay(pidx, emoteId);
   // パネルを閉じる
   const panel = document.getElementById('emotePanel');
   if(panel) panel.style.display = 'none';
+  _startEmoteCooldown();
 }
 
 // エモートをアイコンの上に表示
@@ -17756,11 +17891,12 @@ function showEmoteOverlay(pidx, emoteId){
   }
 }
 
-// オンライン時にエモートボタンを表示
+// オンライン時・CPU対戦・手にボムでもエモートボタンを表示
 function updateEmoteAreaVisibility(){
   const area = document.getElementById('emoteArea');
   if(!area) return;
-  area.style.display = (NET.online) ? 'block' : 'none';
+  const gameActive = G && G.players && G.players.length > 0;
+  area.style.display = (NET.online || gameActive) ? 'block' : 'none';
 }
 
 function closeProfile(){
@@ -18508,6 +18644,102 @@ function plantMineRinshan(ri){
   broadcastState();
   renderAll();
 }
+
+// ── 新キャラプレゼント ──────────────────────────────────────────
+let _ncpSelectedId = null;
+
+function checkNewCharPresent() {
+  // localStorageですでに受け取り済みなら即スキップ
+  if(localStorage.getItem('newCharPresent_v1_done') === '1') return;
+  // サーバーフラグでも確認（loadProfile後に呼ばれるのでPROFILEに入っている）
+  if(PROFILE && PROFILE.newCharPresentDone) {
+    localStorage.setItem('newCharPresent_v1_done','1');
+    return;
+  }
+  // 未ログインはスキップ
+  if(!localStorage.getItem('jwt_token')) return;
+
+  // アイコン画像をセット
+  const base = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/';
+  ['L06','L07','L08','L09'].forEach(id => {
+    const img = document.getElementById('ncpImg_'+id);
+    if(img) img.src = base + id + '.png';
+  });
+
+  _ncpSelectedId = null;
+  const btn = document.getElementById('ncpConfirmBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'キャラを選んでください'; }
+  ['L06','L07','L08','L09'].forEach(id => {
+    const c = document.getElementById('ncpCard_'+id);
+    if(c) c.classList.remove('selected');
+  });
+
+  const modal = document.getElementById('newCharPresentModal');
+  if(modal) modal.classList.add('show');
+}
+
+function selectNewChar(iconId) {
+  _ncpSelectedId = iconId;
+  ['L06','L07','L08','L09'].forEach(id => {
+    const c = document.getElementById('ncpCard_'+id);
+    if(c) c.classList.toggle('selected', id === iconId);
+  });
+  const btn = document.getElementById('ncpConfirmBtn');
+  if(btn){ btn.disabled = false; btn.textContent = `✨ ${iconId} をもらう！`; }
+}
+
+async function claimNewChar() {
+  if(!_ncpSelectedId) return;
+  const btn = document.getElementById('ncpConfirmBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '受け取り中...'; }
+  try {
+    const res = await authFetch('/api/new-char-present', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ iconId: _ncpSelectedId })
+    });
+    const data = await res.json();
+    if(res.status === 409 || data.ok) {
+      // 成功 or すでに受け取り済み → 両方とも閉じる
+      localStorage.setItem('newCharPresent_v1_done','1');
+      if(data.gachaIcons) PROFILE.gachaIcons = data.gachaIcons;
+      if(data.ok) {
+        // 受け取り完了トースト
+        _showNcpToast(_ncpSelectedId);
+        if(typeof _applyProfile === 'function') _applyProfile();
+      }
+      const modal = document.getElementById('newCharPresentModal');
+      if(modal) modal.classList.remove('show');
+    } else {
+      if(btn){ btn.disabled = false; btn.textContent = `✨ ${_ncpSelectedId} をもらう！`; }
+      alert(data.error || 'エラーが発生しました');
+    }
+  } catch(e) {
+    if(btn){ btn.disabled = false; btn.textContent = `✨ ${_ncpSelectedId} をもらう！`; }
+  }
+}
+
+function _showNcpToast(iconId) {
+  let t = document.getElementById('_ncpToast');
+  if(!t){ t = document.createElement('div'); t.id='_ncpToast'; document.body.appendChild(t); }
+  t.style.cssText = [
+    'position:fixed;left:50%;transform:translateX(-50%);bottom:80px;z-index:99999;',
+    'background:linear-gradient(135deg,#2a1a00,#1a0a00);',
+    'border:2px solid #c9a84c;border-radius:14px;',
+    'padding:16px 28px;text-align:center;',
+    'animation:_loginBonusIn .4s cubic-bezier(.34,1.56,.64,1);',
+    'box-shadow:0 8px 32px #00000088;'
+  ].join('');
+  const imgUrl = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/' + iconId + '.png';
+  t.innerHTML = `
+    <div style="font-size:.55rem;color:#c9a84c;letter-spacing:.15em;margin-bottom:6px;">🎉 プレゼント受け取り完了！</div>
+    <img src="${imgUrl}" style="width:80px;height:110px;object-fit:contain;border-radius:8px;border:1.5px solid #c9a84c;background:#040c18;display:block;margin:0 auto 8px;" onerror="this.style.display='none'">
+    <div style="font-size:.75rem;font-weight:900;color:#f0d47a;letter-spacing:.1em;">${iconId}</div>
+    <div style="font-size:.55rem;color:#7a9a8a;margin-top:3px;">ガチャアイコンに追加されました</div>
+  `;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ if(t.parentNode) t.parentNode.removeChild(t); }, 3500);
+}
 </script>
 <!-- 設定パネル（画面右上固定） -->
 <div id="settingsPanel" onclick="event.stopPropagation()" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" style="
@@ -19003,6 +19235,43 @@ function plantMineRinshan(ri){
     </div>
 
     <div id="ofm-action" style="text-align:center;min-height:34px;display:flex;align-items:center;justify-content:center;gap:8px;"></div>
+  </div>
+</div>
+<!-- ===== 新キャラプレゼントモーダル ===== -->
+<div id="newCharPresentModal">
+  <div class="ncp-inner">
+    <div class="ncp-tag">🎉 新キャラ実装記念</div>
+    <div class="ncp-title">新キャラを１枚<br>プレゼント！</div>
+    <div class="ncp-desc">下から好きなキャラを１枚選んでください<br>このプレゼントは一度限りです</div>
+    <div class="ncp-grid">
+      <div class="ncp-card" id="ncpCard_L06" onclick="selectNewChar('L06')">
+        <img id="ncpImg_L06" src="" alt="L06" onerror="this.style.display='none'">
+        <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
+        <div class="ncp-card-label">L06</div>
+        <div class="ncp-card-check">✓</div>
+      </div>
+      <div class="ncp-card" id="ncpCard_L07" onclick="selectNewChar('L07')">
+        <img id="ncpImg_L07" src="" alt="L07" onerror="this.style.display='none'">
+        <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
+        <div class="ncp-card-label">L07</div>
+        <div class="ncp-card-check">✓</div>
+      </div>
+      <div class="ncp-card" id="ncpCard_L08" onclick="selectNewChar('L08')">
+        <img id="ncpImg_L08" src="" alt="L08" onerror="this.style.display='none'">
+        <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
+        <div class="ncp-card-label">L08</div>
+        <div class="ncp-card-check">✓</div>
+      </div>
+      <div class="ncp-card" id="ncpCard_L09" onclick="selectNewChar('L09')">
+        <img id="ncpImg_L09" src="" alt="L09" onerror="this.style.display='none'">
+        <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
+        <div class="ncp-card-label">L09</div>
+        <div class="ncp-card-check">✓</div>
+      </div>
+    </div>
+    <button class="ncp-select-btn" id="ncpConfirmBtn" onclick="claimNewChar()" disabled>
+      キャラを選んでください
+    </button>
   </div>
 </div>
 </body>

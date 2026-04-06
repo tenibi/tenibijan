@@ -15588,7 +15588,15 @@ const GACHA_ICONS = [
   ...Array.from({length:2},(_,i)=>{const n=String(i+8).padStart(2,'0');return{id:`C${n}`,rarity:'normal',label:`コモン${n}`};}),
   ...Array.from({length:15},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`R${n}`,rarity:'rare',label:`レア${n}`};}),
   ...Array.from({length:7},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`E${n}`,rarity:'epic',label:`エピック${n}`};}),
-  ...Array.from({length:9},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`L${n}`,rarity:'legend',label:`レジェンド${n}`};}),
+  {id:'L01',rarity:'legend',label:'おはよう 手にビ'},
+  {id:'L02',rarity:'legend',label:'添い寝 手にビ'},
+  {id:'L03',rarity:'legend',label:'一緒にお風呂 手にビ'},
+  {id:'L04',rarity:'legend',label:'愛子'},
+  {id:'L05',rarity:'legend',label:'マイケル'},
+  {id:'L06',rarity:'legend',label:'コーン周平スープ'},
+  {id:'L07',rarity:'legend',label:'宣教師 斎藤勇貴'},
+  {id:'L08',rarity:'legend',label:'成金 斎藤勇貴'},
+  {id:'L09',rarity:'legend',label:'Ren'},
 ];
 // ローカル管理アイコン（ガチャ排出なし・常時所持）
 const LOCAL_ICONS = [
@@ -19240,25 +19248,25 @@ function _showNcpToast(iconId) {
       <div class="ncp-card" id="ncpCard_L06" onclick="selectNewChar('L06')">
         <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/L06.png" alt="L06">
         <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
-        <div class="ncp-card-label">L06</div>
+        <div class="ncp-card-label">コーン周平スープ</div>
         <div class="ncp-card-check">✓</div>
       </div>
       <div class="ncp-card" id="ncpCard_L07" onclick="selectNewChar('L07')">
         <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/L07.png" alt="L07">
         <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
-        <div class="ncp-card-label">L07</div>
+        <div class="ncp-card-label">宣教師 斎藤勇貴</div>
         <div class="ncp-card-check">✓</div>
       </div>
       <div class="ncp-card" id="ncpCard_L08" onclick="selectNewChar('L08')">
         <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/L08.png" alt="L08">
         <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
-        <div class="ncp-card-label">L08</div>
+        <div class="ncp-card-label">成金 斎藤勇貴</div>
         <div class="ncp-card-check">✓</div>
       </div>
       <div class="ncp-card" id="ncpCard_L09" onclick="selectNewChar('L09')">
         <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/gacha/L09.png" alt="L09">
         <div class="ncp-legend-badge" style="position:absolute;top:8px;left:8px;">LEGEND</div>
-        <div class="ncp-card-label">L09</div>
+        <div class="ncp-card-label">Ren</div>
         <div class="ncp-card-check">✓</div>
       </div>
     </div>

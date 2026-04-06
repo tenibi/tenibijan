@@ -1731,9 +1731,10 @@ body{
   .emote-pick-btn img{width:100%;height:100%;object-fit:contain;}
   /* アイコンの上に重なるエモート表示 */
   .emote-overlay{
-    position:absolute;top:-8px;left:50%;transform:translateX(-50%);
+    position:absolute;
     width:84px;height:84px;
-    pointer-events:none;z-index:20;
+    pointer-events:none;z-index:200;
+    transform:translateX(-50%);
     animation:emoteIn .25s ease-out;
   }
   .emote-overlay img{width:100%;height:100%;object-fit:contain;}
@@ -3256,6 +3257,8 @@ body{
   </div>
 
   <div id="tableWrapper" style="position:relative;transform-origin:center center;">
+  <!-- エモートオーバーレイ専用レイヤー（renderTableに影響されない） -->
+  <div id="emoteOverlayLayer" style="position:absolute;inset:0;pointer-events:none;z-index:200;overflow:visible;"></div>
   <div class="mahjong-table" id="mahjongTable">
     <!-- 局情報: 卓左上内に固定 -->
     <div id="tableInfoBox" style="
@@ -13605,6 +13608,8 @@ function renderTable(){
       const _si = _animSeatMap.indexOf(_animPidxSnap);
       if(_si >= 0){ _playDiscardHandAnim(_si, _animPidxSnap); }
     }
+    // エモートオーバーレイをDOM再構築後に再配置
+    if(typeof _repositionEmoteOverlays === 'function') _repositionEmoteOverlays();
   });
 }
 
@@ -17859,34 +17864,74 @@ function sendEmote(emoteId){
 
 // エモートをアイコンの上に表示
 const _emoteTimers = {};
-function showEmoteOverlay(pidx, emoteId){
-  // leftPanelを探す: player-icon-panelのうちsi対応のもの
-  const allPanels = document.querySelectorAll('.player-icon-panel');
-  // pidxからsi(seatIndex)への変換: renderHandで作られる順序に依存
-  // 自分(NET.myIdx)はsi=0(bottom), 以降は(pidx - myIdx + numPlayers)%numPlayers でsi決定
+// 現在表示中のエモート情報を保持（renderTable後に再配置するため）
+const _activeEmotes = {}; // pidx -> { emoteId, el, endTime }
+
+function _getEmoteLayerPos(pidx){
+  // player-icon-panel の位置を tableWrapper 基準で取得
   const numP = (typeof numPlayers!=='undefined' ? numPlayers : 4);
   const myIdx = NET.myIdx || 0;
   const si = (pidx - myIdx + numP) % numP;
+  const allPanels = document.querySelectorAll('.player-icon-panel');
   const panel = allPanels[si];
-  if(!panel) return;
+  if(!panel) return null;
+  const wrapper = document.getElementById('tableWrapper');
+  if(!wrapper) return null;
+  const pr = panel.getBoundingClientRect();
+  const wr = wrapper.getBoundingClientRect();
+  // scaleTableで transform:scale が当たっているので逆算
+  const scaleX = _TABLE_W / (wr.width || _TABLE_W);
+  const scaleY = (wrapper.style.height ? parseFloat(wrapper.style.height) : _TABLE_H) / (wr.height || _TABLE_H);
+  const cx = (pr.left + pr.width/2 - wr.left) * scaleX;
+  const cy = (pr.top - wr.top) * scaleY - 8; // アイコンの真上
+  return { cx, cy };
+}
 
-  // 同じプレイヤーの既存オーバーレイだけ削除（他プレイヤーのエモートには影響しない）
-  const old = panel.querySelector('.emote-overlay[data-pidx="'+pidx+'"]');
-  if(old) old.remove();
-  if(_emoteTimers[pidx]) clearTimeout(_emoteTimers[pidx]);
+function _repositionEmoteOverlays(){
+  for(const [pidxStr, info] of Object.entries(_activeEmotes)){
+    if(!info || !info.el || !info.el.parentNode) continue;
+    const pos = _getEmoteLayerPos(parseInt(pidxStr));
+    if(!pos) continue;
+    info.el.style.left = pos.cx + 'px';
+    info.el.style.top  = pos.cy + 'px';
+  }
+}
 
-  // windOrbを基準にposition:relativeを付与
-  const orb = panel.querySelector('.wind-orb');
-  if(orb){
-    orb.style.position = 'relative';
+function showEmoteOverlay(pidx, emoteId){
+  const layer = document.getElementById('emoteOverlayLayer');
+  if(!layer) return;
+
+  // 既存オーバーレイを削除
+  if(_activeEmotes[pidx]){
+    if(_activeEmotes[pidx].el && _activeEmotes[pidx].el.parentNode)
+      _activeEmotes[pidx].el.remove();
+    if(_emoteTimers[pidx]) clearTimeout(_emoteTimers[pidx]);
+    delete _activeEmotes[pidx];
+  }
+
+  // 位置を取得（DOMが確定していない場合はrAFで再試行）
+  function _place(){
+    const pos = _getEmoteLayerPos(pidx);
+    if(!pos){ requestAnimationFrame(_place); return; }
+
     const overlay = document.createElement('div');
     overlay.className = 'emote-overlay';
-    overlay.dataset.pidx = pidx; // プレイヤー識別子を付与
+    overlay.dataset.pidx = pidx;
+    overlay.style.left = pos.cx + 'px';
+    overlay.style.top  = pos.cy + 'px';
     overlay.innerHTML = `<img src="${emoteUrl(emoteId)}" alt="emote">`;
-    orb.appendChild(overlay);
-    // 3秒固定表示・他プレイヤーの操作に影響されない
-    _emoteTimers[pidx] = setTimeout(()=>{ overlay.remove(); }, 3000);
+    layer.appendChild(overlay);
+
+    const endTime = Date.now() + 5000;
+    _activeEmotes[pidx] = { emoteId, el: overlay, endTime };
+
+    _emoteTimers[pidx] = setTimeout(()=>{
+      overlay.remove();
+      delete _activeEmotes[pidx];
+    }, 5000);
   }
+  requestAnimationFrame(_place);
+
   // エモートボイスを再生
   const vcUrl = EMOTE_VOICE_MAP[emoteId];
   if(vcUrl){

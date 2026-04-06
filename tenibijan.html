@@ -660,6 +660,9 @@ body{
 .tile.drawn{border-color:transparent;box-shadow:none;}
 .tile.riichi-discard{transform:rotate(90deg);margin:0 5px;}
 .tile-dora-glow{box-shadow:0 0 8px 3px #ffcc0099,0 0 2px 1px #ffaa00cc !important;border-color:#f0c030 !important;background:linear-gradient(160deg,#fffbe8,#f5e87a) !important;}
+/* 赤ドラ: 赤いグロウ + 背景を薄赤に */
+.tile-aka-glow{box-shadow:0 0 10px 4px #ff444499,0 0 3px 1px #cc2222cc !important;border-color:#ff6644 !important;background:linear-gradient(160deg,#fff5f5,#ffd8d0) !important;}
+.tile-img-aka{filter:drop-shadow(0 0 3px #ff4422aa);}
 /* 同種牌ハイライト */
 .tile.same-highlight{
   border-color:#55ddff !important;
@@ -4178,6 +4181,11 @@ const TILE_IMG={
     sou:{1:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu1.png',2:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu2.png',3:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu3.png',4:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu4.png',5:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu5.png',6:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu6.png',7:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu7.png',8:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu8.png',9:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu9.png'},
     honor:{'東':'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/zihai1.png','南':'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/zihai2.png','西':'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/zihai3.png','北':'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/zihai4.png','発':'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/zihai5.png','中':'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/zihai6.png'},
   };
+  // 赤ドラ専用画像URL
+  const TILE_IMG_AKA={
+    pin:{5:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/pinzu5aka.png'},
+    sou:{5:'https://raw.githubusercontent.com/tenibi/tenibijan/main/hai/souzu5aka.png'},
+  };
   
   // 牌画像プリロード
   const _imageCache = new Map();
@@ -4186,6 +4194,12 @@ const TILE_IMG={
     
     // man, pin, sou, honor から全URL収集
     Object.values(TILE_IMG).forEach(suit => {
+      if (typeof suit === 'object') {
+        Object.values(suit).forEach(url => allUrls.add(url));
+      }
+    });
+    // 赤ドラ画像もプリロード
+    Object.values(TILE_IMG_AKA).forEach(suit => {
       if (typeof suit === 'object') {
         Object.values(suit).forEach(url => allUrls.add(url));
       }
@@ -4218,6 +4232,11 @@ const TILE_IMG={
       if(url)return `<img src="${url}" class="tile-img" alt="${t.num}">`;
       return EMJ.honor[t.num]||t.num;
     }
+    // 赤ドラ画像
+    if(t._isAka){
+      const akaUrl=TILE_IMG_AKA[t.suit]&&TILE_IMG_AKA[t.suit][t.num];
+      if(akaUrl)return `<img src="${akaUrl}" class="tile-img tile-img-aka" alt="${t.suit}${t.num}aka">`;
+    }
     const url=TILE_IMG[t.suit]&&TILE_IMG[t.suit][t.num];
     if(url)return `<img src="${url}" class="tile-img" alt="${t.suit}${t.num}">`;
     return EMJ[t.suit]&&EMJ[t.suit][t.num]||`${t.num}`;
@@ -4241,7 +4260,10 @@ function sortTiles(tiles){
 function buildDeck(){
   const tiles=[];
   for(const[suit,nums]of Object.entries(SUITS))
-    for(const num of nums)for(let c=0;c<4;c++){const t=mt(suit,num);t._pkey=suit+'_'+num+'_'+c;tiles.push(t);}
+    for(const num of nums)for(let c=0;c<4;c++){const t=mt(suit,num);t._pkey=suit+'_'+num+'_'+c;
+      // 筒子5・索子5 の c===0 を赤ドラにする
+      if((suit==='pin'||suit==='sou')&&num===5&&c===0){t._isAka=true;t._pkey=suit+'_'+num+'_aka';}
+      tiles.push(t);}
   for(const h of HONORS)for(let c=0;c<4;c++){const t=mt('honor',h);t._pkey='honor_'+h+'_'+c;tiles.push(t);}
   for(let i=tiles.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tiles[i],tiles[j]]=[tiles[j],tiles[i]];}
   return tiles;
@@ -8016,6 +8038,9 @@ function countDoras(hand,p){
     const kitaIsDora=doras.some(d=>teq(d,kitaTile));
     if(kitaIsDora) n+=(p.kitaCount||0);
   }
+  // 赤ドラカウント（手牌＋鳴き）
+  for(const t of hand)if(t._isAka)n++;
+  for(const m of (p.melds||[]))for(const t of (m.tiles||[]))if(t._isAka)n++;
   return n;
 }
 
@@ -11592,7 +11617,7 @@ function showWinModal(winner,hand,winTile,isTsumo,losidx,yakus,score,han,_double
   document.getElementById('mHand').innerHTML=sortTiles(hand).map(t=>{
     const id=doras.some(d=>teq(d,t));
     const iw=teq(t,winTile);
-    return`<div class="tile ${tc(t)}${iw?' selected':''}${id?' tile-dora-glow':''}">${emj(t)}</div>`;
+    return`<div class="tile ${tc(t)}${iw?' selected':''}${id?' tile-dora-glow':''}${t._isAka?' tile-aka-glow':''}">${emj(t)}</div>`;
   }).join('');
   document.getElementById('mYakuBody').innerHTML=yakus.map(y=>
     `<tr><td>${y.name}</td><td>${y.han>=52?'４倍役満':y.han>=39?'３倍役満':y.han>=26?'２倍役満':y.han>=13?'役満':y.han+'翻'}</td></tr>`
@@ -12206,6 +12231,8 @@ const _doraImgCache={};
     if(!t)return null;
     
     if(t.suit==='honor'){return TILE_IMG.honor[t.num]||null;}
+    // 赤ドラ
+    if(t._isAka&&TILE_IMG_AKA[t.suit]&&TILE_IMG_AKA[t.suit][t.num]) return TILE_IMG_AKA[t.suit][t.num];
     return (TILE_IMG[t.suit]&&TILE_IMG[t.suit][t.num])||null;
   }
   function renderWall(){
@@ -12808,7 +12835,8 @@ function renderDoraCanvas(){
       else      { grad.addColorStop(0,'#1a3a50'); grad.addColorStop(1,'#0d2035'); }
       ctx.fillStyle=grad;
     } else {
-      ctx.fillStyle=isDora?'#f0e8d0':'#eee8d0';
+      // 赤ドラ表示牌は薄赤背景
+      ctx.fillStyle=(_tileForDraw&&_tileForDraw._isAka)?'#ffe8e0':(isDora?'#f0e8d0':'#eee8d0');
     }
     _roundRect(ctx,r.x,r.y,r.w,r.h,3,true,false);
 
@@ -12825,7 +12853,7 @@ function renderDoraCanvas(){
     }
     else if(isAlreadyRevealed){ ctx.strokeStyle='#ffee22'; ctx.lineWidth=2; }
     else if(isLightPickable||isLightPickableBack){ ctx.strokeStyle='#ffee22'; ctx.lineWidth=2; }
-    else if(isDoraMark) { ctx.strokeStyle='#c9a84c'; ctx.lineWidth=1.5; }
+    else if(isDoraMark) { ctx.strokeStyle=(_tileForDraw&&_tileForDraw._isAka)?'#ff6644':'#c9a84c'; ctx.lineWidth=1.5; }
     else if(isMine){ ctx.strokeStyle='#cc4422'; ctx.lineWidth=1; }
     else if(plantModeDP&&di<7&&di>=usedR){ ctx.strokeStyle='#6aaa6a'; ctx.lineWidth=1.5; }
     else if(hasPen&&_penModeOn){ ctx.strokeStyle='#3ada8a55'; ctx.lineWidth=1; }
@@ -13159,7 +13187,7 @@ function renderTable(){
       const mw=document.createElement('div');mw.style.cssText='display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:center;';
       if(p.melds.length>0){
         const meld=document.createElement('div');meld.className='melds-wrap';
-        meld.innerHTML=p.melds.map(m=>`<div class="meld-group">${m.tiles.map(t=>`<div class="tile ${tc(t)}">${emj(t)}</div>`).join('')}</div>`).join('');
+        meld.innerHTML=p.melds.map(m=>`<div class="meld-group">${m.tiles.map(t=>`<div class="tile ${tc(t)}${getDoras().some(d=>teq(d,t))?' tile-dora-glow':''}${t._isAka?' tile-aka-glow':''}">${emj(t)}</div>`).join('')}</div>`).join('');
         mw.appendChild(meld);
       }
       if(p.kitaCount>0){
@@ -13338,6 +13366,7 @@ function renderTable(){
         if(isDimmed)tileEl.style.opacity='0.32', tileEl.style.cursor='not-allowed';
         // オープンリーチ中の闇牌: 本物は見えるが薄暗く（裏向きになることを示す）
         if(isDora&&!isDimmed) tileEl.classList.add('tile-dora-glow');
+        if(t._isAka&&!isDimmed) tileEl.classList.add('tile-aka-glow');
         tileEl.innerHTML=(isYamiOpenHide?'🌑':'')+(isDimmed?'':emj(t));
         if(!isDimmed&&!isYamiOpenHide) tileEl.innerHTML=emj(t);
         if(isYamiOpenHide) tileEl.innerHTML=`<span style="font-size:.55em;opacity:.5;">${emj(t)}</span>`;
@@ -13400,7 +13429,7 @@ function renderTable(){
         bt.style.cssText='width:36px;height:48px;font-size:2.8rem;border-radius:4px;overflow:visible;';
         if(isRevealedByLight){
           const t=p.hand[i];
-          bt.className=`tile ${tc(t)} light-revealed`;
+          bt.className=`tile ${tc(t)} light-revealed${t._isAka?' tile-aka-glow':''}`;
           bt.innerHTML=emj(t);
         } else if(isOpenRiichi && yamiIdx===i){
           // 闇指定牌: 光の「闇を解く」モード時はクリック可能
@@ -13410,7 +13439,7 @@ function renderTable(){
         } else if(isOpenRiichi){
           // オープンリーチ: 全牌を表向きに公開
           const t=p.hand[i];
-          bt.className=`tile ${tc(t)}`;
+          bt.className=`tile ${tc(t)}${t._isAka?' tile-aka-glow':''}`;
           bt.innerHTML=emj(t);
         } else if(isLightHandMode&&pidx!==NET.myIdx){
           const isHandSelected=!!(_lightPending&&_lightPending.type==='hand'&&_lightPending.pidx===pidx&&_lightPending.idx===i);
@@ -13491,10 +13520,11 @@ function renderTable(){
       const isStealTarget = G.stealMode && pidx!==NET.myIdx && !t._yami;
       const isHakuDiscard = G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx) && !t._isHaku && !t._yami;
       const isDoraDiscard = getDoras().some(d=>teq(d,t));
+      const isAkaDiscard = !!t._isAka;
       const discardClick = isStealTarget?`onclick="humanSteal(${pidx},${di})"`:isHakuDiscard?`onclick="humanHakuSelectDiscard(${pidx},${di})"`:'' ;
       const discardBorder = isHakuDiscard?'border-color:#aaaaff;cursor:pointer;box-shadow:0 0 6px #aaaaff66;':'';
       const crackOv = t._cracked ? _crackOverlayHtml() : '';
-      return`<div class="tile ${tc(t)}${isLast?' last-discard':''}${isLastAnim?' last-discard-animate':''}${isRiichiTile?' riichi-discard':''}${isStealTarget?' steal-target':''}${isDoraDiscard?' tile-dora-glow':''}" data-suit="${t.suit}" data-num="${t.num}" ${discardClick} style="position:relative;overflow:hidden;${discardBorder}">${emj(t)}${crackOv}</div>`;
+      return`<div class="tile ${tc(t)}${isLast?' last-discard':''}${isLastAnim?' last-discard-animate':''}${isRiichiTile?' riichi-discard':''}${isStealTarget?' steal-target':''}${isDoraDiscard?' tile-dora-glow':''}${isAkaDiscard?' tile-aka-glow':''}" data-suit="${t.suit}" data-num="${t.num}" ${discardClick} style="position:relative;overflow:hidden;${discardBorder}">${emj(t)}${crackOv}</div>`;
     }).join('');
     dw.appendChild(dg);
     // ドラ山は doraPileFixed に固定表示（seat-innerには追加しない）

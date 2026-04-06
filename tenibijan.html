@@ -7055,15 +7055,16 @@ function handleGuestAction(msg, senderIdx){
     case 'penSync':
       if(amIHost() && msg.changedKeys){
         if(!G.penDrawings) G.penDrawings={};
-        // changedKeys: { key: {layer:'g', dataUrl:'...'} } 形式
+        // changedKeys: { key: {layer:'p0'/'p1'/..., dataUrl:'...'} } 形式
         for(const k of Object.keys(msg.changedKeys)){
           const val=msg.changedKeys[k];
           if(val && typeof val==='object' && val.layer && val.dataUrl){
-            // 新形式: レイヤー指定あり
-            _penSetLayer(k, val.layer, val.dataUrl);
+            // layer 'h'→'p0', 'g'→'p1' に正規化
+            const normL=val.layer==='h'?'p0':val.layer==='g'?'p1':val.layer;
+            _penSetLayer(k, normL, val.dataUrl);
           } else if(typeof val==='string'){
-            // 旧形式後方互換: stringが来たらゲスト(g)レイヤーとして扱う
-            _penSetLayer(k, 'g', val);
+            // 旧形式後方互換
+            _penSetLayer(k, 'p1', val);
           }
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
@@ -7073,13 +7074,20 @@ function handleGuestAction(msg, senderIdx){
         if(!G.penDrawings) G.penDrawings={};
         for(const k of Object.keys(msg.changedKeys)){
           const val=msg.changedKeys[k];
-          if(val && typeof val==='object' && (val.h!==undefined||val.g!==undefined)){
-            // broadcastState経由で届く{h,g}形式
+          if(val && typeof val==='object' && (val.p0!==undefined||val.p1!==undefined||val.p2!==undefined||val.p3!==undefined)){
+            // broadcastState経由で届く{p0,p1,p2,p3}形式
             G.penDrawings[k]=val;
+          } else if(val && typeof val==='object' && (val.h!==undefined||val.g!==undefined)){
+            // 旧{h,g}形式 → p0/p1に変換
+            const norm={};
+            if(val.h) norm.p0=val.h;
+            if(val.g) norm.p1=val.g;
+            G.penDrawings[k]=norm;
           } else if(val && typeof val==='object' && val.layer && val.dataUrl){
-            _penSetLayer(k, val.layer, val.dataUrl);
+            const normL=val.layer==='h'?'p0':val.layer==='g'?'p1':val.layer;
+            _penSetLayer(k, normL, val.dataUrl);
           } else if(typeof val==='string'){
-            _penSetLayer(k, 'h', val); // 旧形式後方互換
+            _penSetLayer(k, 'p0', val); // 旧形式後方互換
           }
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
@@ -12287,10 +12295,19 @@ const _doraImgCache={};
     const isRevealed= !!(G.lightRevealedSlots?.[i]);
     const isPinzu   = isPinzuMode && slot.suit==='pin';
     const _penEntry = slot?._pkey ? G.penDrawings?.[slot._pkey] : null; // _pkeyベース
-    // 後方互換: 旧形式(dataURL文字列)と新形式({h,g})両対応
-    const penImg    = _penEntry ? (typeof _penEntry==='string' ? _penEntry : (_penEntry.h||_penEntry.g||null)) : null;
-    const _penLayerH= _penEntry && typeof _penEntry==='object' ? (_penEntry.h||null) : (typeof _penEntry==='string'?_penEntry:null);
-    const _penLayerG= _penEntry && typeof _penEntry==='object' ? (_penEntry.g||null) : null;
+    // p0-p3形式 + 旧h/g形式に対応
+    const _penNorm = _penEntry ? (()=>{
+      if(typeof _penEntry==='string') return {p0:_penEntry};
+      if((_penEntry.h||_penEntry.g) && !_penEntry.p0 && !_penEntry.p1)
+        return {p0:_penEntry.h||null, p1:_penEntry.g||null};
+      return _penEntry;
+    })() : null;
+    const _penLayerUrls = [
+      _penNorm?.p0||null,
+      _penNorm?.p1||null,
+      _penNorm?.p2||null,
+      _penNorm?.p3||null,
+    ];
     // ソロ連鎖展開: 安全確定スロット
     const isSoloSafe= numPlayers===1 && !!(G._soloRevealed&&G._soloRevealed.has(i)) && G.deckSlots[i]!==null;
     const isSoloFlag= numPlayers===1 && !!(G._soloFlags&&G._soloFlags.has(i)) && G.deckSlots[i]!==null;
@@ -12328,92 +12345,97 @@ const _doraImgCache={};
     ctx.lineWidth= isPickable ? 1.5 : 1;
     _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
 
-    // ペン描画: 牌の後にホスト層・ゲスト層をそれぞれ source-over で重ね、
-    // 重なり部分だけ multiply で表現する
-    if(_penLayerH || _penLayerG){
-      const _pimgKey=slot?._pkey;
-      // キャッシュはh/gそれぞれ管理
-      const cacheKeyH=_pimgKey?(_pimgKey+'__h'):null;
-      const cacheKeyG=_pimgKey?(_pimgKey+'__g'):null;
-      const cachedH=cacheKeyH?_penImgCache[cacheKeyH]:null;
-      const cachedG=cacheKeyG?_penImgCache[cacheKeyG]:null;
-      const imgHReady=!_penLayerH||(cachedH&&cachedH.complete&&cachedH._src===_penLayerH);
-      const imgGReady=!_penLayerG||(cachedG&&cachedG.complete&&cachedG._src===_penLayerG);
-      const drawPenLayers=(imgH,imgG)=>{
-        // ── オフスクリーンcanvasで合成してからwallCanvasに描画 ──
-        const oc2=document.createElement('canvas');
-        oc2.width=r.w; oc2.height=r.h;
-        const oc2ctx=oc2.getContext('2d');
-        if(imgH && imgG){
-          // 両方ある: hをそのまま描き、gをsource-overで重ね、
-          // 重なり部分だけmultiplyで再合成
-          oc2ctx.drawImage(imgH,0,0,r.w,r.h);
-          // 重なり検出用: gをdestination-inで切り出す
-          const oc3=document.createElement('canvas');
-          oc3.width=r.w; oc3.height=r.h;
-          const oc3ctx=oc3.getContext('2d');
-          oc3ctx.drawImage(imgH,0,0,r.w,r.h);
-          oc3ctx.globalCompositeOperation='destination-in';
-          oc3ctx.drawImage(imgG,0,0,r.w,r.h);
-          // hのうちgと重ならない部分
-          const oc4=document.createElement('canvas');
-          oc4.width=r.w; oc4.height=r.h;
-          const oc4ctx=oc4.getContext('2d');
-          oc4ctx.drawImage(imgH,0,0,r.w,r.h);
-          oc4ctx.globalCompositeOperation='destination-out';
-          oc4ctx.drawImage(imgG,0,0,r.w,r.h);
-          // gのうちhと重ならない部分
-          const oc5=document.createElement('canvas');
-          oc5.width=r.w; oc5.height=r.h;
-          const oc5ctx=oc5.getContext('2d');
-          oc5ctx.drawImage(imgG,0,0,r.w,r.h);
-          oc5ctx.globalCompositeOperation='destination-out';
-          oc5ctx.drawImage(imgH,0,0,r.w,r.h);
-          // 合成: h単独 + g単独 + 重なり(multiply)
-          const oc6=document.createElement('canvas');
-          oc6.width=r.w; oc6.height=r.h;
-          const oc6ctx=oc6.getContext('2d');
-          oc6ctx.drawImage(oc4,0,0); // h単独
-          oc6ctx.globalCompositeOperation='source-over';
-          oc6ctx.drawImage(oc5,0,0); // g単独
-          oc6ctx.globalCompositeOperation='multiply';
-          oc6ctx.drawImage(oc3,0,0); // 重なり部分(multiply)
-          // wallCanvasへ: multiply で牌と合成
-          ctx.globalCompositeOperation='multiply';
-          ctx.drawImage(oc6,r.x,r.y,r.w,r.h);
-        } else {
-          // 片方だけ: source-overで色そのまま描画
-          const imgSingle=imgH||imgG;
+    // ペン描画: p0-p3 各プレイヤーのレイヤーをピクセル単位で合成
+    // 重なり人数に応じて固定色を使用（乗算なし）
+    if(_penLayerUrls.some(u=>u)){
+      // 重なり人数ごとの固定色 (RGB)
+      // 2人: 紫 #cc66ff, 3人: オレンジ #ff9900, 4人: 白 #ffffff
+      const PEN_MIX_COLORS = [
+        null,
+        null,           // 1人: 各プレイヤー色を使用
+        [204,102,255],  // 2人重なり
+        [255,153,0],    // 3人重なり
+        [255,255,255],  // 4人重なり
+      ];
+      // プレイヤー色 p0=赤 p1=青 p2=黄 p3=緑 (hex→RGB)
+      const PEN_PLAYER_RGB = [
+        [255,68,68],[68,170,255],[255,238,51],[68,255,136]
+      ];
+      const _pimgKey = slot?._pkey;
+      const cacheKeys = _penLayerUrls.map((_,li)=>_pimgKey?(_pimgKey+'__p'+li):null);
+      const cached    = cacheKeys.map(ck=>ck?_penImgCache[ck]:null);
+
+      const drawPenLayersMulti = (imgs) => {
+        // imgs: Image[] または null (長さ4)
+        const availImgs = imgs.filter(im=>im);
+        if(availImgs.length === 0) return;
+        if(availImgs.length === 1){
+          // 1人だけ: そのままsource-overで描画（プレイヤー色はすでに描き込み済み）
           ctx.globalCompositeOperation='source-over';
-          ctx.drawImage(imgSingle,r.x,r.y,r.w,r.h);
+          ctx.drawImage(availImgs[0],r.x,r.y,r.w,r.h);
+        } else {
+          // 複数: ピクセル単位で重なり人数を数えて固定色を適用
+          // 各レイヤーのalphaデータを取得
+          const alphaData = imgs.map((im,li)=>{
+            if(!im) return null;
+            const tmp=document.createElement('canvas');
+            tmp.width=r.w; tmp.height=r.h;
+            tmp.getContext('2d').drawImage(im,0,0,r.w,r.h);
+            return tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
+          });
+          const out = new ImageData(r.w, r.h);
+          for(let px=0;px<r.w*r.h;px++){
+            const pi=px*4;
+            const covered=alphaData.map((a,li)=>a&&a[pi+3]>10);
+            const count=covered.filter(Boolean).length;
+            if(count===0) continue;
+            let cr,cg,cb,ca;
+            if(count===1){
+              const li=covered.indexOf(true);
+              [cr,cg,cb]=PEN_PLAYER_RGB[li];
+              ca=alphaData[li][pi+3];
+            } else {
+              const mix=PEN_MIX_COLORS[Math.min(count,4)];
+              [cr,cg,cb]=mix;
+              ca=Math.max(...covered.map((c,li)=>c?alphaData[li][pi+3]:0));
+            }
+            out.data[pi]=cr; out.data[pi+1]=cg; out.data[pi+2]=cb; out.data[pi+3]=ca;
+          }
+          const oc=document.createElement('canvas');
+          oc.width=r.w; oc.height=r.h;
+          oc.getContext('2d').putImageData(out,0,0);
+          ctx.globalCompositeOperation='source-over';
+          ctx.drawImage(oc,r.x,r.y,r.w,r.h);
         }
         ctx.globalCompositeOperation='source-over';
-        // ボーダー再描画
         ctx.strokeStyle=isMine?'#cc4422':'#2a5a70'; ctx.lineWidth=1;
         _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
       };
-      const _tryDrawPenLayers=()=>{
-        const h=_penLayerH?(_penImgCache[cacheKeyH]||null):null;
-        const g=_penLayerG?(_penImgCache[cacheKeyG]||null):null;
-        if((_penLayerH&&(!h||!h.complete)) || (_penLayerG&&(!g||!g.complete))) return;
-        drawPenLayers(h,g);
+
+      const _tryDraw=()=>{
+        const imgs=_penLayerUrls.map((url,li)=>{
+          if(!url) return null;
+          const c=_penImgCache[cacheKeys[li]];
+          if(!c||!c.complete) return null;
+          return c;
+        });
+        if(_penLayerUrls.some((url,li)=>url&&!imgs[li])) return; // まだ読み込み中
+        drawPenLayersMulti(imgs);
       };
       let _needLoad=false;
-      if(_penLayerH && (!cachedH||cachedH._src!==_penLayerH)){
-        _needLoad=true;
-        const img=new Image(); img._src=_penLayerH;
-        if(cacheKeyH) _penImgCache[cacheKeyH]=img;
-        img.onload=()=>{ if(cacheKeyH) _penImgCache[cacheKeyH]=img; renderWall(); };
-        img.src=_penLayerH;
-      }
-      if(_penLayerG && (!cachedG||cachedG._src!==_penLayerG)){
-        _needLoad=true;
-        const img=new Image(); img._src=_penLayerG;
-        if(cacheKeyG) _penImgCache[cacheKeyG]=img;
-        img.onload=()=>{ if(cacheKeyG) _penImgCache[cacheKeyG]=img; renderWall(); };
-        img.src=_penLayerG;
-      }
-      if(!_needLoad) _tryDrawPenLayers();
+      _penLayerUrls.forEach((url,li)=>{
+        if(!url) return;
+        const ck=cacheKeys[li];
+        const c=cached[li];
+        if(!c||c._src!==url){
+          _needLoad=true;
+          const img=new Image(); img._src=url;
+          if(ck) _penImgCache[ck]=img;
+          img.onload=()=>{ if(ck)_penImgCache[ck]=img; renderWall(); };
+          img.src=url;
+        }
+      });
+      if(!_needLoad) _tryDraw();
     }
 
     // 選択中牌: 白枠+黄色オーバーレイ
@@ -12696,26 +12718,35 @@ function _initWallCanvasEvents(wc){
 }
 
 function _penGetEntry(key){
-  // G.penDrawings[key]が旧形式(string)なら{h:str}に変換して返す
+  // G.penDrawings[key]が旧形式(string)なら{p0:str}に変換
+  // 旧形式{h,g}なら{p0,p1}に正規化して返す
   const e=G.penDrawings[key];
   if(!e) return null;
-  if(typeof e==='string') return {h:e,g:null};
+  if(typeof e==='string') return {p0:e};
+  // 旧形式{h,g}をp0,p1にマッピング（上書きしない）
+  if((e.h!==undefined||e.g!==undefined) && e.p0===undefined && e.p1===undefined){
+    const norm={};
+    if(e.h) norm.p0=e.h;
+    if(e.g) norm.p1=e.g;
+    return norm;
+  }
   return e;
 }
 function _penSetLayer(key, layer, dataUrl){
-  // layer: 'h' or 'g'
-  const e=_penGetEntry(key)||{h:null,g:null};
-  e[layer]=dataUrl;
+  // layer: 'p0'/'p1'/'p2'/'p3' (または後方互換 'h'/'g')
+  // legacy mapping: h→p0, g→p1
+  const normLayer = layer==='h'?'p0':layer==='g'?'p1':layer;
+  const e=_penGetEntry(key)||{};
+  e[normLayer]=dataUrl;
   G.penDrawings[key]=e;
   // キャッシュ破棄
-  delete _penImgCache[key+'__h'];
-  delete _penImgCache[key+'__g'];
+  ['p0','p1','p2','p3'].forEach(l=>delete _penImgCache[key+'__'+l]);
 }
 
 function _saveWallPenDrawingsFromOC(oc, changedSlots){
   if(!G.penDrawings) G.penDrawings={};
   if(!G.deckSlots||!oc) return;
-  const myLayer = amIHost() ? 'h' : 'g';
+  const myLayer = 'p' + NET.myIdx;
   const slots = changedSlots && changedSlots.size>0
     ? Array.from(changedSlots)
     : Array.from({length:G.deckSlots.length},(_,i)=>i);
@@ -12732,7 +12763,7 @@ function _saveWallPenDrawingsFromOC(oc, changedSlots){
     const pixels=tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
     const hasContent=pixels.some((v,idx)=>idx%4===3&&v>10);
     const key=tile._pkey;
-    if(!hasContent){ delete _penImgCache[key+'__h']; delete _penImgCache[key+'__g']; continue; }
+    if(!hasContent){ ['p0','p1','p2','p3'].forEach(l=>delete _penImgCache[key+'__'+l]); continue; }
     pending++;
     const newStrokeDataUrl=tmp.toDataURL('image/webp',0.65);
     // 自分のレイヤーに既存ストロークがあれば source-over で積み上げる
@@ -12860,9 +12891,18 @@ function renderDoraCanvas(){
     else             tile_for_pen=G.doraPile[di-7];     // 裏ドラ di=11→[4],12→[5],13→[6],14→[7]
     const penKey=tile_for_pen?._pkey?'dora_'+tile_for_pen._pkey:null;
     const _penEntryDC=penKey?G.penDrawings?.[penKey]:null;
-    const penImg=_penEntryDC?(typeof _penEntryDC==='string'?_penEntryDC:(_penEntryDC.h||_penEntryDC.g||null)):null;
-    const _penLayerHDC=_penEntryDC?(typeof _penEntryDC==='object'?(_penEntryDC.h||null):(_penEntryDC||null)):null;
-    const _penLayerGDC=_penEntryDC&&typeof _penEntryDC==='object'?(_penEntryDC.g||null):null;
+    const penImg=_penEntryDC?(typeof _penEntryDC==='string'?_penEntryDC:(_penEntryDC.p0||_penEntryDC.h||_penEntryDC.p1||_penEntryDC.g||null)):null;
+    // p0-p3形式 + 旧h/g形式に対応
+    const _penNormDC = _penEntryDC ? (()=>{
+      if(typeof _penEntryDC==='string') return {p0:_penEntryDC};
+      if((_penEntryDC.h||_penEntryDC.g) && !_penEntryDC.p0 && !_penEntryDC.p1)
+        return {p0:_penEntryDC.h||null, p1:_penEntryDC.g||null};
+      return _penEntryDC;
+    })() : null;
+    const _penLayerUrlsDC = [
+      _penNormDC?.p0||null, _penNormDC?.p1||null,
+      _penNormDC?.p2||null, _penNormDC?.p3||null,
+    ];
 
     // ── セル種別判定 ──
     let gone=false, isBack=true, isMine=false, isDora=false, isDoraMark=false;
@@ -12941,72 +12981,71 @@ function renderDoraCanvas(){
       ctx.fillText('✓',r.x+r.w-2,r.y+2);
     }
 
-    // ペン描画を復元（h/gレイヤー対応）
-    if(_penLayerHDC || _penLayerGDC){
-      const cacheH=penKey?(penKey+'__h'):null;
-      const cacheG=penKey?(penKey+'__g'):null;
-      const cachedH=cacheH?_penImgCache[cacheH]:null;
-      const cachedG=cacheG?_penImgCache[cacheG]:null;
-      const drawDoraPenLayers=(imgH,imgG)=>{
-        if(imgH && imgG){
-          const oc2=document.createElement('canvas');
-          oc2.width=r.w; oc2.height=r.h;
-          const oc2ctx=oc2.getContext('2d');
-          // 重なり部分
-          const oc3=document.createElement('canvas'); oc3.width=r.w; oc3.height=r.h;
-          const oc3ctx=oc3.getContext('2d');
-          oc3ctx.drawImage(imgH,0,0,r.w,r.h);
-          oc3ctx.globalCompositeOperation='destination-in';
-          oc3ctx.drawImage(imgG,0,0,r.w,r.h);
-          // h単独
-          const oc4=document.createElement('canvas'); oc4.width=r.w; oc4.height=r.h;
-          const oc4ctx=oc4.getContext('2d');
-          oc4ctx.drawImage(imgH,0,0,r.w,r.h);
-          oc4ctx.globalCompositeOperation='destination-out';
-          oc4ctx.drawImage(imgG,0,0,r.w,r.h);
-          // g単独
-          const oc5=document.createElement('canvas'); oc5.width=r.w; oc5.height=r.h;
-          const oc5ctx=oc5.getContext('2d');
-          oc5ctx.drawImage(imgG,0,0,r.w,r.h);
-          oc5ctx.globalCompositeOperation='destination-out';
-          oc5ctx.drawImage(imgH,0,0,r.w,r.h);
-          oc2ctx.drawImage(oc4,0,0);
-          oc2ctx.globalCompositeOperation='source-over';
-          oc2ctx.drawImage(oc5,0,0);
-          oc2ctx.globalCompositeOperation='multiply';
-          oc2ctx.drawImage(oc3,0,0);
-          ctx.globalCompositeOperation='multiply';
-          ctx.drawImage(oc2,r.x,r.y,r.w,r.h);
-        } else {
+    // ペン描画を復元（p0-p3マルチプレイヤー対応）
+    if(_penLayerUrlsDC.some(u=>u)){
+      const PEN_MIX_COLORS_DC=[[204,102,255],[255,153,0],[255,255,255]]; // 2/3/4人
+      const PEN_PLAYER_RGB_DC=[[255,68,68],[68,170,255],[255,238,51],[68,255,136]];
+      const cacheKeysDC=_penLayerUrlsDC.map((_,li)=>penKey?(penKey+'__p'+li):null);
+      const drawDoraPenLayers=(imgs)=>{
+        const avail=imgs.filter(im=>im);
+        if(avail.length===0) return;
+        if(avail.length===1){
           ctx.globalCompositeOperation='source-over';
-          const imgSingle=imgH||imgG;
-          ctx.drawImage(imgSingle,r.x,r.y,r.w,r.h);
+          ctx.drawImage(avail[0],r.x,r.y,r.w,r.h);
+        } else {
+          const alphaData=imgs.map((im)=>{
+            if(!im) return null;
+            const tmp=document.createElement('canvas'); tmp.width=r.w; tmp.height=r.h;
+            tmp.getContext('2d').drawImage(im,0,0,r.w,r.h);
+            return tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
+          });
+          const out=new ImageData(r.w,r.h);
+          for(let px=0;px<r.w*r.h;px++){
+            const pi=px*4;
+            const covered=alphaData.map(a=>a&&a[pi+3]>10);
+            const count=covered.filter(Boolean).length;
+            if(count===0) continue;
+            let cr,cg,cb,ca;
+            if(count===1){
+              const li=covered.indexOf(true);
+              [cr,cg,cb]=PEN_PLAYER_RGB_DC[li]; ca=alphaData[li][pi+3];
+            } else {
+              const mix=PEN_MIX_COLORS_DC[Math.min(count,4)-2];
+              [cr,cg,cb]=mix; ca=Math.max(...covered.map((c,li)=>c?alphaData[li][pi+3]:0));
+            }
+            out.data[pi]=cr; out.data[pi+1]=cg; out.data[pi+2]=cb; out.data[pi+3]=ca;
+          }
+          const oc=document.createElement('canvas'); oc.width=r.w; oc.height=r.h;
+          oc.getContext('2d').putImageData(out,0,0);
+          ctx.globalCompositeOperation='source-over';
+          ctx.drawImage(oc,r.x,r.y,r.w,r.h);
         }
         ctx.globalCompositeOperation='source-over';
         ctx.strokeStyle=isDoraMark?'#c9a84c':'#2a5a70'; ctx.lineWidth=1;
         _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
       };
+      const _tryDrawDC=()=>{
+        const imgs=_penLayerUrlsDC.map((url,li)=>{
+          if(!url) return null;
+          const c=_penImgCache[cacheKeysDC[li]]; return(c&&c.complete)?c:null;
+        });
+        if(_penLayerUrlsDC.some((url,li)=>url&&!imgs[li])) return;
+        drawDoraPenLayers(imgs);
+      };
       let _needLoadDC=false;
-      if(_penLayerHDC && (!cachedH||cachedH._src!==_penLayerHDC)){
-        _needLoadDC=true;
-        const img=new Image(); img._src=_penLayerHDC;
-        if(cacheH) _penImgCache[cacheH]=img;
-        img.onload=()=>{ if(cacheH) _penImgCache[cacheH]=img; renderDoraCanvas(); };
-        img.src=_penLayerHDC;
-      }
-      if(_penLayerGDC && (!cachedG||cachedG._src!==_penLayerGDC)){
-        _needLoadDC=true;
-        const img=new Image(); img._src=_penLayerGDC;
-        if(cacheG) _penImgCache[cacheG]=img;
-        img.onload=()=>{ if(cacheG) _penImgCache[cacheG]=img; renderDoraCanvas(); };
-        img.src=_penLayerGDC;
-      }
-      if(!_needLoadDC){
-        drawDoraPenLayers(
-          _penLayerHDC?(_penImgCache[cacheH]||null):null,
-          _penLayerGDC?(_penImgCache[cacheG]||null):null
-        );
-      }
+      _penLayerUrlsDC.forEach((url,li)=>{
+        if(!url) return;
+        const ck=cacheKeysDC[li];
+        const c=ck?_penImgCache[ck]:null;
+        if(!c||c._src!==url){
+          _needLoadDC=true;
+          const img=new Image(); img._src=url;
+          if(ck) _penImgCache[ck]=img;
+          img.onload=()=>{ if(ck)_penImgCache[ck]=img; renderDoraCanvas(); };
+          img.src=url;
+        }
+      });
+      if(!_needLoadDC) _tryDrawDC();
     }
 
     // ペンプレビュー（描き込み中のみ）
@@ -13146,7 +13185,7 @@ function _initDoraCanvasEvents(dc){
 function _saveDoraFromOC(oc, changedSet){
   if(!G.penDrawings) G.penDrawings={};
   if(!G.doraPile||!oc) return;
-  const myLayer=amIHost()?'h':'g';
+  const myLayer='p'+NET.myIdx;
   const slots=changedSet&&changedSet.size>0?Array.from(changedSet):Array.from({length:15},(_,i)=>i);
   const toSync={};
   let pending=0, done=0;
@@ -13164,9 +13203,8 @@ function _saveDoraFromOC(oc, changedSet){
     tmp.getContext('2d').drawImage(oc,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
     const pixels=tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
     const hasContent=pixels.some((v,i)=>i%4===3&&v>10);
-    if(!hasContent){ delete _penImgCache[key+'__h']; delete _penImgCache[key+'__g']; continue; }
+    if(!hasContent){ ['p0','p1','p2','p3'].forEach(l=>delete _penImgCache[key+'__'+l]); continue; }
     pending++;
-    const newUrl=tmp.toDataURL('image/webp',0.65);
     const entry=_penGetEntry(key);
     const prevUrl=entry?.[myLayer]||null;
     if(prevUrl){
@@ -13195,7 +13233,7 @@ function _saveDoraFromOC(oc, changedSet){
 function _saveDoraCanvasPenDrawings(dc, changedSet){
   if(!G.penDrawings) G.penDrawings={};
   if(!G.doraPile) return;
-  const myLayer=amIHost()?'h':'g';
+  const myLayer='p'+NET.myIdx;
   const slots=changedSet&&changedSet.size>0?Array.from(changedSet):Array.from({length:15},(_,i)=>i);
   const toSync={};
   for(const di of slots){

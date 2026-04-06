@@ -7076,7 +7076,7 @@ function handleGuestAction(msg, senderIdx){
               mc.width=imgEx.naturalWidth||36; mc.height=imgEx.naturalHeight||48;
               const mctx=mc.getContext('2d');
               mctx.drawImage(imgEx,0,0);
-              mctx.globalCompositeOperation='multiply';
+              mctx.globalCompositeOperation='source-over';
               mctx.drawImage(imgIn,0,0,mc.width,mc.height);
               const merged=mc.toDataURL('image/webp',0.65);
               G.penDrawings[k]=merged; _mergedKeys[k]=merged; _afterMerge();
@@ -12671,7 +12671,7 @@ function _saveWallPenDrawingsFromOC(oc, changedSlots){
         merged.width=r.w; merged.height=r.h;
         const mc=merged.getContext('2d');
         mc.drawImage(prevImg,0,0);
-        mc.globalCompositeOperation='multiply';
+        mc.globalCompositeOperation='source-over';
         mc.drawImage(tmp,0,0);
         G.penDrawings[key]=merged.toDataURL('image/webp',0.65);
         // ゲストは新ストロークのみ送信（ホスト側でマージするため）

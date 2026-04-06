@@ -7055,46 +7055,32 @@ function handleGuestAction(msg, senderIdx){
     case 'penSync':
       if(amIHost() && msg.changedKeys){
         if(!G.penDrawings) G.penDrawings={};
-        const _mergedKeys={};
-        const _pendingMerge=Object.keys(msg.changedKeys).length;
-        let _doneCount=0;
-        const _afterMerge=()=>{
-          _doneCount++;
-          if(_doneCount<_pendingMerge) return;
-          Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
-          renderWall(); renderDoraCanvas();
-          netBroadcastAll({type:'penSync', changedKeys: _mergedKeys});
-        };
+        // changedKeys: { key: {layer:'g', dataUrl:'...'} } 形式
         for(const k of Object.keys(msg.changedKeys)){
-          const incoming=msg.changedKeys[k];
-          if(G.penDrawings[k]){
-            const imgEx=new Image(), imgIn=new Image();
-            let exLoaded=false, inLoaded=false;
-            const tryMerge=()=>{
-              if(!exLoaded||!inLoaded) return;
-              const mc=document.createElement('canvas');
-              mc.width=imgEx.naturalWidth||36; mc.height=imgEx.naturalHeight||48;
-              const mctx=mc.getContext('2d');
-              mctx.drawImage(imgEx,0,0);
-              mctx.globalCompositeOperation='source-over';
-              mctx.drawImage(imgIn,0,0,mc.width,mc.height);
-              const merged=mc.toDataURL('image/webp',0.65);
-              G.penDrawings[k]=merged; _mergedKeys[k]=merged; _afterMerge();
-            };
-            imgEx.onload=()=>{exLoaded=true;tryMerge();};
-            imgIn.onload=()=>{inLoaded=true;tryMerge();};
-            imgEx.onerror=()=>{ G.penDrawings[k]=incoming; _mergedKeys[k]=incoming; _afterMerge(); };
-            imgIn.onerror=()=>{ _mergedKeys[k]=G.penDrawings[k]; _afterMerge(); };
-            imgEx.src=G.penDrawings[k]; imgIn.src=incoming;
-          } else {
-            G.penDrawings[k]=incoming; _mergedKeys[k]=incoming; _afterMerge();
+          const val=msg.changedKeys[k];
+          if(val && typeof val==='object' && val.layer && val.dataUrl){
+            // 新形式: レイヤー指定あり
+            _penSetLayer(k, val.layer, val.dataUrl);
+          } else if(typeof val==='string'){
+            // 旧形式後方互換: stringが来たらゲスト(g)レイヤーとして扱う
+            _penSetLayer(k, 'g', val);
           }
         }
-        if(_pendingMerge===0){ renderWall(); renderDoraCanvas(); }
+        Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+        renderWall(); renderDoraCanvas();
+        broadcastState();
       } else if(!amIHost() && msg.changedKeys){
         if(!G.penDrawings) G.penDrawings={};
         for(const k of Object.keys(msg.changedKeys)){
-          G.penDrawings[k]=msg.changedKeys[k];
+          const val=msg.changedKeys[k];
+          if(val && typeof val==='object' && (val.h!==undefined||val.g!==undefined)){
+            // broadcastState経由で届く{h,g}形式
+            G.penDrawings[k]=val;
+          } else if(val && typeof val==='object' && val.layer && val.dataUrl){
+            _penSetLayer(k, val.layer, val.dataUrl);
+          } else if(typeof val==='string'){
+            _penSetLayer(k, 'h', val); // 旧形式後方互換
+          }
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
         renderWall(); renderDoraCanvas();
@@ -7129,6 +7115,7 @@ function applyHostState(msg){
     G.savedScores=s.savedScores;G._dealerWon=s._dealerWon;
     G.pendingRiichi=s.pendingRiichi;G.riichiValidIdx=s.riichiValidIdx;
     G.mineSlots=s.mineSlots??[];G.mineRinshanIdxs=s.mineRinshanIdxs??[];G.mineOwners=s.mineOwners??{};G.mineRinshanOwners=s.mineRinshanOwners??{};G.mineCount=s.mineCount??0;G.mineStock=s.mineStock??{};G.minePlantPlayers=s.minePlantPlayers??[];G.yamiSelectMode=s.yamiSelectMode??false;G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
+    Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]); // penDrawings更新時にキャッシュクリア
     G.players=s.players;
     numPlayers=s.numPlayers;
     pendingAction=s.pendingAction;
@@ -12299,7 +12286,11 @@ const _doraImgCache={};
     const isMine    = amMineOwner && G.mineOwners?.[i] === NET.myIdx;
     const isRevealed= !!(G.lightRevealedSlots?.[i]);
     const isPinzu   = isPinzuMode && slot.suit==='pin';
-    const penImg    = slot?._pkey ? G.penDrawings?.[slot._pkey] : null; // _pkeyベース
+    const _penEntry = slot?._pkey ? G.penDrawings?.[slot._pkey] : null; // _pkeyベース
+    // 後方互換: 旧形式(dataURL文字列)と新形式({h,g})両対応
+    const penImg    = _penEntry ? (typeof _penEntry==='string' ? _penEntry : (_penEntry.h||_penEntry.g||null)) : null;
+    const _penLayerH= _penEntry && typeof _penEntry==='object' ? (_penEntry.h||null) : (typeof _penEntry==='string'?_penEntry:null);
+    const _penLayerG= _penEntry && typeof _penEntry==='object' ? (_penEntry.g||null) : null;
     // ソロ連鎖展開: 安全確定スロット
     const isSoloSafe= numPlayers===1 && !!(G._soloRevealed&&G._soloRevealed.has(i)) && G.deckSlots[i]!==null;
     const isSoloFlag= numPlayers===1 && !!(G._soloFlags&&G._soloFlags.has(i)) && G.deckSlots[i]!==null;
@@ -12337,26 +12328,92 @@ const _doraImgCache={};
     ctx.lineWidth= isPickable ? 1.5 : 1;
     _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
 
-    // ペン描画: 牌の後に multiply で合成（透明背景のストロークのみ）
-    if(penImg){
+    // ペン描画: 牌の後にホスト層・ゲスト層をそれぞれ source-over で重ね、
+    // 重なり部分だけ multiply で表現する
+    if(_penLayerH || _penLayerG){
       const _pimgKey=slot?._pkey;
-      const cached=_pimgKey?_penImgCache[_pimgKey]:null;
-      const drawPen=(img)=>{
-        ctx.globalCompositeOperation='multiply';
-        ctx.drawImage(img,r.x,r.y,r.w,r.h);
+      // キャッシュはh/gそれぞれ管理
+      const cacheKeyH=_pimgKey?(_pimgKey+'__h'):null;
+      const cacheKeyG=_pimgKey?(_pimgKey+'__g'):null;
+      const cachedH=cacheKeyH?_penImgCache[cacheKeyH]:null;
+      const cachedG=cacheKeyG?_penImgCache[cacheKeyG]:null;
+      const imgHReady=!_penLayerH||(cachedH&&cachedH.complete&&cachedH._src===_penLayerH);
+      const imgGReady=!_penLayerG||(cachedG&&cachedG.complete&&cachedG._src===_penLayerG);
+      const drawPenLayers=(imgH,imgG)=>{
+        // ── オフスクリーンcanvasで合成してからwallCanvasに描画 ──
+        const oc2=document.createElement('canvas');
+        oc2.width=r.w; oc2.height=r.h;
+        const oc2ctx=oc2.getContext('2d');
+        if(imgH && imgG){
+          // 両方ある: hをそのまま描き、gをsource-overで重ね、
+          // 重なり部分だけmultiplyで再合成
+          oc2ctx.drawImage(imgH,0,0,r.w,r.h);
+          // 重なり検出用: gをdestination-inで切り出す
+          const oc3=document.createElement('canvas');
+          oc3.width=r.w; oc3.height=r.h;
+          const oc3ctx=oc3.getContext('2d');
+          oc3ctx.drawImage(imgH,0,0,r.w,r.h);
+          oc3ctx.globalCompositeOperation='destination-in';
+          oc3ctx.drawImage(imgG,0,0,r.w,r.h);
+          // hのうちgと重ならない部分
+          const oc4=document.createElement('canvas');
+          oc4.width=r.w; oc4.height=r.h;
+          const oc4ctx=oc4.getContext('2d');
+          oc4ctx.drawImage(imgH,0,0,r.w,r.h);
+          oc4ctx.globalCompositeOperation='destination-out';
+          oc4ctx.drawImage(imgG,0,0,r.w,r.h);
+          // gのうちhと重ならない部分
+          const oc5=document.createElement('canvas');
+          oc5.width=r.w; oc5.height=r.h;
+          const oc5ctx=oc5.getContext('2d');
+          oc5ctx.drawImage(imgG,0,0,r.w,r.h);
+          oc5ctx.globalCompositeOperation='destination-out';
+          oc5ctx.drawImage(imgH,0,0,r.w,r.h);
+          // 合成: h単独 + g単独 + 重なり(multiply)
+          const oc6=document.createElement('canvas');
+          oc6.width=r.w; oc6.height=r.h;
+          const oc6ctx=oc6.getContext('2d');
+          oc6ctx.drawImage(oc4,0,0); // h単独
+          oc6ctx.globalCompositeOperation='source-over';
+          oc6ctx.drawImage(oc5,0,0); // g単独
+          oc6ctx.globalCompositeOperation='multiply';
+          oc6ctx.drawImage(oc3,0,0); // 重なり部分(multiply)
+          // wallCanvasへ: multiply で牌と合成
+          ctx.globalCompositeOperation='multiply';
+          ctx.drawImage(oc6,r.x,r.y,r.w,r.h);
+        } else {
+          // 片方だけ: source-overで色そのまま描画
+          const imgSingle=imgH||imgG;
+          ctx.globalCompositeOperation='source-over';
+          ctx.drawImage(imgSingle,r.x,r.y,r.w,r.h);
+        }
+        ctx.globalCompositeOperation='source-over';
         // ボーダー再描画
         ctx.strokeStyle=isMine?'#cc4422':'#2a5a70'; ctx.lineWidth=1;
         _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
       };
-      if(cached&&cached.complete&&cached._src===penImg){
-        drawPen(cached);
-      } else {
-        const img=new Image();
-        img._src=penImg;
-        if(_pimgKey)_penImgCache[_pimgKey]=img;
-        img.onload=()=>{if(_pimgKey)_penImgCache[_pimgKey]=img;renderWall();};
-        img.src=penImg;
+      const _tryDrawPenLayers=()=>{
+        const h=_penLayerH?(_penImgCache[cacheKeyH]||null):null;
+        const g=_penLayerG?(_penImgCache[cacheKeyG]||null):null;
+        if((_penLayerH&&(!h||!h.complete)) || (_penLayerG&&(!g||!g.complete))) return;
+        drawPenLayers(h,g);
+      };
+      let _needLoad=false;
+      if(_penLayerH && (!cachedH||cachedH._src!==_penLayerH)){
+        _needLoad=true;
+        const img=new Image(); img._src=_penLayerH;
+        if(cacheKeyH) _penImgCache[cacheKeyH]=img;
+        img.onload=()=>{ if(cacheKeyH) _penImgCache[cacheKeyH]=img; renderWall(); };
+        img.src=_penLayerH;
       }
+      if(_penLayerG && (!cachedG||cachedG._src!==_penLayerG)){
+        _needLoad=true;
+        const img=new Image(); img._src=_penLayerG;
+        if(cacheKeyG) _penImgCache[cacheKeyG]=img;
+        img.onload=()=>{ if(cacheKeyG) _penImgCache[cacheKeyG]=img; renderWall(); };
+        img.src=_penLayerG;
+      }
+      if(!_needLoad) _tryDrawPenLayers();
     }
 
     // 選択中牌: 白枠+黄色オーバーレイ
@@ -12638,9 +12695,27 @@ function _initWallCanvasEvents(wc){
   });
 }
 
+function _penGetEntry(key){
+  // G.penDrawings[key]が旧形式(string)なら{h:str}に変換して返す
+  const e=G.penDrawings[key];
+  if(!e) return null;
+  if(typeof e==='string') return {h:e,g:null};
+  return e;
+}
+function _penSetLayer(key, layer, dataUrl){
+  // layer: 'h' or 'g'
+  const e=_penGetEntry(key)||{h:null,g:null};
+  e[layer]=dataUrl;
+  G.penDrawings[key]=e;
+  // キャッシュ破棄
+  delete _penImgCache[key+'__h'];
+  delete _penImgCache[key+'__g'];
+}
+
 function _saveWallPenDrawingsFromOC(oc, changedSlots){
   if(!G.penDrawings) G.penDrawings={};
   if(!G.deckSlots||!oc) return;
+  const myLayer = amIHost() ? 'h' : 'g';
   const slots = changedSlots && changedSlots.size>0
     ? Array.from(changedSlots)
     : Array.from({length:G.deckSlots.length},(_,i)=>i);
@@ -12657,14 +12732,13 @@ function _saveWallPenDrawingsFromOC(oc, changedSlots){
     const pixels=tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
     const hasContent=pixels.some((v,idx)=>idx%4===3&&v>10);
     const key=tile._pkey;
-    if(!hasContent){ delete _penImgCache[key]; continue; }
+    if(!hasContent){ delete _penImgCache[key+'__h']; delete _penImgCache[key+'__g']; continue; }
     pending++;
-    // ★バグ修正: ゲストがホストに送る値は「新ストロークのみ」にする。
-    // ゲストがローカルでマージ済みの画像を送ると、ホスト側でも同じ過去の
-    // ストロークが重ねてマージされ、描画が指数的に増殖するバグが起きる。
-    // ホスト役の場合はローカルマージ結果をそのまま送信してよい（マージ済み=正）。
     const newStrokeDataUrl=tmp.toDataURL('image/webp',0.65);
-    if(G.penDrawings[key]){
+    // 自分のレイヤーに既存ストロークがあれば source-over で積み上げる
+    const entry=_penGetEntry(key);
+    const prevLayerUrl=entry?.[myLayer]||null;
+    if(prevLayerUrl){
       const prevImg=new Image();
       prevImg.onload=()=>{
         const merged=document.createElement('canvas');
@@ -12673,24 +12747,20 @@ function _saveWallPenDrawingsFromOC(oc, changedSlots){
         mc.drawImage(prevImg,0,0);
         mc.globalCompositeOperation='source-over';
         mc.drawImage(tmp,0,0);
-        G.penDrawings[key]=merged.toDataURL('image/webp',0.65);
-        // ゲストは新ストロークのみ送信（ホスト側でマージするため）
-        toSync[key]= amIHost() ? G.penDrawings[key] : newStrokeDataUrl;
-        delete _penImgCache[key];
+        _penSetLayer(key, myLayer, merged.toDataURL('image/webp',0.65));
+        toSync[key]={layer:myLayer, dataUrl:G.penDrawings[key][myLayer]};
         trySync();
       };
       prevImg.onerror=()=>{
-        G.penDrawings[key]=newStrokeDataUrl;
-        toSync[key]=newStrokeDataUrl;
-        delete _penImgCache[key];
+        _penSetLayer(key, myLayer, newStrokeDataUrl);
+        toSync[key]={layer:myLayer, dataUrl:newStrokeDataUrl};
         trySync();
       };
-      prevImg.src=G.penDrawings[key];
+      prevImg.src=prevLayerUrl;
     } else {
-      G.penDrawings[key]=newStrokeDataUrl;
-      toSync[key]=newStrokeDataUrl;
-      delete _penImgCache[key];
-      trySync(); // 修正: done++ では _syncPenDrawings が呼ばれなかった
+      _penSetLayer(key, myLayer, newStrokeDataUrl);
+      toSync[key]={layer:myLayer, dataUrl:newStrokeDataUrl};
+      trySync();
     }
   }
   if(pending===0) _syncPenDrawings(toSync);
@@ -12743,9 +12813,10 @@ function setPenSize(el){
 function _syncPenDrawings(changedKeys){
   if(!NET.online){ return; }
   if(amIHost()){
+    // ホストはbroadcastStateで全体を配信（penDrawingsごと送られる）
     broadcastState();
   } else {
-    // ゲスト: 変更分だけホストに送信
+    // ゲスト: {key: {layer, dataUrl}} 形式でホストに送信
     netSend({type:'penSync', changedKeys: changedKeys});
   }
 }
@@ -12788,7 +12859,10 @@ function renderDoraCanvas(){
     else if(di<11)   tile_for_pen=G.doraPile[di-7];     // カンドラ
     else             tile_for_pen=G.doraPile[di-7];     // 裏ドラ di=11→[4],12→[5],13→[6],14→[7]
     const penKey=tile_for_pen?._pkey?'dora_'+tile_for_pen._pkey:null;
-    const penImg=penKey?G.penDrawings?.[penKey]:null;
+    const _penEntryDC=penKey?G.penDrawings?.[penKey]:null;
+    const penImg=_penEntryDC?(typeof _penEntryDC==='string'?_penEntryDC:(_penEntryDC.h||_penEntryDC.g||null)):null;
+    const _penLayerHDC=_penEntryDC?(typeof _penEntryDC==='object'?(_penEntryDC.h||null):(_penEntryDC||null)):null;
+    const _penLayerGDC=_penEntryDC&&typeof _penEntryDC==='object'?(_penEntryDC.g||null):null;
 
     // ── セル種別判定 ──
     let gone=false, isBack=true, isMine=false, isDora=false, isDoraMark=false;
@@ -12867,20 +12941,71 @@ function renderDoraCanvas(){
       ctx.fillText('✓',r.x+r.w-2,r.y+2);
     }
 
-    // ペン描画を復元
-    if(penImg){
-      const dcached=penKey?_penImgCache[penKey]:null;
-      if(dcached&&dcached.complete&&dcached._src===penImg){
-        ctx.globalCompositeOperation='multiply';
-        ctx.drawImage(dcached,r.x,r.y,r.w,r.h);
+    // ペン描画を復元（h/gレイヤー対応）
+    if(_penLayerHDC || _penLayerGDC){
+      const cacheH=penKey?(penKey+'__h'):null;
+      const cacheG=penKey?(penKey+'__g'):null;
+      const cachedH=cacheH?_penImgCache[cacheH]:null;
+      const cachedG=cacheG?_penImgCache[cacheG]:null;
+      const drawDoraPenLayers=(imgH,imgG)=>{
+        if(imgH && imgG){
+          const oc2=document.createElement('canvas');
+          oc2.width=r.w; oc2.height=r.h;
+          const oc2ctx=oc2.getContext('2d');
+          // 重なり部分
+          const oc3=document.createElement('canvas'); oc3.width=r.w; oc3.height=r.h;
+          const oc3ctx=oc3.getContext('2d');
+          oc3ctx.drawImage(imgH,0,0,r.w,r.h);
+          oc3ctx.globalCompositeOperation='destination-in';
+          oc3ctx.drawImage(imgG,0,0,r.w,r.h);
+          // h単独
+          const oc4=document.createElement('canvas'); oc4.width=r.w; oc4.height=r.h;
+          const oc4ctx=oc4.getContext('2d');
+          oc4ctx.drawImage(imgH,0,0,r.w,r.h);
+          oc4ctx.globalCompositeOperation='destination-out';
+          oc4ctx.drawImage(imgG,0,0,r.w,r.h);
+          // g単独
+          const oc5=document.createElement('canvas'); oc5.width=r.w; oc5.height=r.h;
+          const oc5ctx=oc5.getContext('2d');
+          oc5ctx.drawImage(imgG,0,0,r.w,r.h);
+          oc5ctx.globalCompositeOperation='destination-out';
+          oc5ctx.drawImage(imgH,0,0,r.w,r.h);
+          oc2ctx.drawImage(oc4,0,0);
+          oc2ctx.globalCompositeOperation='source-over';
+          oc2ctx.drawImage(oc5,0,0);
+          oc2ctx.globalCompositeOperation='multiply';
+          oc2ctx.drawImage(oc3,0,0);
+          ctx.globalCompositeOperation='multiply';
+          ctx.drawImage(oc2,r.x,r.y,r.w,r.h);
+        } else {
+          ctx.globalCompositeOperation='source-over';
+          const imgSingle=imgH||imgG;
+          ctx.drawImage(imgSingle,r.x,r.y,r.w,r.h);
+        }
         ctx.globalCompositeOperation='source-over';
         ctx.strokeStyle=isDoraMark?'#c9a84c':'#2a5a70'; ctx.lineWidth=1;
         _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
-      } else {
-        const img=new Image(); img._src=penImg;
-        if(penKey)_penImgCache[penKey]=img;
-        img.onload=()=>{ if(penKey)_penImgCache[penKey]=img; renderDoraCanvas(); };
-        img.src=penImg;
+      };
+      let _needLoadDC=false;
+      if(_penLayerHDC && (!cachedH||cachedH._src!==_penLayerHDC)){
+        _needLoadDC=true;
+        const img=new Image(); img._src=_penLayerHDC;
+        if(cacheH) _penImgCache[cacheH]=img;
+        img.onload=()=>{ if(cacheH) _penImgCache[cacheH]=img; renderDoraCanvas(); };
+        img.src=_penLayerHDC;
+      }
+      if(_penLayerGDC && (!cachedG||cachedG._src!==_penLayerGDC)){
+        _needLoadDC=true;
+        const img=new Image(); img._src=_penLayerGDC;
+        if(cacheG) _penImgCache[cacheG]=img;
+        img.onload=()=>{ if(cacheG) _penImgCache[cacheG]=img; renderDoraCanvas(); };
+        img.src=_penLayerGDC;
+      }
+      if(!_needLoadDC){
+        drawDoraPenLayers(
+          _penLayerHDC?(_penImgCache[cacheH]||null):null,
+          _penLayerGDC?(_penImgCache[cacheG]||null):null
+        );
       }
     }
 
@@ -13021,7 +13146,11 @@ function _initDoraCanvasEvents(dc){
 function _saveDoraFromOC(oc, changedSet){
   if(!G.penDrawings) G.penDrawings={};
   if(!G.doraPile||!oc) return;
+  const myLayer=amIHost()?'h':'g';
   const slots=changedSet&&changedSet.size>0?Array.from(changedSet):Array.from({length:15},(_,i)=>i);
+  const toSync={};
+  let pending=0, done=0;
+  const trySync=()=>{ done++; if(done>=pending) _syncPenDrawings(toSync); };
   for(const di of slots){
     let tile;
     if(di<7)        tile=G.doraPile[8+di];
@@ -13035,28 +13164,40 @@ function _saveDoraFromOC(oc, changedSet){
     tmp.getContext('2d').drawImage(oc,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
     const pixels=tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
     const hasContent=pixels.some((v,i)=>i%4===3&&v>10);
-    if(hasContent){
-      if(G.penDrawings[key]){
+    if(!hasContent){ delete _penImgCache[key+'__h']; delete _penImgCache[key+'__g']; continue; }
+    pending++;
+    const newUrl=tmp.toDataURL('image/webp',0.65);
+    const entry=_penGetEntry(key);
+    const prevUrl=entry?.[myLayer]||null;
+    if(prevUrl){
+      const prev=new Image();
+      prev.onload=()=>{
         const merged=document.createElement('canvas');
         merged.width=r.w; merged.height=r.h;
         const mc=merged.getContext('2d');
-        const prev=new Image(); prev.src=G.penDrawings[key];
         mc.drawImage(prev,0,0);
-        mc.globalCompositeOperation='multiply';
+        mc.globalCompositeOperation='source-over';
         mc.drawImage(tmp,0,0);
-        G.penDrawings[key]=merged.toDataURL('image/webp',0.65);
-      } else {
-        G.penDrawings[key]=tmp.toDataURL('image/webp',0.65);
-      }
+        _penSetLayer(key, myLayer, merged.toDataURL('image/webp',0.65));
+        toSync[key]={layer:myLayer, dataUrl:G.penDrawings[key][myLayer]};
+        trySync();
+      };
+      prev.onerror=()=>{ _penSetLayer(key,myLayer,newUrl); toSync[key]={layer:myLayer,dataUrl:newUrl}; trySync(); };
+      prev.src=prevUrl;
+    } else {
+      _penSetLayer(key, myLayer, newUrl);
+      toSync[key]={layer:myLayer, dataUrl:newUrl};
+      trySync();
     }
-    delete _penImgCache[key];
   }
-  _syncPenDrawings(slots.reduce((o,di)=>{let tile;if(di<7)tile=G.doraPile[8+di];else if(di===7)tile=G.doraPile[0];else tile=G.doraPile[di-7];const k='dora_'+(tile?._pkey||'');if(k!=='dora_'&&G.penDrawings[k])o[k]=G.penDrawings[k];return o;},{}));
+  if(pending===0) _syncPenDrawings(toSync);
 }
 function _saveDoraCanvasPenDrawings(dc, changedSet){
   if(!G.penDrawings) G.penDrawings={};
   if(!G.doraPile) return;
+  const myLayer=amIHost()?'h':'g';
   const slots=changedSet&&changedSet.size>0?Array.from(changedSet):Array.from({length:15},(_,i)=>i);
+  const toSync={};
   for(const di of slots){
     let tile;
     if(di<7)        tile=G.doraPile[8+di];
@@ -13068,10 +13209,11 @@ function _saveDoraCanvasPenDrawings(dc, changedSet){
     const tmp=document.createElement('canvas');
     tmp.width=r.w; tmp.height=r.h;
     tmp.getContext('2d').drawImage(dc,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
-    G.penDrawings[key]=tmp.toDataURL('image/webp',0.65);
-    delete _penImgCache[key];
+    const newUrl=tmp.toDataURL('image/webp',0.65);
+    _penSetLayer(key, myLayer, newUrl);
+    toSync[key]={layer:myLayer, dataUrl:newUrl};
   }
-  _syncPenDrawings(slots.reduce((o,di)=>{let tile;if(di<7)tile=G.doraPile[8+di];else if(di===7)tile=G.doraPile[0];else tile=G.doraPile[di-7];const k='dora_'+(tile?._pkey||'');if(k!=='dora_'&&G.penDrawings[k])o[k]=G.penDrawings[k];return o;},{}));
+  _syncPenDrawings(toSync);
 }
 
 // ドラ山セル1枚レンダリング

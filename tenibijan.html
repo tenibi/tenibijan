@@ -4213,6 +4213,7 @@ const TILE_IMG={
     
     if(t.suit==='honor'){
       if(t.num==='白'&&t._isHaku)return '🀆️';
+      if(t.num==='白')return '';
       const url=TILE_IMG.honor[t.num];
       if(url)return `<img src="${url}" class="tile-img" alt="${t.num}">`;
       return EMJ.honor[t.num]||t.num;

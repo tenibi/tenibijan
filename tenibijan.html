@@ -12346,8 +12346,11 @@ const _doraImgCache={};
     _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
 
     // ペン描画: p0-p3 各プレイヤーのレイヤーをピクセル単位で合成
+    // _activePenOC（描き込み中バッファ）もブレンドに組み込む（source-over上書きを防ぐ）
     // 重なり人数に応じて固定色を使用（乗算なし）
-    if(_penLayerUrls.some(u=>u)){
+    const _myLi = NET.myIdx % 4;
+    const _hasActivePen = !!(window._activePenOC);
+    if(_penLayerUrls.some(u=>u) || _hasActivePen){
       // 重なり人数ごとの固定色 (RGB)
       // 2人: 紫 #cc66ff, 3人: オレンジ #ff9900, 4人: 白 #ffffff
       const PEN_MIX_COLORS = [
@@ -12367,46 +12370,63 @@ const _doraImgCache={};
 
       const drawPenLayersMulti = (imgs) => {
         // imgs: Image[] または null (長さ4)
-        const availImgs = imgs.filter(im=>im);
-        if(availImgs.length === 0) return;
-        if(availImgs.length === 1){
-          // 1人だけ: そのままsource-overで描画（プレイヤー色はすでに描き込み済み）
-          ctx.globalCompositeOperation='source-over';
-          ctx.drawImage(availImgs[0],r.x,r.y,r.w,r.h);
-        } else {
-          // 複数: ピクセル単位で重なり人数を数えて固定色を適用
-          // 各レイヤーのalphaデータを取得
-          const alphaData = imgs.map((im,li)=>{
-            if(!im) return null;
-            const tmp=document.createElement('canvas');
-            tmp.width=r.w; tmp.height=r.h;
-            tmp.getContext('2d').drawImage(im,0,0,r.w,r.h);
-            return tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
-          });
-          const out = new ImageData(r.w, r.h);
-          for(let px=0;px<r.w*r.h;px++){
-            const pi=px*4;
-            const covered=alphaData.map((a,li)=>a&&a[pi+3]>10);
-            const count=covered.filter(Boolean).length;
-            if(count===0) continue;
-            let cr,cg,cb,ca;
-            if(count===1){
-              const li=covered.indexOf(true);
-              [cr,cg,cb]=PEN_PLAYER_RGB[li];
-              ca=alphaData[li][pi+3];
-            } else {
-              const mix=PEN_MIX_COLORS[Math.min(count,4)];
-              [cr,cg,cb]=mix;
-              ca=Math.max(...covered.map((c,li)=>c?alphaData[li][pi+3]:0));
-            }
-            out.data[pi]=cr; out.data[pi+1]=cg; out.data[pi+2]=cb; out.data[pi+3]=ca;
-          }
-          const oc=document.createElement('canvas');
-          oc.width=r.w; oc.height=r.h;
-          oc.getContext('2d').putImageData(out,0,0);
-          ctx.globalCompositeOperation='source-over';
-          ctx.drawImage(oc,r.x,r.y,r.w,r.h);
+        // _activePenOC のこのタイル範囲を自分のレイヤーにマージ
+        // （saved layer と union: max alpha を使用）
+        let _activeData = null;
+        if(window._activePenOC){
+          const atmp=document.createElement('canvas');
+          atmp.width=r.w; atmp.height=r.h;
+          atmp.getContext('2d').drawImage(window._activePenOC,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
+          const ad=atmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
+          if(ad.some((v,ii)=>ii%4===3&&v>10)) _activeData=ad;
         }
+        // 各レイヤーのalphaデータを取得
+        const alphaData = imgs.map((im)=>{
+          if(!im) return null;
+          const tmp=document.createElement('canvas');
+          tmp.width=r.w; tmp.height=r.h;
+          tmp.getContext('2d').drawImage(im,0,0,r.w,r.h);
+          return tmp.getContext('2d').getImageData(0,0,r.w,r.h).data;
+        });
+        // _activePenOC を自分のレイヤーと union（max alpha）
+        if(_activeData){
+          if(!alphaData[_myLi]){
+            alphaData[_myLi]=_activeData;
+          } else {
+            // 既存の saved layer と union
+            const merged=new Uint8ClampedArray(alphaData[_myLi].length);
+            for(let ii=0;ii<alphaData[_myLi].length;ii+=4){
+              merged[ii]=alphaData[_myLi][ii]; merged[ii+1]=alphaData[_myLi][ii+1]; merged[ii+2]=alphaData[_myLi][ii+2];
+              merged[ii+3]=Math.max(alphaData[_myLi][ii+3],_activeData[ii+3]);
+            }
+            alphaData[_myLi]=merged;
+          }
+        }
+        const hasAny=alphaData.some(a=>a&&a.some((v,ii)=>ii%4===3&&v>10));
+        if(!hasAny) return;
+        const out = new ImageData(r.w, r.h);
+        for(let px=0;px<r.w*r.h;px++){
+          const pi=px*4;
+          const covered=alphaData.map((a)=>a&&a[pi+3]>10);
+          const count=covered.filter(Boolean).length;
+          if(count===0) continue;
+          let cr,cg,cb,ca;
+          if(count===1){
+            const li=covered.indexOf(true);
+            [cr,cg,cb]=PEN_PLAYER_RGB[li];
+            ca=alphaData[li][pi+3];
+          } else {
+            const mix=PEN_MIX_COLORS[Math.min(count,4)];
+            [cr,cg,cb]=mix;
+            ca=Math.max(...covered.map((c,li)=>c?alphaData[li][pi+3]:0));
+          }
+          out.data[pi]=cr; out.data[pi+1]=cg; out.data[pi+2]=cb; out.data[pi+3]=ca;
+        }
+        const oc=document.createElement('canvas');
+        oc.width=r.w; oc.height=r.h;
+        oc.getContext('2d').putImageData(out,0,0);
+        ctx.globalCompositeOperation='source-over';
+        ctx.drawImage(oc,r.x,r.y,r.w,r.h);
         ctx.globalCompositeOperation='source-over';
         ctx.strokeStyle=isMine?'#cc4422':'#2a5a70'; ctx.lineWidth=1;
         _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
@@ -12487,23 +12507,7 @@ const _doraImgCache={};
     }
   }
 
-  // ペン描き込み中: offscreen canvas をリアルタイムプレビュー
-  // _penOC は renderWall内では参照できないのでグローバル経由
-  // ★バグ修正: 牌の領域のみにクリップして描画（牌の外に線が残る不具合を防ぐ）
-  if(window._activePenOC){
-    ctx.save();
-    ctx.beginPath();
-    for(let i=0;i<total;i++){
-      const slot=G.deckSlots[i];
-      if(!slot) continue;
-      const r=_wallTileRect(i);
-      ctx.rect(r.x,r.y,r.w,r.h);
-    }
-    ctx.clip();
-    ctx.globalCompositeOperation='source-over';
-    ctx.drawImage(window._activePenOC,0,0);
-    ctx.restore();
-  }
+  // ペン描き込みプレビューはタイルごとのピクセルブレンドに統合済み
 
   // イベント設定（初回のみ・かつ本物の wallCanvas のときのみ）
   if(!_wallCanvasInited && wc.id==='wallCanvas'){

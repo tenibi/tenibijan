@@ -7068,6 +7068,9 @@ function handleGuestAction(msg, senderIdx){
           }
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
+        // ★パフォーマンス修正: ネット受信時も合成キャッシュをクリア
+        Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
         renderWall(); renderDoraCanvas();
         broadcastState();
       } else if(!amIHost() && msg.changedKeys){
@@ -7091,6 +7094,9 @@ function handleGuestAction(msg, senderIdx){
           }
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
+        // ★パフォーマンス修正: ネット受信時も合成キャッシュをクリア
+        Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
         renderWall(); renderDoraCanvas();
       }
       break;
@@ -7123,7 +7129,8 @@ function applyHostState(msg){
     G.savedScores=s.savedScores;G._dealerWon=s._dealerWon;
     G.pendingRiichi=s.pendingRiichi;G.riichiValidIdx=s.riichiValidIdx;
     G.mineSlots=s.mineSlots??[];G.mineRinshanIdxs=s.mineRinshanIdxs??[];G.mineOwners=s.mineOwners??{};G.mineRinshanOwners=s.mineRinshanOwners??{};G.mineCount=s.mineCount??0;G.mineStock=s.mineStock??{};G.minePlantPlayers=s.minePlantPlayers??[];G.yamiSelectMode=s.yamiSelectMode??false;G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
-    Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]); // penDrawings更新時にキャッシュクリア
+    Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]); // penDrawings更新時にキャッシュクリア
     G.players=s.players;
     numPlayers=s.numPlayers;
     pendingAction=s.pendingAction;
@@ -7202,6 +7209,7 @@ function applyHostState(msg){
       window._epOC = null;
       _wallCanvasInited = false;
       Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
     }
     renderAll();
     if(s.winModal){
@@ -7889,6 +7897,7 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   // ── ペン描画: 引き継ぎ（_pkeyそのままなのでコピーのみ）
   G.penDrawings = _prevPenDrawings;
   Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
 
   const _prevPlayers = G.players ? G.players.slice() : [];
   G.players=Array.from({length:numPlayers},(_,i)=>{
@@ -10707,6 +10716,7 @@ function nextRound(){
     window._epOC = null;
     _wallCanvasInited = false;
     Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
     return;
   }
   // ホスト: ゲストのモーダルも閉じるよう通知
@@ -11172,6 +11182,7 @@ async function backToRoom(){
   _penModeOn=false; _wallCanvasInited=false; _doraCanvasInited=false; _wallExpandInited=false;
   window._activePenOC=null;
   Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
   const penBtn=document.getElementById('penToggleBtn');
   if(penBtn) penBtn.classList.remove('pen-active');
   const penToolbar=document.getElementById('penToolbarFloat');
@@ -11839,6 +11850,9 @@ function _wGAP(){ return Math.round(W_GAP*_wScale()); }
 let   _wallCanvasInited=false;
 let   _penModeOn=false;
 const _penImgCache={}; // ペンON/OFFトグル
+// ★パフォーマンス修正: タイルごとの合成済みCanvasキャッシュ
+// キー: "pkey__u0|u1|u2|u3" → {canvas, w, h}
+const _penCompositeCache={};
 // wall canvas上のドロー中フラグ
 let   _wallPenActive=false, _wallPenLX=0, _wallPenLY=0;
 // 各スロットの描画データ: {idx: ImageData} — canvas座標に対応
@@ -12367,9 +12381,23 @@ const _doraImgCache={};
       const _pimgKey = slot?._pkey;
       const cacheKeys = _penLayerUrls.map((_,li)=>_pimgKey?(_pimgKey+'__p'+li):null);
       const cached    = cacheKeys.map(ck=>ck?_penImgCache[ck]:null);
+      // ★パフォーマンス修正: 合成済みCanvasのキャッシュキー
+      const _compKey = _pimgKey ? (_pimgKey+'__comp__'+_penLayerUrls.join('|')) : null;
 
       const drawPenLayersMulti = (imgs) => {
         // imgs: Image[] または null (長さ4)
+        // ★パフォーマンス修正: 描き込み中(_activePenOC)でなければキャッシュを使用
+        if(!window._activePenOC && _compKey && _penCompositeCache[_compKey]){
+          const cc=_penCompositeCache[_compKey];
+          if(cc.w===r.w && cc.h===r.h){
+            ctx.globalCompositeOperation='source-over';
+            ctx.drawImage(cc.canvas,r.x,r.y,r.w,r.h);
+            ctx.globalCompositeOperation='source-over';
+            ctx.strokeStyle=isMine?'#cc4422':'#2a5a70'; ctx.lineWidth=1;
+            _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
+            return;
+          }
+        }
         // _activePenOC のこのタイル範囲を自分のレイヤーにマージ
         // （saved layer と union: max alpha を使用）
         let _activeData = null;
@@ -12430,6 +12458,10 @@ const _doraImgCache={};
         ctx.globalCompositeOperation='source-over';
         ctx.strokeStyle=isMine?'#cc4422':'#2a5a70'; ctx.lineWidth=1;
         _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
+        // ★パフォーマンス修正: 描き込み中でなければ合成結果をキャッシュ保存
+        if(!window._activePenOC && _compKey){
+          _penCompositeCache[_compKey]={canvas:oc, w:r.w, h:r.h};
+        }
       };
 
       const _tryDraw=()=>{
@@ -12638,14 +12670,23 @@ function _initWallCanvasEvents(wc){
     const si=_wallSlotAt(p.x,p.y); if(si>=0) _strokeSlots.add(si);
     _applyPenOC(wc,oc);
   };
+  let _penRafPending=false;
   function _applyPenOC(wc,oc){
-    // wc を再描画してから oc を multiply 合成
-    renderWall();
+    // ★パフォーマンス修正: penMove のたびに呼ばれるため RAF でスロットリング
+    // 前フレームがまだ処理中なら追加リクエストをスキップ
+    if(_penRafPending) return;
+    _penRafPending=true;
+    requestAnimationFrame(()=>{
+      _penRafPending=false;
+      renderWall();
+    });
   }
   const penUp=(e)=>{
     if(!_penModeOn||!_wallPenActive) return;
     e.preventDefault();
     _wallPenActive=false;
+    // ★パフォーマンス修正: ストローク確定時に合成キャッシュをクリア（古いキャッシュ使用防止）
+    for(const k in _penCompositeCache) delete _penCompositeCache[k];
     _saveWallPenDrawingsFromOC(_penOC, _strokeSlots);
 
     // 確定バッファに今のストロークを合成してから保存（epUp と同じパターン）

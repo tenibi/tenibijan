@@ -14,6 +14,15 @@
 <meta name="twitter:title" content="手にビじゃん">
 <meta name="twitter:description" content="5枚だから簡単！だけど奥が深い！みんなでわいわい『手にビじゃん』">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/tenibi/tenibijan/main/fabi.png">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('[SW] 登録成功:', reg.scope))
+      .catch(err => console.warn('[SW] 登録失敗:', err));
+  });
+}
+</script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 function _centerHandSeats(table){ /* CSS固定値で処理 */ }

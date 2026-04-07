@@ -7068,11 +7068,10 @@ function handleGuestAction(msg, senderIdx){
           }
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
-    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
-        // ★パフォーマンス修正: ネット受信時も合成キャッシュをクリア
         Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
         renderWall(); renderDoraCanvas();
-        broadcastState();
+        // ★Bug1修正: broadcastState()（全状態=数MB）は廃止し、差分キーだけを他ゲストへ転送
+        netBroadcastAll({type:'penSync', changedKeys: msg.changedKeys});
       } else if(!amIHost() && msg.changedKeys){
         if(!G.penDrawings) G.penDrawings={};
         for(const k of Object.keys(msg.changedKeys)){
@@ -7094,8 +7093,6 @@ function handleGuestAction(msg, senderIdx){
           }
         }
         Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
-    Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
-        // ★パフォーマンス修正: ネット受信時も合成キャッシュをクリア
         Object.keys(_penCompositeCache).forEach(k=>delete _penCompositeCache[k]);
         renderWall(); renderDoraCanvas();
       }
@@ -12069,7 +12066,9 @@ function _initWallExpandEvents(ec){
   };
 
   // ── ペン描き込み ──────────────────────────────────────
-  let _epActive = false, _epLX = 0, _epLY = 0, _epSlots = new Set();
+  let _epActive = false, _epLX = 0, _epLY = 0;
+  // ★Bug2修正: _epSlots も window._penActiveStrokeSlots を共用（pen/ep両方の描き込みタイルを一元管理）
+  let _epSlots = window._penActiveStrokeSlots;
   // _epOC: ストローク中のリアルタイム描画バッファ
   // _epCommitted: 確定済み全ストロークの累積バッファ（消去しない）
   // ★バグ修正: startRound からリセットできるよう window に公開
@@ -12150,7 +12149,9 @@ function _initWallExpandEvents(ec){
     window._activePenOC = window._epCommitted;
 
     window._epOC = null;
-    _epSlots = new Set();
+    // ★Bug2修正: window._penActiveStrokeSlots をクリアし、_epSlots も同じ参照を維持
+    window._penActiveStrokeSlots.clear();
+    _epSlots = window._penActiveStrokeSlots;
     renderWallExpand();
     renderWall(); // 元の卓も更新
   };
@@ -12386,8 +12387,11 @@ const _doraImgCache={};
 
       const drawPenLayersMulti = (imgs) => {
         // imgs: Image[] または null (長さ4)
-        // ★パフォーマンス修正: 描き込み中(_activePenOC)でなければキャッシュを使用
-        if(!window._activePenOC && _compKey && _penCompositeCache[_compKey]){
+        // ★Bug2修正: 描き込み中かの判定を「全体で_activePenOCが存在する」から
+        //   「このタイル(i)が現在のストローク対象か」に絞り込む
+        //   → 2人以上が同時描き込みをしても無関係なタイルのキャッシュは維持される
+        const _thisSlotActive = !!(window._activePenOC && window._penActiveStrokeSlots.has(i));
+        if(!_thisSlotActive && _compKey && _penCompositeCache[_compKey]){
           const cc=_penCompositeCache[_compKey];
           if(cc.w===r.w && cc.h===r.h){
             ctx.globalCompositeOperation='source-over';
@@ -12458,8 +12462,8 @@ const _doraImgCache={};
         ctx.globalCompositeOperation='source-over';
         ctx.strokeStyle=isMine?'#cc4422':'#2a5a70'; ctx.lineWidth=1;
         _roundRect(ctx,r.x,r.y,r.w,r.h,3,false,true);
-        // ★パフォーマンス修正: 描き込み中でなければ合成結果をキャッシュ保存
-        if(!window._activePenOC && _compKey){
+        // ★Bug2修正: 描き込み中のタイルでなければ合成結果をキャッシュ保存
+        if(!_thisSlotActive && _compKey){
           _penCompositeCache[_compKey]={canvas:oc, w:r.w, h:r.h};
         }
       };
@@ -12612,7 +12616,9 @@ function _initWallCanvasEvents(wc){
   };
 
   // ─── ペンモード描き込み ───────────────────────────
-  let _strokeSlots=new Set();
+  // ★Bug2修正: 現在描き込み中のタイルIndexを window に公開し、キャッシュ無効化をタイル単位に絞る
+  window._penActiveStrokeSlots = new Set();
+  let _strokeSlots=window._penActiveStrokeSlots;
   // ── ペン用 offscreen canvas（透明背景にストロークのみ）
   // wc と同サイズ。ストロークはここに描いて、renderWall時に multiply 合成する
   // ★バグ修正: startRound からリセットできるよう window に公開
@@ -12714,7 +12720,9 @@ function _initWallCanvasEvents(wc){
     window._activePenOC=window._penCommitted;
 
     window._penOC=null;
-    _strokeSlots=new Set();
+    // ★Bug2修正: window._penActiveStrokeSlots をクリアし、_strokeSlots も同じ参照を維持
+    window._penActiveStrokeSlots.clear();
+    _strokeSlots=window._penActiveStrokeSlots;
     renderWall();
   };
 
@@ -12889,8 +12897,8 @@ function setPenSize(el){
 function _syncPenDrawings(changedKeys){
   if(!NET.online){ return; }
   if(amIHost()){
-    // ホストはbroadcastStateで全体を配信（penDrawingsごと送られる）
-    broadcastState();
+    // ★Bug1修正: broadcastState()（全状態=数MB）は廃止し、変化した差分キーだけを送信
+    netBroadcastAll({type:'penSync', changedKeys: changedKeys});
   } else {
     // ゲスト: {key: {layer, dataUrl}} 形式でホストに送信
     netSend({type:'penSync', changedKeys: changedKeys});

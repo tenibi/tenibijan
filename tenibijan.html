@@ -1391,13 +1391,15 @@ body{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(88px,1fr));
   gap:8px;
+  overflow:visible;
 }
 .icon-col-card{
   border-radius:10px;border:2px solid;padding:6px 4px 5px;
   display:flex;flex-direction:column;align-items:center;gap:3px;
-  cursor:pointer;transition:all .15s;position:relative;
+  cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,z-index 0s;
+  position:relative;transform-origin:center center;z-index:0;
 }
-.icon-col-card.owned:hover{transform:translateY(-3px);box-shadow:0 4px 16px #00000066;}
+.icon-col-card.owned:hover{transform:scale(1.45);box-shadow:0 8px 28px #00000099;z-index:10;}
 .icon-col-card.unowned{cursor:default;opacity:.55;}
 .icon-col-card.equipped-card{outline:2px solid #ffd700;outline-offset:2px;}
 .icon-col-card img{width:80px;height:112px;object-fit:contain;border-radius:6px;display:block;background:#fff;}

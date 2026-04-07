@@ -4853,7 +4853,8 @@ function _resolveRonDecisions(){
       if(isChankan) G.players[ci].isChankan = true;
       if(cpuDecideRon(ci, tile)){ handleRon(ci, tile, from); return; }
     }
-    if(!checkPon(from, tile)) nextTurn((from + 1) % numPlayers);
+    // ロンなし確定 → 一発をリセット（ポンは handlePon 内でリセット）
+    if(!checkPon(from, tile)){ G.players.forEach(pl=>{if(pl.id!==from)pl.ippatsu=false;}); nextTurn((from + 1) % numPlayers); }
     broadcastState();
     return;
   }
@@ -8204,8 +8205,6 @@ function discardAction(pidx,tidx,isYami=false){ if(pidx===NET.myIdx){ _timerSave
   p.turnCount=(p.turnCount||0)+1;
   // 全員が1回以上捨てたら1巡目終了
   if(G.firstRound && G.players.every(pl=>( pl.turnCount||0)>=1)) G.firstRound=false;
-  G.players.forEach(pl=>{if(pl.id!==pidx)pl.ippatsu=false;});
-
   if(isYami) addLog(`${p.name} → 🌑 を捨てた`,'log-new');
   else addLog(`${p.name} → ${emj(tile)} を捨てた`,'log-new');
   // 闇牌が捨てられた場合: 全プレイヤーにチャレンジ選択肢を提示
@@ -8225,8 +8224,9 @@ function discardAction(pidx,tidx,isYami=false){ if(pidx===NET.myIdx){ _timerSave
   // Check ron
   if(_startRonQueue(pidx, tile, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op))) return;
   // 1人モードは自分の番に即戻る（ポン・ロンなし）
-  if(numPlayers===1){ nextTurn(0); broadcastState(); return; }
-  if(!checkPon(pidx,tile)){nextTurn((pidx+1)%numPlayers);}
+  if(numPlayers===1){ G.players.forEach(pl=>{if(pl.id!==pidx)pl.ippatsu=false;}); nextTurn(0); broadcastState(); return; }
+  // ロン候補なし・ポンなしの場合のみ一発をリセット（ポンは handlePon 内でリセット）
+  if(!checkPon(pidx,tile)){ G.players.forEach(pl=>{if(pl.id!==pidx)pl.ippatsu=false;}); nextTurn((pidx+1)%numPlayers); }
   broadcastState();
 }
 
@@ -8388,6 +8388,7 @@ function handlePon(pidx,tile,fromPidx){
   p.yamiTileIdx = yamiTileP ? p.hand.findIndex(t=>t===yamiTileP) : -1;
   updateTenpai(p);
   addLog(`${p.name} がポン！ ${emj(tile)}`,'log-new');
+  G.players.forEach(pl=>{pl.ippatsu=false;}); // 鳴きが入ったら一発を消す
   G.current=pidx;G.phase='discard';renderAll();broadcastState();
   if(pidx===NET.myIdx){ timerOnMyTurn(); }
   // オンラインホスト: ゲストの番ならCPUを呼ばない
@@ -10489,6 +10490,7 @@ function handleMinkan(pidx,tile,fromPidx){
   p.melds.push({type:'minkan',tiles:[tile,tile,tile,tile],from:fromPidx});
   p.kanCount=(p.kanCount||0)+1;
   addLog(`${p.name} が明槓！ ${emj(tile)}`,'log-dora');
+  G.players.forEach(pl=>{pl.ippatsu=false;}); // 鳴きが入ったら一発を消す
   const rep=drawRinshanTile(pidx);if(!rep){handleExhausted();return;}
   revealKanDora();
   // 💣 嶺上地雷チェック（カン後）
@@ -18370,13 +18372,24 @@ function buyEmoteSet(setId, price){
   if(PROFILE.ownedEmoteSets.includes(setId)){
     _shopToast('すでに所持しています'); return;
   }
-  PROFILE.coins=(PROFILE.coins||0)-price;
-  PROFILE.ownedEmoteSets.push(setId);
-  saveProfileSilent();
-  renderShop();
-  updateGachaCoinDisplay();
-  const item=SHOP_EMOTE_SETS.find(s=>s.setId===setId);
-  _shopToast(`😊 ${item?item.label:'エモートセット'} を入手しました！`);
+  // サーバー側でコイン消費＋セット追加をアトミックに実行
+  authFetch('/api/shop/buy-emote-set',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({setId}),
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(!d.ok){ _shopToast(d.error||'購入に失敗しました'); return; }
+    PROFILE.coins=d.coins;                   // DBから返ってきた値で上書き
+    PROFILE.ownedEmoteSets=d.ownedEmoteSets;
+    saveProfileSilent();
+    renderShop();
+    updateGachaCoinDisplay();
+    const item=SHOP_EMOTE_SETS.find(s=>s.setId===setId);
+    _shopToast(`😊 ${item?item.label:'エモートセット'} を入手しました！`);
+  })
+  .catch(()=>_shopToast('通信エラーが発生しました'));
 }
 
 function _shopToast(msg){

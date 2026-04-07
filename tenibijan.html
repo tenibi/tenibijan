@@ -660,9 +660,9 @@ body{
 .tile.drawn{border-color:transparent;box-shadow:none;}
 .tile.riichi-discard{transform:rotate(90deg);margin:0 5px;}
 .tile-dora-glow{box-shadow:0 0 8px 3px #ffcc0099,0 0 2px 1px #ffaa00cc !important;border-color:#f0c030 !important;background:linear-gradient(160deg,#fffbe8,#f5e87a) !important;}
-/* 赤ドラ: 赤いグロウ + 背景を薄赤に */
-.tile-aka-glow{box-shadow:0 0 10px 4px #ff444499,0 0 3px 1px #cc2222cc !important;border-color:#ff6644 !important;background:linear-gradient(160deg,#fff5f5,#ffd8d0) !important;}
-.tile-img-aka{filter:drop-shadow(0 0 3px #ff4422aa);}
+/* 赤ドラ: エフェクトなし（画像差し替えのみ） */
+.tile-aka-glow{}
+.tile-img-aka{}
 /* 同種牌ハイライト */
 .tile.same-highlight{
   border-color:#55ddff !important;
@@ -12835,8 +12835,7 @@ function renderDoraCanvas(){
       else      { grad.addColorStop(0,'#1a3a50'); grad.addColorStop(1,'#0d2035'); }
       ctx.fillStyle=grad;
     } else {
-      // 赤ドラ表示牌は薄赤背景
-      ctx.fillStyle=(_tileForDraw&&_tileForDraw._isAka)?'#ffe8e0':(isDora?'#f0e8d0':'#eee8d0');
+      ctx.fillStyle=(isDora?'#f0e8d0':'#eee8d0');
     }
     _roundRect(ctx,r.x,r.y,r.w,r.h,3,true,false);
 
@@ -12853,7 +12852,7 @@ function renderDoraCanvas(){
     }
     else if(isAlreadyRevealed){ ctx.strokeStyle='#ffee22'; ctx.lineWidth=2; }
     else if(isLightPickable||isLightPickableBack){ ctx.strokeStyle='#ffee22'; ctx.lineWidth=2; }
-    else if(isDoraMark) { ctx.strokeStyle=(_tileForDraw&&_tileForDraw._isAka)?'#ff6644':'#c9a84c'; ctx.lineWidth=1.5; }
+    else if(isDoraMark) { ctx.strokeStyle='#c9a84c'; ctx.lineWidth=1.5; }
     else if(isMine){ ctx.strokeStyle='#cc4422'; ctx.lineWidth=1; }
     else if(plantModeDP&&di<7&&di>=usedR){ ctx.strokeStyle='#6aaa6a'; ctx.lineWidth=1.5; }
     else if(hasPen&&_penModeOn){ ctx.strokeStyle='#3ada8a55'; ctx.lineWidth=1; }
@@ -14833,7 +14832,16 @@ function loadProfile(){
 
   // サーバーから最新データを取得して上書き（Neon PostgreSQL連携）
   authFetch('/api/profile')
-    .then(r=>{ if(!r.ok) throw new Error('not ok'); return r.json(); })
+    .then(r=>{
+      // 401: JWTが無効 / セッション切れ → localTokenを削除してGoogleログインへ
+      if(r.status === 401){
+        localStorage.removeItem('jwt_token');
+        window.location.href = BACKEND + '/auth/google';
+        throw new Error('unauthorized');
+      }
+      if(!r.ok) throw new Error('server_error');
+      return r.json();
+    })
     .then(data=>{
       PROFILE=Object.assign(PROFILE, {
         matId:      data.matId      ?? PROFILE.matId,
@@ -14920,7 +14928,19 @@ function loadProfile(){
       checkNewCharPresent();
       if(typeof refreshFriendBadge==='function') refreshFriendBadge();
     })
-    .catch(()=>{ /* サーバー未接続時はlocalStorageのデータをそのまま使う */ });
+    .catch(err=>{
+      // 'unauthorized' は上のthenで処理済み（リダイレクト中）なのでスキップ
+      if(err && err.message === 'unauthorized') return;
+      // ネットワーク完全切断 or サーバーエラーの場合:
+      // localStorageにキャッシュがあればそのまま使う（オフライン許容）
+      // キャッシュもない場合はDBセッションが壊れている可能性が高いのでログインへ
+      const hasCache = !!localStorage.getItem('mjProfile');
+      if(!hasCache){
+        localStorage.removeItem('jwt_token');
+        window.location.href = BACKEND + '/auth/google';
+      }
+      // キャッシュあり: localStorageのデータをそのまま使う（オフライン時の救済）
+    });
 }
 
 // ── デイリーミッション カウントダウンタイマー（常時表示）──────────

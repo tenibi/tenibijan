@@ -5978,11 +5978,13 @@ function setRoomTonpuuMode(on){
 }
 function setTobiMode(on){
   G_TOBI_MODE=on;
+  saveCpuGameSettings();
   document.getElementById('modeTobiOn')?.classList.toggle('active',on);
   document.getElementById('modeTobiOff')?.classList.toggle('active',!on);
 }
 function setRoundMode(tonpuu){
   G_TONPUU_MODE=tonpuu;
+  saveCpuGameSettings();
   document.getElementById('modeTonpuu')?.classList.toggle('active', tonpuu);
   document.getElementById('modeHanchan')?.classList.toggle('active',!tonpuu);
 }
@@ -7499,6 +7501,71 @@ function startOnlineGame(){
 // CPU能力選択の保持（'random'=ランダム, ''=なし, 能力キー=固定）
 let cpuSelectedAbilities = ['random','random','random']; // CPU1〜3
 
+// ── CPU対戦設定の保存・復元 ──────────────────────────────
+function saveCpuGameSettings(){
+  try{
+    const s={
+      numPlayers,
+      abilityMode:G_ABILITY_MODE,
+      timeMode:G_TIME_MODE,
+      tobiMode:G_TOBI_MODE,
+      tonpuuMode:G_TONPUU_MODE,
+      cpuAbilities:cpuSelectedAbilities.slice()
+    };
+    localStorage.setItem('cpuGameSettings', JSON.stringify(s));
+  }catch(e){}
+}
+function loadCpuGameSettings(){
+  try{
+    const raw=localStorage.getItem('cpuGameSettings');
+    if(!raw) return;
+    const s=JSON.parse(raw);
+    // 人数
+    if(s.numPlayers && [2,3,4].includes(s.numPlayers)){
+      numPlayers=s.numPlayers;
+      document.querySelectorAll('#lobbySolo .pcnt-btn').forEach((b,i)=>b.classList.toggle('active',i===(numPlayers-2)));
+    }
+    // 能力あり/なし
+    if(s.abilityMode!==undefined){
+      G_ABILITY_MODE=!!s.abilityMode;
+      const aOn=document.getElementById('modeAbilityOn');
+      const aOff=document.getElementById('modeAbilityOff');
+      if(aOn) aOn.classList.toggle('active',G_ABILITY_MODE);
+      if(aOff) aOff.classList.toggle('active',!G_ABILITY_MODE);
+    }
+    // 半荘/東風
+    if(s.tonpuuMode!==undefined){
+      G_TONPUU_MODE=!!s.tonpuuMode;
+      const hEl=document.getElementById('modeHanchan');
+      const tEl=document.getElementById('modeTonpuu');
+      if(hEl) hEl.classList.toggle('active',!G_TONPUU_MODE);
+      if(tEl) tEl.classList.toggle('active',G_TONPUU_MODE);
+    }
+    // 制限時間
+    if(s.timeMode!==undefined){
+      G_TIME_MODE=!!s.timeMode;
+      const tmOn=document.getElementById('modeTimeOn');
+      const tmOff=document.getElementById('modeTimeOff');
+      if(tmOn) tmOn.classList.toggle('active',G_TIME_MODE);
+      if(tmOff) tmOff.classList.toggle('active',!G_TIME_MODE);
+      const desc=document.getElementById('timeModeDesc');
+      if(desc) desc.style.display=G_TIME_MODE?'block':'none';
+    }
+    // 飛び
+    if(s.tobiMode!==undefined){
+      G_TOBI_MODE=!!s.tobiMode;
+      const tbOn=document.getElementById('modeTobiOn');
+      const tbOff=document.getElementById('modeTobiOff');
+      if(tbOn) tbOn.classList.toggle('active',G_TOBI_MODE);
+      if(tbOff) tbOff.classList.toggle('active',!G_TOBI_MODE);
+    }
+    // CPU設定
+    if(Array.isArray(s.cpuAbilities)){
+      s.cpuAbilities.forEach((v,i)=>{ if(i<3 && v!==undefined) cpuSelectedAbilities[i]=v; });
+    }
+  }catch(e){}
+}
+
 // CPU能力の解放管理（localStorageで永続化）
 // 常に選択可能な能力
 const CPU_ALWAYS_UNLOCKED = new Set(['random','','light']);
@@ -7561,6 +7628,7 @@ function selectCount(n){
   // ２人=index0、３人=index1、４人=index2（１人ボタン削除済み）
   document.querySelectorAll('#lobbySolo .pcnt-btn').forEach((b,i)=>b.classList.toggle('active',i===(n-2)));
   renderCpuSlots();
+  saveCpuGameSettings();
 }
 
 // 現在開いているCPUスロットインデックス
@@ -7713,6 +7781,7 @@ function openCpuSelectScreen(slotIdx){
         cpuSelectedAbilities[_cpuSelectSlot] = _key;
         closeCpuSelectScreen();
         renderCpuSlots();
+        saveCpuGameSettings();
       });
       if(!isSel){
         card.addEventListener('mouseover', ()=>{ card.style.borderColor='#3a7a5a'; });
@@ -11097,6 +11166,7 @@ function setAbilityMode(on){
   G_ABILITY_MODE=on;
   document.getElementById('modeAbilityOn').classList.toggle('active',on);
   document.getElementById('modeAbilityOff').classList.toggle('active',!on);
+  saveCpuGameSettings();
 }
 function setTimeMode(v){
   G_TIME_MODE=v;
@@ -11104,6 +11174,7 @@ function setTimeMode(v){
   document.getElementById('modeTimeOff').classList.toggle('active',!v);
   const desc=document.getElementById('timeModeDesc');
   if(desc) desc.style.display=v?'block':'none';
+  saveCpuGameSettings();
 }
 function confirmBackToTitle(){
   document.getElementById('titleConfirmOverlay').classList.add('show');
@@ -11965,7 +12036,7 @@ function _moveCornerLeftTo(targetId){
 function _restoreCornerLeft(){
   const cl=document.getElementById('tableCornerLeft');
   if(!cl) return;
-  cl.style.position='';
+  cl.style.position='absolute';
   cl.style.zIndex='';
 }
 function openWallExpand(){
@@ -18456,6 +18527,7 @@ function doTwitchLogout(){
   document.getElementById('lobby').style.display='';
   loadProfile();
   loadSettings(); // ★ 音量・BGM設定を復元
+  loadCpuGameSettings(); // ★ CPU対戦設定を復元
   renderCpuSlots(); // CPU設定スロットを初期描画
   if(!localStorage.getItem('mjProfile')){
     // First visit: open profile screen right away

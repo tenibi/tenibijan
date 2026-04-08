@@ -16521,7 +16521,7 @@ const _GACHA_VID_LE     = ['https://raw.githubusercontent.com/tenibi/tenibijan/m
 
 function _playGachaVideo(results, onEnded){
   const hasLegend = results.some(r=>r.rarity==='legend');
-  const useLe     = hasLegend && Math.random() < 0.10;
+  const useLe     = hasLegend && Math.random() < 0.50;
   const src       = useLe ? _GACHA_VID_LE[Math.floor(Math.random()*2)] : _GACHA_VID_NORMAL;
 
   // オーバーレイ

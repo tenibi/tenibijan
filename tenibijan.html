@@ -520,6 +520,8 @@ body{
     padding: 6px 14px; cursor: pointer;
     transition: border-color .2s, box-shadow .2s;
     flex-shrink: 0;
+    transform: scale(1.5);
+    transform-origin: left center;
   }
   #llProfileBtn:hover { border-color: #3a6a4a; box-shadow: 0 0 14px #c9a84c1a; }
   #llProfileBtn .ll-pname    { font-size: .85rem; font-weight: 700; color: var(--gold); letter-spacing: .05em; white-space: nowrap; }
@@ -530,15 +532,15 @@ body{
   #llTopBar .ll-spacer { flex: 1; }
   #llTopRightBtns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .ll-trb {
-    width: 44px; height: 44px;
+    width: 66px; height: 66px;
     background: #030a10; border: 1px solid #1a3a2a; border-radius: 8px;
-    color: #5a8a6a; font-size: 1rem;
+    color: #5a8a6a; font-size: 1.5rem;
     cursor: pointer; transition: all .15s;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 2px; padding: 0;
   }
   .ll-trb:hover { border-color: var(--gold); box-shadow: 0 0 10px #c9a84c22; }
-  .ll-trb span.ll-label { font-size: .45rem; line-height: 1; opacity: .8; }
+  .ll-trb span.ll-label { font-size: .675rem; line-height: 1; opacity: .8; }
   .ll-trb.twitch { border-color: #2a1a4a; color: #9b59b6; }
   .ll-trb.twitch:hover { border-color: #7a4acc; }
   .ll-trb.logout { border-color: #3a1a1a; color: #8a5a5a; }
@@ -554,7 +556,7 @@ body{
     z-index: 10; pointer-events: none;
   }
   #llPlayerIconBig {
-    width: 360px; height: 504px;
+    width: 432px; height: 605px;
     border-radius: 20px; overflow: hidden;
     border: 2px solid #2a4a3a;
     background: #040c12;
@@ -2206,7 +2208,7 @@ body{
           background:linear-gradient(135deg,#1a0830,#0d0518);
           border:1.5px solid #8844cc;color:#cc88ff;
           box-shadow:0 0 10px #8844cc33;
-        ">💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">150枚）</button>
+        ">💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）</button>
       </div>
 
       <!-- 排出アイテム一覧 -->
@@ -2446,7 +2448,7 @@ body{
           <div style="font-size:.85rem;color:#5a4a7a;font-weight:700;">＝</div>
           <div style="display:flex;align-items:center;gap:5px;">
             <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:18px;height:18px;object-fit:contain;">
-            <span style="font-size:.85rem;font-weight:700;color:#88ddff;">+100 TBBコイン</span>
+            <span style="font-size:.85rem;font-weight:700;color:#88ddff;">+150 TBBコイン</span>
           </div>
         </div>
         <div style="font-size:.54rem;color:#5a4a7a;text-align:center;margin-top:8px;">
@@ -2465,7 +2467,7 @@ body{
 
     <!-- Twitch サブスク特典 -->
     <div class="shop-section-title" style="margin-top:18px;">💜 Twitch サブスク特典</div>
-    <div style="font-size:.56rem;color:#4a6a5a;margin-bottom:10px;">サブスクライバーは毎月<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">1000枚<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tbb.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100 TBB枚、初回🔊ボイス付きエモートセット2をもらえます。</div>
+    <div style="font-size:.56rem;color:#4a6a5a;margin-bottom:10px;">サブスクライバーは毎月<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">1000枚<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tbb.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">150 TBB枚、初回🔊ボイス付きエモートセット2をもらえます。</div>
     <div id="twitchSubPanel" style="background:#0d0a18;border:1.5px solid #4a2a7a;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
       <div id="twitchLinkStatus" style="font-size:.65rem;color:#9a7acc;"></div>
       <div id="twitchSubAction"></div>
@@ -3120,6 +3122,25 @@ body{
           </select>
         </div>
       </div>
+      <!-- レジェンドボイス個別音量 -->
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a3a2a;">
+        <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('span').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼';" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;margin-bottom:4px;">
+          <span style="font-size:.6rem;color:#c9a84c;letter-spacing:.05em;">⭐ レジェンドボイス 個別音量</span>
+          <span style="font-size:.55rem;color:#5a7a6a;">▶</span>
+        </button>
+        <div id="legendVoiceSliders" style="display:none;display:flex;flex-direction:column;gap:6px;padding:6px 0;">
+          <div style="font-size:.52rem;color:#4a6a5a;margin-bottom:2px;">各アイコンのボイス音量を個別に調整します（全体ボイス音量と掛け合わせ）</div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L01 おはよう 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L01',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L02 添い寝 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L02',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L03 一緒にお風呂 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L03',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L04 愛子</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L04',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L05 マイケル</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L05',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L06 コーン周平スープ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L06',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L07 宣教師 斎藤勇貴</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L07',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L08 成金 斎藤勇貴</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L08',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L09 Ren</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L09',+this.value)"></div>
+        </div>
+      </div>
     </div>
     <!-- 操作タブ -->
     <div id="titleTabContentOperation" style="display:none;">
@@ -3140,8 +3161,22 @@ body{
           </div>
         </label>
       </div>
+      <!-- 捨てアニメON/OFF -->
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a3a2a;">
+        <div style="font-size:.6rem;color:#5a7a6a;margin-bottom:8px;letter-spacing:.05em;">🎞️ 演出</div>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;cursor:pointer;border:1px solid #1a3a2a;background:#030a10;" onclick="toggleDiscardAnim()">
+          <div>
+            <div style="font-size:.7rem;font-weight:700;color:var(--gold);">牌を切るアニメーション</div>
+            <div style="font-size:.55rem;color:#5a7a6a;margin-top:2px;">捨て牌が出現するアニメをOFFにすると動作が軽くなります</div>
+          </div>
+          <div id="discardAnimToggle" style="
+            width:40px;height:22px;border-radius:11px;position:relative;flex-shrink:0;margin-left:12px;
+            background:var(--gold);transition:background .2s;cursor:pointer;">
+            <div style="position:absolute;top:3px;left:calc(100% - 19px);width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;"></div>
+          </div>
+        </label>
+      </div>
     </div>
-    <!-- ルールタブ -->
     <div id="titleTabContentRules" style="display:none;font-size:.85rem;color:#8aaa8a;line-height:1.8;text-align:center;padding:20px 10px;">
       同じ図柄を２つと同じ図柄を３つ<br>or 同じ図柄の並んだ数字を３つ<br>集めると上がれるよ。
     </div>
@@ -3226,7 +3261,7 @@ body{
       <div class="lobby-banner-slide" onclick="openShop()" style="cursor:pointer;">
         <div class="lbs-inner" style="background:linear-gradient(135deg,#12082a,#0a0418);border:1px solid #5a3a9a;">
           <span class="lbs-tag" style="background:#1e0a40;color:#c9a0ff;border:1px solid #7a4acc;">💜 Twitch特典</span>
-          <div class="lbs-title" style="color:#e0c0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(.55rem,2vw,.82rem);display:flex;align-items:center;gap:2px;flex-wrap:nowrap;">サブスクで毎月 <img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;flex-shrink:0;">1,000 手にビ ＋ <img src="https://github.com/tenibi/tenibijan/blob/main/coin/tbb.png?raw=true" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;flex-shrink:0;">100 TBB</div>
+          <div class="lbs-title" style="color:#e0c0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(.55rem,2vw,.82rem);display:flex;align-items:center;gap:2px;flex-wrap:nowrap;">サブスクで毎月 <img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;flex-shrink:0;">1,000 手にビ ＋ <img src="https://github.com/tenibi/tenibijan/blob/main/coin/tbb.png?raw=true" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;flex-shrink:0;">150 TBB</div>
           <div class="lbs-desc" style="color:#9a70cc;">ショップからTwitchを連携すると毎月コイン＆TBBコインを受け取れます！さらに🔊ボイス付きエモート（サブスク限定）もゲット。</div>
         </div>
       </div>
@@ -4183,6 +4218,8 @@ function saveSettings(){
       yakumanVideoVol: _yakumanVideoVol,
       agariVideoVol: _agariVideoVol,
       oneClickDiscard: oneClickDiscard,
+      discardAnimEnabled: discardAnimEnabled,
+      iconVoiceScale: Object.assign({}, iconVoiceScale),
       seScale: Object.fromEntries(
         ['draw','discard','ron','tsumo','riichi','pon','kan','kita','yakuman','light','yami','haku','steal','mine','myTurn','countdown','voice']
         .map(k=>[k, SFX.getSeScale(k)])
@@ -4272,6 +4309,18 @@ function loadSettings(){
     if(data.oneClickDiscard != null){
       oneClickDiscard = !!data.oneClickDiscard;
       _applyDiscardModeUI();
+    }
+    // 捨てアニメ設定
+    if(data.discardAnimEnabled != null){
+      discardAnimEnabled = !!data.discardAnimEnabled;
+      _applyDiscardAnimUI();
+    }
+    // レジェンドアイコン個別ボイス音量
+    if(data.iconVoiceScale){
+      Object.keys(data.iconVoiceScale).forEach(id=>{
+        if(id in iconVoiceScale) iconVoiceScale[id] = Math.min(1, Math.max(0, +data.iconVoiceScale[id] || 0));
+      });
+      _applyIconVoiceSliders();
     }
   }catch(e){}
 }
@@ -5053,6 +5102,7 @@ let autoWinEnabled=false;     // 自動上がりON/OFF
 let autoSortEnabled=false;    // 自動理牌ON/OFF
 let oneClickDiscard=true;     // 1クリック捨てON/OFF
 let _discardAnimPidx = null;  // 捨てアニメ: 次のrenderTableで再生するプレイヤーidx
+let discardAnimEnabled = true; // 捨てアニメON/OFF設定
 let _broadcastDiscardAnimPidx = null; // ゲスト向けbroadcast用（renderTableでクリアされる前に保持）
 let _discardAnimActivePidx = null; // lock期間中ずっと保持（複数回renderAll対応）
 let _discardAnimLocked = false;   // 捨てアニメ再生中フラグ（妨害防止）
@@ -8613,9 +8663,9 @@ function discardAction(pidx,tidx,isYami=false){ if(pidx===NET.myIdx){ _timerSave
   // 闇捨て: タイルに印をつける＋abilityUsedをセット
   if(isYami){ tile._yami=true; p.abilityUsed=true; }
   p.discards.push(tile);
-  _discardAnimPidx = pidx; // 捨てアニメ: 次のrenderTableで再生
+  _discardAnimPidx = discardAnimEnabled ? pidx : null; // 捨てアニメ: 次のrenderTableで再生
   _broadcastDiscardAnimPidx = pidx; // ゲスト向けstate送信用（renderTableでクリアされる前に保持）
-  _startDiscardAnimLock(pidx); // 捨てアニメ妨害防止ロック開始
+  if(discardAnimEnabled) _startDiscardAnimLock(pidx); // 捨てアニメ妨害防止ロック開始
   // 闇指定牌を捨てた場合はyamiTileIdxをリセット、そうでなければソート後に再計算
   if(isYami || tile===yamiTileObj){
     p.yamiTileIdx=-1;
@@ -9012,9 +9062,66 @@ function _updateAFKBtn(){
   btn.style.color=isCpu?'#ff6666':'#8a4a4a';
   btn.style.boxShadow=isCpu?'0 0 8px #cc333366':'';
 }
+function _applyIconVoiceSliders(){
+  const container = document.getElementById('legendVoiceSliders');
+  if(!container) return;
+  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09'];
+  const sliders = container.querySelectorAll('input[type=range]');
+  sliders.forEach((sl, i) => {
+    const id = ids[i];
+    if(id && iconVoiceScale[id] != null) sl.value = iconVoiceScale[id];
+  });
+}
+function toggleDiscardAnim(){
+  discardAnimEnabled = !discardAnimEnabled;
+  _applyDiscardAnimUI();
+  saveSettings();
+}
+function _applyDiscardAnimUI(){
+  const toggle = document.getElementById('discardAnimToggle');
+  if(!toggle) return;
+  const dot = toggle.firstElementChild;
+  if(discardAnimEnabled){
+    toggle.style.background = 'var(--gold)';
+    if(dot) dot.style.left = 'calc(100% - 19px)';
+  } else {
+    toggle.style.background = '#1a3a2a';
+    if(dot) dot.style.left = '3px';
+  }
+}
 function toggleTitleSettings(){
   const p=document.getElementById('titleSettingsPanel');
-  if(p) p.style.display=p.style.display==='none'?'block':'none';
+  if(!p) return;
+  // 横画面判定: lobbyLandscapeが表示されているか
+  const ll=document.getElementById('lobbyLandscape');
+  const inLandscape=ll&&getComputedStyle(ll).display!=='none';
+  if(inLandscape){
+    // 横画面: パネルをbodyに移動してfixed overlayとして表示
+    if(p._llOverlayOpen){
+      p._llOverlayOpen=false;
+      p.style.cssText=p._llOrigStyle||'';
+      if(p._llOrigParent) p._llOrigParent.insertBefore(p,p._llOrigNext||null);
+      return;
+    }
+    p._llOverlayOpen=true;
+    p._llOrigParent=p.parentNode;
+    p._llOrigNext=p.nextSibling;
+    p._llOrigStyle=p.getAttribute('style')||'';
+    document.body.appendChild(p);
+    p.style.cssText='display:block;position:fixed;z-index:2000;top:50%;left:50%;transform:translate(-50%,-50%);max-width:700px;width:90%;max-height:85vh;overflow-y:auto;background:#030a10;border:1px solid #1a3a2a;border-radius:10px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.85);';
+    if(!document.getElementById('_llSettingsCloseBtn')){
+      const cb=document.createElement('button');
+      cb.id='_llSettingsCloseBtn';
+      cb.textContent='✕';
+      cb.style.cssText='position:absolute;top:8px;right:10px;background:#030a10;border:1px solid #2a3a4a;border-radius:7px;color:#5a7a8a;font-size:.65rem;padding:4px 9px;cursor:pointer;z-index:1;';
+      cb.onclick=function(){ toggleTitleSettings(); };
+      p.insertBefore(cb,p.firstChild);
+    }
+    showTitleTab('audio');
+  } else {
+    // 縦画面: 従来通りインライン表示
+    p.style.display=p.style.display==='none'?'block':'none';
+  }
 }
 function showTitleTab(tab){
   ['audio','operation','rules','yaku'].forEach(t=>{
@@ -15598,9 +15705,10 @@ function _updateSukiBtn() {
 
 // サーバーからミッション状態を読み込む
 function loadDailyMissions() {
-  const token = localStorage.getItem('jwt_token');
-  if (!token) return;
   _startDailyMissionTimer(); // カウントダウン常時起動
+  renderDailyMissions(); // DEBUG: トークンなしでもUIを表示
+  const token = localStorage.getItem('jwt_token');
+  if (!token) return; // トークンなし時はUI表示のみ（API呼び出しスキップ）
   authFetch('/api/daily-missions')
     .then(r => r.json())
     .then(d => {
@@ -16187,7 +16295,15 @@ const ICON_SE_MAP = {
   },
 };
 
-// アイコン専用SEキャッシュ
+// レジェンドアイコンごとの個別ボイス音量スケール (0〜1, デフォルト1)
+const iconVoiceScale = {
+  'L01':1,'L02':1,'L03':1,'L04':1,'L05':1,
+  'L06':1,'L07':1,'L08':1,'L09':1,
+};
+function setIconVoiceScale(iconId, val){
+  iconVoiceScale[iconId] = Math.min(1, Math.max(0, val));
+  saveSettings();
+}
 const _iconSeCache = {};
 function _playIconSe(iconId, action, fallback) {
   const map = ICON_SE_MAP[iconId];
@@ -16202,7 +16318,8 @@ function _playIconSe(iconId, action, fallback) {
   a.currentTime = 0;
   const scaleKey = action === 'riichi' ? 'riichi' : action;
   const voiceScale = SFX.getSeScale ? SFX.getSeScale('voice') : 1;
-  a.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(scaleKey) : 1) * voiceScale);
+  const iconScale = iconVoiceScale[iconId] ?? 1;
+  a.volume = Math.min(1, (SFX.getSeVol ? SFX.getSeVol() : 0.42) * (SFX.getSeScale ? SFX.getSeScale(scaleKey) : 1) * voiceScale * iconScale);
   a.play().catch(()=>{});
 }
 
@@ -16655,14 +16772,14 @@ function doPullTbb(){
     const el=document.getElementById('gachaTbbDisplay');
     if(el){el.style.color='#ff4444';setTimeout(()=>{el.style.color='#88ddff';},600);}
     if(btn){btn.style.boxShadow='0 0 14px #ff444488';setTimeout(()=>{btn.style.boxShadow='0 0 10px #8844cc33';},600);}
-    _showTbbMsg('TBBコインが不足しています（150枚必要）');
+    _showTbbMsg('TBBコインが不足しています（100枚必要）');
     return;
   }
   if(btn){ btn.disabled=true; btn.textContent='引いています…'; }
   authFetch('/api/gacha-tbb',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({pullType:'pull1'})})
   .then(r=>r.json()).then(d=>{
-    if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">150枚）'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）'; }
     if(!d.ok){
       const el=document.getElementById('gachaTbbDisplay');
       if(el){el.style.color='#ff4444';setTimeout(()=>{el.style.color='#88ddff';},600);}
@@ -16708,7 +16825,7 @@ function doPullTbb(){
     updateTbbGachaStat();
     _showTbbGachaAnim(wonItem, isNew);
   }).catch((e)=>{
-    if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">150枚）'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）'; }
     _showTbbMsg('通信エラーが発生しました。再度お試しください');
   });
 }
@@ -17869,8 +17986,42 @@ function selectAbility(el,ability){
   // ---- デイリーボタンのバッジ同期 ----
   const _origShowDaily = window.showDaily;
   window.showDaily = function(){
-    if(_origShowDaily) _origShowDaily();
-    _llCloseSubPanel();
+    const ll=document.getElementById('lobbyLandscape');
+    const inLandscape=ll&&getComputedStyle(ll).display!=='none';
+    if(inLandscape){
+      // 横画面: #lobbyDailyをbodyに移動してfixed overlayとして表示
+      const src=document.getElementById('lobbyDaily');
+      if(src){
+        if(src._llOverlayOpen){
+          // 閉じる
+          src._llOverlayOpen=false;
+          src.style.cssText=src._llOrigStyle||'';
+          if(src._llOrigParent) src._llOrigParent.insertBefore(src,src._llOrigNext||null);
+          return;
+        }
+        if(_origShowDaily) _origShowDaily(); // 縦画面側の状態初期化
+        src._llOverlayOpen=true;
+        src._llOrigParent=src.parentNode;
+        src._llOrigNext=src.nextSibling;
+        src._llOrigStyle=src.getAttribute('style')||'';
+        document.body.appendChild(src);
+        src.style.cssText='display:block;position:fixed;z-index:2000;top:50%;left:50%;transform:translate(-50%,-50%);max-width:600px;width:90%;max-height:85vh;overflow-y:auto;background:#030a10;border:1px solid #1a3a2a;border-radius:10px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.85);';
+        if(!document.getElementById('_llDailyCloseBtn')){
+          const cb=document.createElement('button');
+          cb.id='_llDailyCloseBtn';
+          cb.textContent='✕';
+          cb.style.cssText='position:absolute;top:8px;right:10px;background:#030a10;border:1px solid #2a3a4a;border-radius:7px;color:#5a7a8a;font-size:.65rem;padding:4px 9px;cursor:pointer;z-index:1;';
+          cb.onclick=function(){ window.showDaily(); };
+          src.insertBefore(cb,src.firstChild);
+        }
+        checkLoginBonus();
+        loadDailyMissions();
+      }
+    } else {
+      // 縦画面: 従来通り
+      if(_origShowDaily) _origShowDaily();
+      _llCloseSubPanel();
+    }
   };
 
   // DOMContentLoaded後にプロフィール同期
@@ -18746,7 +18897,7 @@ function renderTwitchSubPanel(){
         border-radius:8px;padding:10px 20px;font-size:.7rem;color:#9a70cc;
         font-weight:700;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;">
         <span><img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:3px;">毎月の特典TBBコイン</span>
-        <span style="color:#88ddff;font-size:.8rem;">+100 TBB</span>
+        <span style="color:#88ddff;font-size:.8rem;">+150 TBB</span>
       </div>
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
         background:#00000044;border-radius:8px;font-size:1.1rem;">🔒</div>
@@ -18757,7 +18908,7 @@ function renderTwitchSubPanel(){
         border-radius:8px;color:#fff;font-weight:700;font-size:.7rem;
         padding:10px 20px;cursor:pointer;letter-spacing:.04em;width:100%;
         display:flex;justify-content:space-between;align-items:center;
-      "><span><img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:3px;">今月の特典TBBコインを受け取る</span><span style="color:#88ddff;">+100 TBB</span></button>`;
+      "><span><img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:3px;">今月の特典TBBコインを受け取る</span><span style="color:#88ddff;">+150 TBB</span></button>`;
   } else {
     const _nowT = PROFILE.serverTime ? new Date(PROFILE.serverTime) : new Date();
     const _nextMonthT = new Date(Date.UTC(_nowT.getUTCFullYear(), _nowT.getUTCMonth() + 1, 1));

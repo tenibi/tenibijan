@@ -16810,61 +16810,95 @@ function showGachaAnim10(results){
 
   // ---- カード表示スケジューリング ----
   if(is100){
-    // 100連: 全行ぽん → 完了後にNEWスポットライト
+    // 100連: 1行ずつぽん → NEWが含まれる行でスポットライト一時停止 → 次へで再開
     const COLS=10, INTERVAL=320;
-    const rows=Math.ceil(results.length/COLS);
-    for(let row=0;row<rows;row++){
-      setTimeout(()=>{
-        _playPonSe();
-        for(let col=0;col<COLS;col++){
-          const card=items[row*COLS+col];
-          if(card) popCard(card);
-        }
-      }, row*INTERVAL+300);
-    }
-    const allDone = rows*INTERVAL+300;
-    setTimeout(()=>{
-      if(newByOrder.length > 0){
-        _showNewSpotlight(newByOrder, 0, ()=>{ /* 全スポットライト完了 */ });
-      } else {
-        if(best.rarity==='legend') SFX.yakuman?.();
-        else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
-      }
-    }, allDone);
-  } else {
-    // 10連: 1枚ずつぽん、最初のNEWが出たタイミングで一時停止→スポットライト→残り再開
-    const INTERVAL=300;
-    const firstNewIdx = results.findIndex(r => r.isNew || r.iconIsNew);
+    const totalRows=Math.ceil(results.length/COLS);
 
-    if(firstNewIdx < 0){
-      // NEWなし: 通常通り
-      results.forEach((_,i)=>{ setTimeout(()=>{ _playPonSe(); popCard(items[i]); }, i*INTERVAL+200); });
-      setTimeout(()=>{
+    function showRow100(row){
+      if(row >= totalRows){
+        // 全行完了
         if(best.rarity==='legend') SFX.yakuman?.();
         else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
-      }, results.length*INTERVAL+200);
-    } else {
-      // firstNewIdx までぽん、その後スポットライト、残りを再開
-      for(let i=0; i<=firstNewIdx; i++){
-        (function(idx){
-          setTimeout(()=>{
-            _playPonSe(); popCard(items[idx]);
-            if(idx === firstNewIdx){
-              setTimeout(()=>{
-                _showNewSpotlight(newByOrder, 0, ()=>{
-                  // 残りカードをpop
-                  let rd = 300;
-                  for(let j=firstNewIdx+1; j<results.length; j++){
-                    (function(jj,dd){ setTimeout(()=>{ _playPonSe(); popCard(items[jj]); }, dd); })(j, rd);
-                    rd += INTERVAL;
-                  }
-                });
-              }, 420);
-            }
-          }, idx*INTERVAL+200);
-        })(i);
+        return;
+      }
+      _playPonSe();
+      // この行のカードをポップ & NEW収集
+      const rowNewItems = [];
+      for(let col=0; col<COLS; col++){
+        const idx = row*COLS+col;
+        const card = items[idx];
+        if(card){
+          popCard(card);
+          if(results[idx] && (results[idx].isNew || results[idx].iconIsNew)){
+            rowNewItems.push(results[idx]);
+          }
+        }
+      }
+      if(rowNewItems.length > 0){
+        // NEWあり: ポップアニメ後にスポットライト → 完了後に次行へ
+        setTimeout(()=>{
+          _showNewSpotlight(rowNewItems, 0, ()=>{
+            setTimeout(()=>showRow100(row+1), INTERVAL);
+          });
+        }, 420);
+      } else {
+        // NEWなし: インターバル後に次行へ
+        setTimeout(()=>showRow100(row+1), INTERVAL);
       }
     }
+
+    setTimeout(()=>showRow100(0), 300);
+  } else {
+    // 10連: 1枚ずつぽん、NEWが出るたびに一時停止→スポットライト→つぎへで再開
+    const INTERVAL=300;
+
+    // NEWアイテムをインデックス付きで収集（順番通り）
+    const newItemsWithIdx = results
+      .map((r,i) => ({ r, i }))
+      .filter(({r}) => r.isNew || r.iconIsNew);
+
+    // 再帰的にカードをポンポンしてNEWで止める
+    function ponFrom(startIdx, newQueue, onAllDone){
+      if(startIdx >= results.length){
+        onAllDone();
+        return;
+      }
+      // 次のNEWのインデックスを探す
+      const nextNew = newQueue.find(({i}) => i >= startIdx);
+      const stopAt = nextNew ? nextNew.i : results.length - 1;
+
+      // startIdx から stopAt まで順番にポン
+      let delay = 200;
+      for(let i = startIdx; i <= stopAt; i++){
+        (function(idx, d){
+          setTimeout(()=>{
+            _playPonSe();
+            popCard(items[idx]);
+            if(idx === stopAt){
+              if(nextNew){
+                // このカードがNEW → 420ms後にスポットライト
+                setTimeout(()=>{
+                  _showNewSpotlight([nextNew.r], 0, ()=>{
+                    // 残りのNEWキューから今回使ったものを除く
+                    const remainQueue = newQueue.filter(({i}) => i > stopAt);
+                    ponFrom(stopAt + 1, remainQueue, onAllDone);
+                  });
+                }, 420);
+              } else {
+                // NEWなし・最後まで完了
+                onAllDone();
+              }
+            }
+          }, d);
+        })(i, delay);
+        delay += INTERVAL;
+      }
+    }
+
+    ponFrom(0, newItemsWithIdx, ()=>{
+      if(best.rarity==='legend') SFX.yakuman?.();
+      else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
+    });
   }
 }
 

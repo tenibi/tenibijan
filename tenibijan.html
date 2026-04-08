@@ -3218,7 +3218,7 @@ body{
           <tr><td style="padding:2px 6px;">字一色</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">字牌のみ</td></tr>
           <tr><td style="padding:2px 6px;">清老頭</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">1・9のみ</td></tr>
           <tr><td style="padding:2px 6px;">緑一色</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">索子23468・発のみ</td></tr>
-          <tr><td style="padding:2px 6px;">国士無双</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">東南西北中</td></tr>
+          <tr><td style="padding:2px 6px;">国士無双（東南西北中）</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">東南西北中</td></tr>
           <tr><td style="padding:2px 6px;">一槓子</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">カン1回以上</td></tr>
           <tr><td style="padding:2px 6px;">一暗刻</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">暗刻が１つ（ツモのみ）</td></tr>
           <tr><td style="padding:2px 6px;">地和</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">子の第一ツモ上がり</td></tr>
@@ -4724,7 +4724,7 @@ function isStdWin(hand){
 function isZiiso(allTiles, hand5, melds){
   // 全牌が字牌であること
   if(!allTiles.every(t=>t.suit==='honor')) return false;
-  // 国士無双とは複合しない
+  // 国士無双（東南西北中）とは複合しない
   if(hand5 && isKokushi(hand5)) return false;
   // 鳴きがある場合、チー（順子）は不可。ポン・カン（刻子）のみ許可
   if(melds && melds.length>0){
@@ -18250,7 +18250,7 @@ const YAKUMAN_TITLES = {
   '字一色':    { title:'字牌の覇者',   emoji:'🀇', color:'#ff9944', img:'https://raw.githubusercontent.com/tenibi/tenibijan/main/syougou/tuiso.png' },
   '清老頭':    { title:'老頭牌の王',   emoji:'🃏', color:'#ffcc44', img:'https://raw.githubusercontent.com/tenibi/tenibijan/main/syougou/tinroutou.png' },
   '緑一色':    { title:'翠の使い手',   emoji:'🀅', color:'#44cc88', img:'https://raw.githubusercontent.com/tenibi/tenibijan/main/syougou/ryuiso.png' },
-  '国士無双':  { title:'国士の剣士',   emoji:'⚔️', color:'#cc44ff', img:'https://raw.githubusercontent.com/tenibi/tenibijan/main/syougou/kokusi.png' },
+  '国士無双（東南西北中）':  { title:'国士の剣士',   emoji:'⚔️', color:'#cc44ff', img:'https://raw.githubusercontent.com/tenibi/tenibijan/main/syougou/kokusi.png' },
   '一槓子':    { title:'カンの鬼',     emoji:'🀄', color:'#ff6644', img:'https://raw.githubusercontent.com/tenibi/tenibijan/main/syougou/wankantu.png' },
   '一暗刻':    { title:'暗刻マスター', emoji:'🔮', color:'#4488ff', img:'https://raw.githubusercontent.com/tenibi/tenibijan/main/syougou/wananko.png' },
   '地和':      { title:'地和の申し子', emoji:'🌏', color:'#44ddff', img:'https://raw.githubusercontent.com/tenibi/tenibijan/main/syougou/tiihou.png' },
@@ -19738,7 +19738,7 @@ function _showNcpToast(iconId) {
               <tr><td style="padding:2px 6px;">字一色</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">字牌のみ</td></tr>
               <tr><td style="padding:2px 6px;">清老頭</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">1・9のみ</td></tr>
               <tr><td style="padding:2px 6px;">緑一色</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">索子23468・発のみ</td></tr>
-              <tr><td style="padding:2px 6px;">国士無双</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">東南西北中</td></tr>
+              <tr><td style="padding:2px 6px;">国士無双（東南西北中）</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">東南西北中</td></tr>
               <tr><td style="padding:2px 6px;">一槓子</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">カン1回以上</td></tr>
               <tr><td style="padding:2px 6px;">一暗刻</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">暗刻が１つ（ツモのみ）</td></tr>
               <tr><td style="padding:2px 6px;">地和</td><td style="text-align:right;color:#ff9944;padding:2px 6px;">役満</td><td style="padding:2px 6px;font-size:.58rem;">子の第一ツモ上がり</td></tr>

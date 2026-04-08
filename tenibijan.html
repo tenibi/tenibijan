@@ -1340,7 +1340,7 @@ body{
 /* ガチャ演出オーバーレイ */
 #gachaAnim{
   position:fixed;inset:0;z-index:200;pointer-events:none;
-  display:none;align-items:center;justify-content:flex-start;
+  display:none;align-items:center;justify-content:center;
   flex-direction:column;gap:16px;
   overflow-y:auto;padding:16px 0 24px;box-sizing:border-box;
 }
@@ -16792,8 +16792,13 @@ function showGachaAnim10(results){
     el.classList.add('show');
     requestAnimationFrame(()=>{ inner.style.transform='scale(1)'; inner.style.opacity='1'; });
 
-    if(res.rarity==='legend') SFX.yakuman?.();
-    else if(res.rarity==='epic'||res.rarity==='rare') SFX.draw?.();
+    if(res.rarity==='legend'){
+      if(!window._gnsLegendAudio){ window._gnsLegendAudio=new Audio('https://raw.githubusercontent.com/tenibi/tenibijan/main/legendary.mp3'); }
+      try{ window._gnsLegendAudio.currentTime=0; window._gnsLegendAudio.play().catch(()=>{}); }catch(e){}
+    } else if(res.rarity==='epic'){
+      if(!window._gnsEpicAudio){ window._gnsEpicAudio=new Audio('https://raw.githubusercontent.com/tenibi/tenibijan/main/epic.mp3'); }
+      try{ window._gnsEpicAudio.currentTime=0; window._gnsEpicAudio.play().catch(()=>{}); }catch(e){}
+    } else if(res.rarity==='rare') SFX.draw?.();
 
     window._gnsResolve = ()=>{ _hideNewSpotlight(()=>{ _showNewSpotlight(newList, idx+1, onDone); }); };
   }

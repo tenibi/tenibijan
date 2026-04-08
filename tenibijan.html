@@ -19181,15 +19181,21 @@ function doTwitchLogout(){
 
 // Show profile on first load if no name saved
 (function(){
-  // ★ プレビュー用: ログインチェックをスキップして直接ロビーを表示
-  document.getElementById('loginScreen').style.display='none';
+  const _token = localStorage.getItem('jwt_token');
+  if(!_token){
+    // 未ログイン → ログイン画面を表示
+    document.getElementById('loginScreen').style.display='flex';
+    return;
+  }
 
+  // ログイン済み → ロビーを表示
+  document.getElementById('loginScreen').style.display='none';
   document.getElementById('lobby').style.display='';
   loadProfile();
   loadSettings(); // ★ 音量・BGM設定を復元
   loadCpuGameSettings(); // ★ CPU対戦設定を復元（変数のみ）
   renderCpuSlots(); // CPU設定スロットを初期描画
-  if(false){ // プレビュー中はプロフィール画面を開かない
+  if(false){
     setTimeout(()=>{
       document.getElementById('lobby').style.display='none';
       document.getElementById('profileScreen').classList.add('active');

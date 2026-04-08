@@ -10122,7 +10122,7 @@ function handleWin(widx,winTile,isTsumo,losidx){
   G._dealerWon=w.isDealer;
   addLog(`${w.name} の${isTsumo?'ツモ':'ロン'}上がり！ ${score}点`,'log-win');
   // 役満上がり → 称号解禁
-  if(isYakumanPlus && w.id === (G.players[NET.myIdx]||{}).id){
+  if(isYakumanPlus && widx === NET.myIdx){
     if(!G._sessionYakuman) G._sessionYakuman=[];
     yakus.filter(y=>y.han>=13).forEach(y=>{
       if(!G._sessionYakuman.includes(y.name)) G._sessionYakuman.push(y.name);
@@ -10130,7 +10130,7 @@ function handleWin(widx,winTile,isTsumo,losidx){
     });
   }
   // 持ち点称号チェック（自分の上がりのみ）
-  if(w.id === (G.players[NET.myIdx]||{}).id){
+  if(widx === NET.myIdx){
     _checkScoreTitles(w.score);
   }
   // デイリーミッション達成チェック

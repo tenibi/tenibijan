@@ -1251,6 +1251,13 @@ body{
   letter-spacing:.1em;margin-bottom:4px;
 }
 @keyframes gachaShimmer{0%{background-position:0%}100%{background-position:300%}}
+@keyframes gachaPop{
+  0%  {opacity:0;transform:scale(0.1) rotate(-10deg);}
+  55% {opacity:1;transform:scale(1.22) rotate(3deg);}
+  75% {transform:scale(0.92) rotate(-1.5deg);}
+  90% {transform:scale(1.05) rotate(.5deg);}
+  100%{opacity:1;transform:scale(1) rotate(0deg);}
+}
 
 .gacha-sub{font-size:.65rem;color:#5a7a6a;margin-bottom:18px;letter-spacing:.1em;}
 
@@ -16620,6 +16627,19 @@ function showGachaAnim1(res){
   else if(res.rarity==='rare') SFX.draw?.();
 }
 
+// ぽん効果音（pon1〜pon3ランダム再生）
+const _PON_URLS = [
+  'https://raw.githubusercontent.com/tenibi/tenibijan/main/pon1.mp3',
+  'https://raw.githubusercontent.com/tenibi/tenibijan/main/pon2.mp3',
+  'https://raw.githubusercontent.com/tenibi/tenibijan/main/pon3.mp3',
+];
+function _playPonSe(){
+  try{
+    const a=new Audio(_PON_URLS[Math.floor(Math.random()*3)]);
+    a.volume=0.8; a.play().catch(()=>{});
+  }catch(e){}
+}
+
 function showGachaAnim10(results){
   const anim = document.getElementById('gachaAnim');
   const flash = document.getElementById('gachaFlash');
@@ -16637,37 +16657,21 @@ function showGachaAnim10(results){
   const iconStyle = is100 ? 'style="font-size:.9rem;"' : '';
   const nameStyle = is100 ? 'style="font-size:.38rem;"' : '';
   const imgStyle  = is100 ? 'style="width:24px;height:34px;object-fit:contain;border-radius:3px;"' : 'style="width:40px;height:56px;object-fit:contain;border-radius:4px;"';
+
+  // カードHTML生成（初期状態は非表示）
   const cards = results.map(res=>{
+    let inner_html;
     if(res.rarity==='legend'){
-      if(res.skin){
-        return `<div class="gacha-mini-card rarity-legend" ${miniStyle}>
-          <div class="g-icon" ${iconStyle}>${res.skin.icon}</div>
-          <div class="g-name" ${nameStyle}>${res.skin.name}</div>
-          ${res.isNew?'<div class="g-new">NEW</div>':''}
-        </div>`;
-      }
-      if(res.agari) return `<div class="gacha-mini-card rarity-legend" ${miniStyle}>
-        <div class="g-icon" ${iconStyle}>${res.agari.icon}</div>
-        <div class="g-name" ${nameStyle}>${res.agari.name}</div>
-        ${res.isNew?'<div class="g-new">NEW</div>':''}
-      </div>`;
-      if(res.ability) return `<div class="gacha-mini-card rarity-legend" ${miniStyle}>
-        <div class="g-icon" ${iconStyle}>${res.ability.icon}</div>
-        <div class="g-name" ${nameStyle}>${res.ability.name}</div>
-        ${res.isNew?'<div class="g-new">NEW</div>':''}
-      </div>`;
-      if(res.icon) return `<div class="gacha-mini-card rarity-legend" ${miniStyle}>
-        <img src="${gachaIconUrl(res.icon.id)}" ${imgStyle} alt="${res.icon.id}">
-        <div class="g-name" ${nameStyle}>${res.icon.label}</div>
-        ${res.iconIsNew?'<div class="g-new">NEW</div>':''}
-      </div>`;
-      return `<div class="gacha-mini-card rarity-legend" ${miniStyle}><div class="g-name" ${nameStyle}>LEGEND</div></div>`;
+      if(res.skin)    inner_html=`<div class="g-icon" ${iconStyle}>${res.skin.icon}</div><div class="g-name" ${nameStyle}>${res.skin.name}</div>${res.isNew?'<div class="g-new">NEW</div>':''}`;
+      else if(res.agari)  inner_html=`<div class="g-icon" ${iconStyle}>${res.agari.icon}</div><div class="g-name" ${nameStyle}>${res.agari.name}</div>${res.isNew?'<div class="g-new">NEW</div>':''}`;
+      else if(res.ability) inner_html=`<div class="g-icon" ${iconStyle}>${res.ability.icon}</div><div class="g-name" ${nameStyle}>${res.ability.name}</div>${res.isNew?'<div class="g-new">NEW</div>':''}`;
+      else if(res.icon)   inner_html=`<img src="${gachaIconUrl(res.icon.id)}" ${imgStyle} alt="${res.icon.id}"><div class="g-name" ${nameStyle}>${res.icon.label}</div>${res.iconIsNew?'<div class="g-new">NEW</div>':''}`;
+      else inner_html=`<div class="g-name" ${nameStyle}>LEGEND</div>`;
+    } else {
+      inner_html=`${res.icon?`<img src="${gachaIconUrl(res.icon.id)}" ${imgStyle} alt="${res.icon.id}">`:`<div class="g-icon" ${iconStyle} style="opacity:.5;">·</div>`}<div class="g-name" ${nameStyle}>${res.icon?res.icon.label:(res.label||res.rd.label)}</div>${res.iconIsNew?'<div class="g-new">NEW</div>':''}`;
     }
-    return `<div class="gacha-mini-card rarity-${res.rarity}" ${miniStyle}>
-      ${res.icon?`<img src="${gachaIconUrl(res.icon.id)}" ${imgStyle} alt="${res.icon.id}">`:`<div class="g-icon" ${iconStyle} style="opacity:.5;">·</div>`}
-      <div class="g-name" ${nameStyle}>${res.icon?res.icon.label:(res.label||res.rd.label)}</div>
-      ${res.iconIsNew?'<div class="g-new">NEW</div>':''}
-    </div>`;
+    // 初期状態: 透明・縮小
+    return `<div class="gacha-mini-card rarity-${res.rarity} _gc-pop" ${miniStyle} style="opacity:0;transform:scale(0.1);">${inner_html}</div>`;
   }).join('');
 
   const gridStyle = is100
@@ -16677,8 +16681,43 @@ function showGachaAnim10(results){
   anim.classList.add('show');
   anim.style.pointerEvents='all';
   anim.style.background='rgba(0,0,0,.88)';
-  if(best.rarity==='legend') SFX.yakuman?.();
-  else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
+
+  const items = inner.querySelectorAll('._gc-pop');
+
+  function popCard(card){
+    card.style.opacity='';
+    card.style.transform='';
+    card.style.animation='gachaPop 0.42s cubic-bezier(0.22,1,0.36,1) forwards';
+  }
+
+  if(is100){
+    // 100連: 1行（10枚）ずつぽん
+    const COLS=10, INTERVAL=320;
+    const rows=Math.ceil(results.length/COLS);
+    for(let row=0;row<rows;row++){
+      setTimeout(()=>{
+        _playPonSe();
+        for(let col=0;col<COLS;col++){
+          const card=items[row*COLS+col];
+          if(card) popCard(card);
+        }
+      }, row*INTERVAL+300);
+    }
+    setTimeout(()=>{
+      if(best.rarity==='legend') SFX.yakuman?.();
+      else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
+    }, rows*INTERVAL+300);
+  } else {
+    // 10連: 1枚ずつぽん
+    const INTERVAL=300;
+    items.forEach((card,i)=>{
+      setTimeout(()=>{ _playPonSe(); popCard(card); }, i*INTERVAL+200);
+    });
+    setTimeout(()=>{
+      if(best.rarity==='legend') SFX.yakuman?.();
+      else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
+    }, items.length*INTERVAL+200);
+  }
 }
 
 function closeGachaAnim(){

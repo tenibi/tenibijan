@@ -27,6 +27,15 @@ if ('serviceWorker' in navigator) {
 <script>
 function _centerHandSeats(table){ /* CSS固定値で処理 */ }
 
+// ── ボタン効果音 ──────────────────────────────────────────
+const _botanAudio = new Audio('https://raw.githubusercontent.com/tenibi/tenibijan/main/botan.mp3');
+function _playBotanSe(){
+  try {
+    _botanAudio.currentTime = 0;
+    _botanAudio.play().catch(()=>{});
+  } catch(e) {}
+}
+
 
 // ── テーブルスケール ──────────────────────────────
 const _TABLE_W=1400, _TABLE_H=933;
@@ -469,6 +478,200 @@ body{
   letter-spacing:.3em;cursor:pointer;transition:all .25s;
 }
 .start-btn:hover{background:linear-gradient(135deg,#8a4810,#5a2808);box-shadow:0 0 18px #c9a84c44;transform:translateY(-2px);}
+
+/* ===== LANDSCAPE LOBBY (横画面専用) ===== */
+
+/* 横画面/縦画面の出し分け */
+@media (orientation: portrait) {
+  #lobbyLandscape { display: none !important; }
+}
+@media (orientation: landscape) {
+  #lobbyInner { display: none !important; }
+  /* スケーリングコンテナ */
+  #llScaleRoot {
+    position: fixed;
+    top: 0; left: 0;
+    width: 1920px; height: 1080px;
+    transform-origin: top left;
+    /* transform は JS で設定 */
+  }
+  /* 背景パターン */
+  #llScaleRoot::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 0%, #1a3a2a33, transparent),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.012'%3E%3Cpath d='M0 60L60 0H30L0 30M60 60V30L30 60'/%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+  /* ===== 上部バー ===== */
+  #llTopBar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 52px;
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 12px;
+    background: transparent;
+    z-index: 100;
+  }
+  #llProfileBtn {
+    display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, rgba(6,14,24,0.85), rgba(9,20,34,0.85));
+    border: 1px solid #1a3a2a; border-radius: 8px;
+    padding: 6px 14px; cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+    flex-shrink: 0;
+  }
+  #llProfileBtn:hover { border-color: #3a6a4a; box-shadow: 0 0 14px #c9a84c1a; }
+  #llProfileBtn .ll-pname    { font-size: .85rem; font-weight: 700; color: var(--gold); letter-spacing: .05em; white-space: nowrap; }
+  #llProfileBtn .ll-psep     { width: 1px; height: 16px; background: #2a4a3a; flex-shrink: 0; }
+  #llProfileBtn .ll-pability { font-size: .68rem; color: #5a8a7a; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+  #llProfileBtn .ll-pcoins   { display: flex; align-items: center; gap: 6px; font-size: .65rem; color: #aa8844; }
+  #llProfileBtn .ll-pcoins-item { display: flex; align-items: center; gap: 3px; }
+  #llTopBar .ll-spacer { flex: 1; }
+  #llTopRightBtns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .ll-trb {
+    width: 44px; height: 44px;
+    background: #030a10; border: 1px solid #1a3a2a; border-radius: 8px;
+    color: #5a8a6a; font-size: 1rem;
+    cursor: pointer; transition: all .15s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding: 0;
+  }
+  .ll-trb:hover { border-color: var(--gold); box-shadow: 0 0 10px #c9a84c22; }
+  .ll-trb span.ll-label { font-size: .45rem; line-height: 1; opacity: .8; }
+  .ll-trb.twitch { border-color: #2a1a4a; color: #9b59b6; }
+  .ll-trb.twitch:hover { border-color: #7a4acc; }
+  .ll-trb.logout { border-color: #3a1a1a; color: #8a5a5a; }
+  .ll-trb.logout:hover { border-color: #aa4444; }
+
+  /* ===== 左アイコン (画面左1/3、中央右寄せ) ===== */
+  #llCenterIconWrap {
+    position: absolute;
+    top: 52px; left: 0;
+    width: 33.33%; bottom: 0;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 32px;
+    z-index: 10; pointer-events: none;
+  }
+  #llPlayerIconBig {
+    width: 360px; height: 504px;
+    border-radius: 20px; overflow: hidden;
+    border: 2px solid #2a4a3a;
+    background: #040c12;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 60px #0b3322cc, 0 0 120px #0b332266;
+    pointer-events: auto; cursor: pointer;
+    transition: box-shadow .2s, border-color .2s;
+  }
+  #llPlayerIconBig:hover { border-color: #3a6a4a; box-shadow: 0 0 70px #c9a84c33, 0 0 120px #0b332266; }
+  #llPlayerIconBig img { width: 100%; height: 100%; object-fit: contain; }
+  .ll-icon-empty { font-size: .9rem; color: #2a4a3a; text-align: center; line-height: 1.6; }
+
+  /* ===== メインモード 2×2グリッド ===== */
+  #llMainModeCol {
+    position: absolute;
+    top: 52px; bottom: 0;
+    left: 50%; right: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0; padding: 12px;
+    z-index: 20; pointer-events: none;
+  }
+  .ll-main-mode-row { display: flex; flex-direction: row; gap: 0; }
+  .ll-main-btn {
+    width: 308px; padding: 5px;
+    background: transparent;
+    border: 2px solid transparent; border-radius: 10px;
+    cursor: pointer; transition: all .2s;
+    display: flex; flex-direction: column; align-items: center;
+    pointer-events: auto;
+  }
+  .ll-main-btn.active { border-color: transparent; background: transparent; }
+  .ll-main-btn:hover  { border-color: var(--gold) !important; box-shadow: 0 0 20px #c9a84c33; background: transparent !important; }
+  .ll-main-btn img { width: 100%; height: auto; display: block; border-radius: 8px; }
+
+  /* ===== バナー ===== */
+  #llBannerArea {
+    position: absolute;
+    top: 68px; left: 33.33%; right: 0;
+    padding: 12px 16px 0 0;
+    z-index: 10;
+  }
+  #llBannerWrap {
+    width: 100%; max-width: 660px;
+    position: relative; overflow: hidden;
+    border-radius: 12px; cursor: pointer; user-select: none;
+  }
+  .ll-banner-track {
+    display: flex;
+    transition: transform .7s cubic-bezier(.4,0,.2,1);
+    will-change: transform;
+  }
+  .ll-banner-slide {
+    flex: 0 0 100%; width: 100%;
+    border-radius: 12px; overflow: hidden;
+    position: relative; min-height: 90px;
+    display: flex; align-items: center;
+  }
+  .ll-lbs-inner {
+    width: 100%; padding: 14px 20px;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 5px; position: relative; overflow: hidden;
+  }
+  .ll-lbs-inner::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(120deg, transparent 55%, #ffffff06);
+    pointer-events: none;
+  }
+  .ll-lbs-tag   { font-size: .52rem; font-weight: 700; letter-spacing: .12em; padding: 2px 7px; border-radius: 3px; display: inline-block; align-self: flex-start; }
+  .ll-lbs-title { font-size: .82rem; font-weight: 900; letter-spacing: .04em; line-height: 1.25; }
+  .ll-lbs-desc  { font-size: .6rem; opacity: .8; line-height: 1.5; }
+  #llBannerDots { display: flex; gap: 5px; justify-content: center; margin-top: 6px; }
+  .ll-lbd { width: 6px; height: 6px; border-radius: 50%; background: #1a3a2a; transition: all .3s; cursor: pointer; }
+  .ll-lbd.active { background: var(--gold); width: 16px; border-radius: 3px; }
+
+  /* ===== 右下モードバー ===== */
+  #llModeBar {
+    position: absolute;
+    bottom: 0; right: 0; left: 33.33%;
+    padding: 10px 16px 14px;
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 6px;
+    background: none;
+    z-index: 100;
+  }
+  .ll-mode-btn {
+    flex: 0 0 auto; width: 120px; padding: 6px;
+    background: transparent;
+    border: 1.5px solid #2a4a3a; border-radius: 8px;
+    cursor: pointer; transition: all .2s;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .ll-mode-btn.active { border-color: var(--gold); background: linear-gradient(135deg,#1a2a1a,#0d1a0d); }
+  .ll-mode-btn:hover  { border-color: var(--gold) !important; box-shadow: 0 0 10px #c9a84c22; }
+  .ll-mode-btn img    { width: 100%; height: auto; display: block; border-radius: 5px; }
+  .ll-mode-emoji-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 5px; padding: 6px 0 4px; gap: 3px; }
+  .ll-mode-label { font-size: .75rem; color: #88aacc; letter-spacing: .04em; }
+
+  /* ===== サブパネル (CPU設定・ルームマッチ等) ===== */
+  #llSubPanel {
+    position: absolute;
+    top: 52px; left: 0; right: 0; bottom: 0;
+    z-index: 50;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(3px);
+  }
+  #llSubPanel.open { display: flex; }
+  #llSubPanelInner {
+    background: linear-gradient(135deg, rgba(9,20,34,0.97), rgba(6,14,24,0.97));
+    border: 1px solid #2a4a3a; border-radius: 14px;
+    padding: 20px 24px;
+    max-width: 520px; width: 92%;
+    max-height: 900px;
+    overflow-y: auto;
+  }
+}
 
 /* ===== GAME SCREEN ===== */
 #gameScreen{
@@ -2675,6 +2878,146 @@ body{
 </div>
 
 <div id="lobby" style="display:none">
+
+<!-- ===== 横画面専用ロビー ===== -->
+<div id="lobbyLandscape">
+<div id="llScaleRoot">
+
+  <!-- 上部バー -->
+  <div id="llTopBar">
+    <div id="llProfileBtn" onclick="openProfile()" title="プロフィールを編集">
+      <div class="ll-pname" id="llPName">プレイヤー</div>
+      <div class="ll-psep"></div>
+      <div class="ll-pability" id="llPAbility">⚡ 能力なし</div>
+      <div class="ll-psep"></div>
+      <div class="ll-pcoins">
+        <div class="ll-pcoins-item">
+          <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tenibi.png" style="width:13px;height:13px;object-fit:contain;">
+          <span id="llPCoin">---</span>
+        </div>
+        <div class="ll-pcoins-item">
+          <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:13px;height:13px;object-fit:contain;">
+          <span id="llPTbb">---</span>
+        </div>
+      </div>
+    </div>
+    <div class="ll-spacer"></div>
+    <div id="llTopRightBtns">
+      <button class="ll-trb" onclick="toggleTitleSettings()" title="設定">
+        <span>⚙️</span><span class="ll-label">設定</span>
+      </button>
+      <button class="ll-trb twitch" onclick="_openTwitchAndMission()" title="Twitch">
+        <span>💜</span><span class="ll-label">Twitch</span>
+      </button>
+      <button class="ll-trb" onclick="openFriendScreen()" title="フレンド" id="llFriendBtn" style="position:relative;">
+        <span>👥</span><span class="ll-label">フレンド</span>
+        <span id="llFriendBadge" style="display:none;position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#ff4444;"></span>
+      </button>
+      <button class="ll-trb logout" onclick="doGoogleLogout()" title="ログアウト">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;opacity:0.7;">
+        <span class="ll-label">ログアウト</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 左: プレイヤーアイコン -->
+  <div id="llCenterIconWrap">
+    <div id="llPlayerIconBig" onclick="openProfile()" title="プロフィールを編集">
+      <div id="llIconInner" class="ll-icon-empty">アイコン<br>未設定</div>
+    </div>
+  </div>
+
+  <!-- 中央右: メインモード 2×2グリッド -->
+  <div id="llMainModeCol">
+    <div class="ll-main-mode-row">
+      <button id="llModeBtn-rank" class="ll-main-btn" onclick="_playBotanSe();_llShowSub('rank')" title="ランクマッチ">
+        <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tbotan/rankuma.png" alt="ランクマッチ">
+      </button>
+      <button id="llModeBtn-online" class="ll-main-btn" onclick="_playBotanSe();_llShowSub('online')" title="ルームマッチ">
+        <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tbotan/rumuma.png" alt="ルームマッチ">
+      </button>
+    </div>
+    <div class="ll-main-mode-row">
+      <button id="llModeBtn-solo" class="ll-main-btn active" onclick="_playBotanSe();startTitleBgmOnce();_llShowSub('solo')" title="CPU対戦">
+        <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tbotan/cpu.png" alt="CPU対戦">
+      </button>
+      <button id="llModeBtn-bomb" class="ll-main-btn" onclick="_playBotanSe();startTitleBgmOnce();_llShowSub('bomb')" title="手にボム！">
+        <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tbotan/bomu.png" alt="手にボム！">
+      </button>
+    </div>
+  </div>
+
+  <!-- バナー -->
+  <div id="llBannerArea">
+    <div id="llBannerWrap" ontouchstart="_llBnTouchStart(event)" ontouchend="_llBnTouchEnd(event)">
+      <div class="ll-banner-track" id="llBannerTrack">
+        <div class="ll-banner-slide">
+          <div class="ll-lbs-inner" style="background:linear-gradient(135deg,#0a1a10,#051508);border:1px solid #1a4a2a;">
+            <span class="ll-lbs-tag" style="background:#0d2a10;color:#3ada8a;border:1px solid #2a6a3a;">📢 お知らせ</span>
+            <div class="ll-lbs-title" style="color:#c9f0d0;">手にビじゃん へようこそ！</div>
+            <div class="ll-lbs-desc" style="color:#5a9a6a;">ガチャを引いて能力を解放しよう。ランクマッチでレートを上げろ！</div>
+          </div>
+        </div>
+        <div class="ll-banner-slide" onclick="openGacha();switchGachaTab('collab')" style="cursor:pointer;">
+          <div class="ll-lbs-inner" style="background:linear-gradient(135deg,#0d0a20,#070518);border:1px solid #3a2a6a;">
+            <span class="ll-lbs-tag" style="background:#1a0a30;color:#aa80ff;border:1px solid #5a3aaa;">🌟 コラボガチャ</span>
+            <div class="ll-lbs-title" style="color:#d0b0ff;">コラボガチャ 近日公開予定</div>
+            <div class="ll-lbs-desc" style="color:#7a5aaa;">ガチャ画面のコラボタブをチェック！限定アイコンが登場します。</div>
+          </div>
+        </div>
+        <div class="ll-banner-slide" onclick="openShop()" style="cursor:pointer;">
+          <div class="ll-lbs-inner" style="background:linear-gradient(135deg,#12082a,#0a0418);border:1px solid #5a3a9a;">
+            <span class="ll-lbs-tag" style="background:#1e0a40;color:#c9a0ff;border:1px solid #7a4acc;">💜 Twitch特典</span>
+            <div class="ll-lbs-title" style="color:#e0c0ff;">サブスクで毎月コイン＋TBBコイン150獲得！</div>
+            <div class="ll-lbs-desc" style="color:#9a70cc;">ショップからTwitchを連携すると毎月コイン＆TBBコイン150を受け取れます！TBBガチャは100コインで挑戦！</div>
+          </div>
+        </div>
+        <div class="ll-banner-slide">
+          <div class="ll-lbs-inner" style="background:linear-gradient(135deg,#1a0505,#0d0202);border:1px solid #5a1a1a;">
+            <span class="ll-lbs-tag" style="background:#2a0808;color:#ff8866;border:1px solid #aa3322;">💣 手にボム！</span>
+            <div class="ll-lbs-title" style="color:#ffaa88;">爆弾を避けて山牌を引け！</div>
+            <div class="ll-lbs-desc" style="color:#aa6655;">ステージクリアごとに手にビコイン2枚獲得。どこまで進めるか挑戦しよう。</div>
+          </div>
+        </div>
+      </div>
+      <div id="llBannerDots"></div>
+    </div>
+  </div>
+
+  <!-- 右下モードバー -->
+  <div id="llModeBar">
+    <button class="ll-mode-btn" style="border-color:#aa7700;background:rgba(6,14,24,0.45);" onclick="startTitleBgmOnce();openGacha()" title="ガチャ">
+      <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tbotan/gacha.png" alt="ガチャ">
+    </button>
+    <button class="ll-mode-btn" style="border-color:#007799;background:rgba(6,14,24,0.45);" onclick="startTitleBgmOnce();openShop()" title="ショップ">
+      <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tbotan/shop.png" alt="ショップ">
+    </button>
+    <button class="ll-mode-btn" style="border-color:#2a5a3a;background:rgba(6,14,24,0.45);" onclick="startTitleBgmOnce();openProfile()" title="プロフィール">
+      <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tbotan/purofi.png" alt="プロフィール">
+    </button>
+    <button class="ll-mode-btn" style="border-color:#3a3a6a;background:rgba(6,14,24,0.45);" onclick="startTitleBgmOnce();openRecordScreen()" title="戦績">
+      <div class="ll-mode-emoji-wrap" style="background:transparent;">
+        <span style="font-size:2.1rem;">📋</span>
+        <span class="ll-mode-label">戦績</span>
+      </div>
+    </button>
+    <button id="llModeBtnDaily" class="ll-mode-btn" style="border-color:#1a3a5a;background:rgba(6,14,24,0.45);" onclick="showDaily()" title="デイリー">
+      <div class="ll-mode-emoji-wrap" style="background:transparent;">
+        <span style="font-size:2.1rem;">🎁</span>
+        <span class="ll-mode-label">デイリー</span>
+      </div>
+    </button>
+  </div>
+
+  <!-- サブパネル -->
+  <div id="llSubPanel" onclick="_llSubPanelBgClick(event)">
+    <div id="llSubPanelInner"></div>
+  </div>
+
+</div><!-- /llScaleRoot -->
+</div><!-- /lobbyLandscape -->
+
+<!-- ===== 縦画面用ロビー (既存) ===== -->
 <div id="lobbyInner">
   <div class="lobby-title">
     <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/logo.png" alt="手にビじゃん" style="max-width:320px;width:80%;height:auto;display:block;margin:0 auto;">
@@ -5164,6 +5507,8 @@ function showSolo(){
   _setModeActive('modeBtn-solo');
   // numPlayersとロビーUIのアクティブボタンを同期（BOMBモード(1人)から戻った時に3人ボタンが正しく選択される）
   selectCount(numPlayers);
+  // ゲームモードボタンの状態を保存値で復元
+  _applyCpuGameSettingsUI();
 }
 function showOnline(){
   document.getElementById('lobbySolo').style.display='none';
@@ -7521,49 +7866,52 @@ function loadCpuGameSettings(){
     if(!raw) return;
     const s=JSON.parse(raw);
     // 人数
-    if(s.numPlayers && [2,3,4].includes(s.numPlayers)){
-      numPlayers=s.numPlayers;
-      document.querySelectorAll('#lobbySolo .pcnt-btn').forEach((b,i)=>b.classList.toggle('active',i===(numPlayers-2)));
-    }
+    if(s.numPlayers && [2,3,4].includes(s.numPlayers)) numPlayers=s.numPlayers;
     // 能力あり/なし
-    if(s.abilityMode!==undefined){
-      G_ABILITY_MODE=!!s.abilityMode;
-      const aOn=document.getElementById('modeAbilityOn');
-      const aOff=document.getElementById('modeAbilityOff');
-      if(aOn) aOn.classList.toggle('active',G_ABILITY_MODE);
-      if(aOff) aOff.classList.toggle('active',!G_ABILITY_MODE);
-    }
+    if(s.abilityMode!==undefined) G_ABILITY_MODE=!!s.abilityMode;
     // 半荘/東風
-    if(s.tonpuuMode!==undefined){
-      G_TONPUU_MODE=!!s.tonpuuMode;
-      const hEl=document.getElementById('modeHanchan');
-      const tEl=document.getElementById('modeTonpuu');
-      if(hEl) hEl.classList.toggle('active',!G_TONPUU_MODE);
-      if(tEl) tEl.classList.toggle('active',G_TONPUU_MODE);
-    }
+    if(s.tonpuuMode!==undefined) G_TONPUU_MODE=!!s.tonpuuMode;
     // 制限時間
-    if(s.timeMode!==undefined){
-      G_TIME_MODE=!!s.timeMode;
-      const tmOn=document.getElementById('modeTimeOn');
-      const tmOff=document.getElementById('modeTimeOff');
-      if(tmOn) tmOn.classList.toggle('active',G_TIME_MODE);
-      if(tmOff) tmOff.classList.toggle('active',!G_TIME_MODE);
-      const desc=document.getElementById('timeModeDesc');
-      if(desc) desc.style.display=G_TIME_MODE?'block':'none';
-    }
+    if(s.timeMode!==undefined) G_TIME_MODE=!!s.timeMode;
     // 飛び
-    if(s.tobiMode!==undefined){
-      G_TOBI_MODE=!!s.tobiMode;
-      const tbOn=document.getElementById('modeTobiOn');
-      const tbOff=document.getElementById('modeTobiOff');
-      if(tbOn) tbOn.classList.toggle('active',G_TOBI_MODE);
-      if(tbOff) tbOff.classList.toggle('active',!G_TOBI_MODE);
-    }
+    if(s.tobiMode!==undefined) G_TOBI_MODE=!!s.tobiMode;
     // CPU設定
     if(Array.isArray(s.cpuAbilities)){
       s.cpuAbilities.forEach((v,i)=>{ if(i<3 && v!==undefined) cpuSelectedAbilities[i]=v; });
     }
   }catch(e){}
+}
+
+// ゲームモードボタンのactive状態を現在の変数値に合わせて反映
+function _applyCpuGameSettingsUI(){
+  // 人数ボタン
+  const cntBtns=[...document.querySelectorAll('#lobbySolo .pcnt-btn')].filter(b=>['selectCount(2)','selectCount(3)','selectCount(4)'].some(s=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes(s)));
+  cntBtns.forEach(b=>{
+    const m=b.getAttribute('onclick').match(/selectCount\((\d)\)/);
+    if(m) b.classList.toggle('active', parseInt(m[1])===numPlayers);
+  });
+  // 能力あり/なし
+  const aOn=document.getElementById('modeAbilityOn');
+  const aOff=document.getElementById('modeAbilityOff');
+  if(aOn) aOn.classList.toggle('active',G_ABILITY_MODE);
+  if(aOff) aOff.classList.toggle('active',!G_ABILITY_MODE);
+  // 半荘/東風
+  const hEl=document.getElementById('modeHanchan');
+  const tEl=document.getElementById('modeTonpuu');
+  if(hEl) hEl.classList.toggle('active',!G_TONPUU_MODE);
+  if(tEl) tEl.classList.toggle('active',G_TONPUU_MODE);
+  // 制限時間
+  const tmOn=document.getElementById('modeTimeOn');
+  const tmOff=document.getElementById('modeTimeOff');
+  if(tmOn) tmOn.classList.toggle('active',G_TIME_MODE);
+  if(tmOff) tmOff.classList.toggle('active',!G_TIME_MODE);
+  const desc=document.getElementById('timeModeDesc');
+  if(desc) desc.style.display=G_TIME_MODE?'block':'none';
+  // 飛び
+  const tbOn=document.getElementById('modeTobiOn');
+  const tbOff=document.getElementById('modeTobiOff');
+  if(tbOn) tbOn.classList.toggle('active',G_TOBI_MODE);
+  if(tbOff) tbOff.classList.toggle('active',!G_TOBI_MODE);
 }
 
 // CPU能力の解放管理（localStorageで永続化）
@@ -7625,8 +7973,12 @@ const CPU_ABILITY_OPTIONS = [
 
 function selectCount(n){
   numPlayers=n;
-  // ２人=index0、３人=index1、４人=index2（１人ボタン削除済み）
-  document.querySelectorAll('#lobbySolo .pcnt-btn').forEach((b,i)=>b.classList.toggle('active',i===(n-2)));
+  // ２人=index0、３人=index1、４人=index2（人数ボタン3つのみ対象）
+  const cntBtns=[...document.querySelectorAll('#lobbySolo .pcnt-btn')].filter(b=>['selectCount(2)','selectCount(3)','selectCount(4)'].some(s=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes(s)));
+  cntBtns.forEach(b=>{
+    const m=b.getAttribute('onclick').match(/selectCount\((\d)\)/);
+    if(m) b.classList.toggle('active', parseInt(m[1])===n);
+  });
   renderCpuSlots();
   saveCpuGameSettings();
 }
@@ -17280,6 +17632,23 @@ function updateProfileBadge(){
       lpcIconInner.style.color='#2a4a3a';
     }
   }
+  // ── 横画面ロビーUI同期 ──
+  (function(){
+    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ'};
+    const g = (id)=>document.getElementById(id);
+    const pn=g('llPName'); if(pn) pn.textContent = PROFILE.name||'プレイヤー';
+    const pa=g('llPAbility'); if(pa) pa.textContent = abilityIcons[PROFILE.ability||'']||'⚡ 能力なし';
+    const pc=g('llPCoin');  if(pc) pc.textContent = PROFILE.coins!=null ? PROFILE.coins.toLocaleString() : '---';
+    const pt=g('llPTbb');   if(pt) pt.textContent = PROFILE.tbbCoins!=null ? PROFILE.tbbCoins.toLocaleString() : '---';
+    const iconWrap=g('llIconInner');
+    if(iconWrap){
+      if(PROFILE.iconId){
+        iconWrap.innerHTML = `<img src="${gachaIconUrl(PROFILE.iconId)}" alt="${PROFILE.iconId}">`;
+      } else {
+        iconWrap.innerHTML = '<span class="ll-icon-empty">アイコン<br>未設定</span>';
+      }
+    }
+  })();
 }
 
 function selectAbility(el,ability){
@@ -17363,6 +17732,150 @@ function selectAbility(el,ability){
         if(_bnSwiped){ e.stopPropagation(); _bnSwiped = false; }
       }, true);
     }, 100);
+  });
+})();
+
+// ============================================================
+// LANDSCAPE LOBBY — 1920×1080スケーリング
+// ============================================================
+(function(){
+  const BASE_W = 1920, BASE_H = 1080;
+  function applyLlScale(){
+    const el = document.getElementById('llScaleRoot');
+    if(!el) return;
+    // 横画面のときだけ適用
+    if(window.innerWidth < window.innerHeight) return;
+    const scaleX = window.innerWidth  / BASE_W;
+    const scaleY = window.innerHeight / BASE_H;
+    const scale  = Math.min(scaleX, scaleY);
+    const offsetX = (window.innerWidth  - BASE_W * scale) / 2;
+    const offsetY = (window.innerHeight - BASE_H * scale) / 2;
+    el.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+    el.style.transformOrigin = 'top left';
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{ setTimeout(applyLlScale, 50); });
+  window.addEventListener('resize', applyLlScale);
+  window.addEventListener('orientationchange', ()=>{ setTimeout(applyLlScale, 200); });
+  window._applyLlScale = applyLlScale; // 外部から呼べるように
+})();
+
+// ============================================================
+// LANDSCAPE LOBBY BANNER
+// ============================================================
+(function(){
+  const INTERVAL = 7000;
+  let _idx = 0, _timer = null, _total = 0, _touchX = 0, _swiped = false;
+
+  function _init(){
+    const track = document.getElementById('llBannerTrack');
+    const dotsEl = document.getElementById('llBannerDots');
+    if(!track || !dotsEl) return;
+    _total = track.children.length;
+    if(_total === 0) return;
+    dotsEl.innerHTML = '';
+    for(let i=0;i<_total;i++){
+      const d = document.createElement('div');
+      d.className = 'll-lbd' + (i===0?' active':'');
+      d.onclick = (()=>{ const n=i; return ()=>_go(n,true); })();
+      dotsEl.appendChild(d);
+    }
+    _go(0, false);
+    _autoStart();
+  }
+  function _go(idx, resetTimer){
+    const track = document.getElementById('llBannerTrack');
+    if(!track) return;
+    _idx = (idx + _total) % _total;
+    track.style.transform = `translateX(-${_idx * 100}%)`;
+    document.querySelectorAll('.ll-lbd').forEach((d,i)=>d.classList.toggle('active', i===_idx));
+    if(resetTimer){ _autoStop(); _autoStart(); }
+  }
+  function _autoStart(){ _timer = setInterval(()=>_go(_idx+1,false), INTERVAL); }
+  function _autoStop(){ if(_timer){ clearInterval(_timer); _timer=null; } }
+
+  window._llBnTouchStart = function(e){ _touchX = e.touches[0].clientX; _swiped = false; _autoStop(); };
+  window._llBnTouchEnd   = function(e){
+    const dx = e.changedTouches[0].clientX - _touchX;
+    if(Math.abs(dx) > 40){ _go(_idx + (dx<0?1:-1), false); _swiped=true; }
+    _autoStart();
+  };
+  document.addEventListener('DOMContentLoaded', ()=>{
+    setTimeout(()=>{
+      _init();
+      const wrap = document.getElementById('llBannerWrap');
+      if(wrap) wrap.addEventListener('click', function(e){ if(_swiped){ e.stopPropagation(); _swiped=false; } }, true);
+    }, 120);
+  });
+})();
+
+// ============================================================
+// LANDSCAPE LOBBY — サブパネル制御 & プロフィール同期
+// ============================================================
+(function(){
+  // ---- サブパネル ----
+  window._llCurrentSub = null;
+
+  window._llShowSub = function(mode){
+    // 縦画面側の同名関数を呼んでから、その lobby-card の中身をサブパネルにコピー表示
+    const cardMap = { solo:'lobbySolo', online:'lobbyOnline', rank:'lobbyRank', bomb:'lobbyBomb' };
+    const srcId = cardMap[mode];
+    if(!srcId) return;
+
+    // まず縦画面側のモード選択関数を呼んで状態を初期化
+    if(mode==='solo')   { startTitleBgmOnce(); showSolo(); }
+    else if(mode==='online') { showOnline(); }
+    else if(mode==='rank')   { showRank(); }
+    else if(mode==='bomb')   { startTitleBgmOnce(); showBomb(); }
+
+    // lobby-card の中身をクローンしてサブパネルに表示
+    const src = document.getElementById(srcId);
+    const panel = document.getElementById('llSubPanelInner');
+    if(!src || !panel) return;
+
+    panel.innerHTML = '';
+    // タイトル
+    const h3 = src.querySelector('h3');
+    if(h3){ const t=h3.cloneNode(true); panel.appendChild(t); }
+    // 中身（h3以外）
+    Array.from(src.children).forEach(child=>{
+      if(child.tagName!=='H3') panel.appendChild(child.cloneNode(true));
+    });
+
+    // ボタンのonclick属性を再バインド（cloneではイベントが消えるため）
+    panel.querySelectorAll('[onclick]').forEach(el=>{
+      const fn = el.getAttribute('onclick');
+      el.onclick = ()=>{ try{ eval(fn); }catch(e){} };
+    });
+
+    document.getElementById('llSubPanel').classList.add('open');
+    _llCurrentSub = mode;
+
+    // アクティブ状態更新
+    document.querySelectorAll('.ll-main-btn').forEach(b=>b.classList.remove('active'));
+    const activeBtn = document.getElementById('llModeBtn-' + mode);
+    if(activeBtn) activeBtn.classList.add('active');
+  };
+
+  window._llSubPanelBgClick = function(e){
+    if(e.target === document.getElementById('llSubPanel')){
+      document.getElementById('llSubPanel').classList.remove('open');
+    }
+  };
+
+  window._llCloseSubPanel = function(){
+    document.getElementById('llSubPanel').classList.remove('open');
+  };
+
+  // ---- デイリーボタンのバッジ同期 ----
+  const _origShowDaily = window.showDaily;
+  window.showDaily = function(){
+    if(_origShowDaily) _origShowDaily();
+    _llCloseSubPanel();
+  };
+
+  // DOMContentLoaded後にプロフィール同期
+  document.addEventListener('DOMContentLoaded', ()=>{
+    setTimeout(()=>{ if(typeof updateLobbyUI==='function') updateLobbyUI(); }, 400);
   });
 })();
 
@@ -18517,20 +19030,15 @@ function doTwitchLogout(){
 
 // Show profile on first load if no name saved
 (function(){
-  // JWTトークンがなければログイン画面を表示
-  const token = localStorage.getItem('jwt_token');
-  if(!token){
-    document.getElementById('loginScreen').style.display='flex';
-    return;
-  }
+  // ★ プレビュー用: ログインチェックをスキップして直接ロビーを表示
+  document.getElementById('loginScreen').style.display='none';
 
   document.getElementById('lobby').style.display='';
   loadProfile();
   loadSettings(); // ★ 音量・BGM設定を復元
-  loadCpuGameSettings(); // ★ CPU対戦設定を復元
+  loadCpuGameSettings(); // ★ CPU対戦設定を復元（変数のみ）
   renderCpuSlots(); // CPU設定スロットを初期描画
-  if(!localStorage.getItem('mjProfile')){
-    // First visit: open profile screen right away
+  if(false){ // プレビュー中はプロフィール画面を開かない
     setTimeout(()=>{
       document.getElementById('lobby').style.display='none';
       document.getElementById('profileScreen').classList.add('active');

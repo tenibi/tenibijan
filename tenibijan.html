@@ -6189,7 +6189,7 @@ function _onRankMatched(data){
             ];
             console.log('ホストからgameStart送信:', membersInfo);
             NET.conns.forEach((c)=>{
-              if(c&&c.open) c.send({type:'gameStart', totalPlayers:3, abilityMode:true, timeMode:true, tobiMode:true, membersInfo});
+              if(c&&c.open) c.send({type:'gameStart', totalPlayers:3, abilityMode:true, timeMode:true, tobiMode:true, tonpuuMode:false, membersInfo});
             });
             setTimeout(()=>{
               G_TIME_MODE = true;
@@ -7592,7 +7592,7 @@ function handleGuestAction(msg, senderIdx){
       }
       break;
     case 'kita':      remoteKita(msg.pidx); break;
-    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx); break;
+    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false); break;
     case 'nextRound': nextRound(); break;
     case 'backToRoom': backToRoom(); break; // ホストから部屋戻り通知
     case 'requestMyName':
@@ -7725,6 +7725,7 @@ function applyHostState(msg){
     G.savedScores=s.savedScores;G._dealerWon=s._dealerWon;
     G.pendingRiichi=s.pendingRiichi;G.riichiValidIdx=s.riichiValidIdx;
     G.mineSlots=s.mineSlots??[];G.mineRinshanIdxs=s.mineRinshanIdxs??[];G.mineOwners=s.mineOwners??{};G.mineRinshanOwners=s.mineRinshanOwners??{};G.mineCount=s.mineCount??0;G.mineStock=s.mineStock??{};G.minePlantPlayers=s.minePlantPlayers??[];G.yamiSelectMode=s.yamiSelectMode??false;G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
+    G._mineHit=s._mineHit??null;
     G.players=s.players;
     numPlayers=s.numPlayers;
     pendingAction=s.pendingAction;
@@ -7748,7 +7749,8 @@ function applyHostState(msg){
       _startDiscardAnimLock(s.discardAnimPidx);
     }
     // ゲスト: 自分のターンでdrawフェーズなら、draw_waitに遷移してツモ選択可能にする
-    if(G.phase==='draw' && G.current===NET.myIdx){
+    // ★地雷爆発の中間状態 (_mineHit) の場合は誤ってdraw_waitに遷移しないようガード
+    if(G.phase==='draw' && G.current===NET.myIdx && !G._mineHit){
       if(G.deck.length===0){handleExhausted();return;}
       G.phase='draw_wait';
       timerOnMyTurn();
@@ -7803,6 +7805,10 @@ function applyHostState(msg){
       window._epOC = null;
       _wallCanvasInited = false;
       Object.keys(_penImgCache).forEach(k=>delete _penImgCache[k]);
+      // ★タイマー負債・自動行動フラグを局ごとにリセット（ホストはstartRound内でリセット済み）
+      timerStop();
+      _timerDebt = 0;
+      _timerAutoActFired = false;
     }
     renderAll();
     if(s.winModal){
@@ -7837,6 +7843,7 @@ function _buildStateSnapshot(extra={}){
     savedScores:G.savedScores,_dealerWon:G._dealerWon,
     pendingRiichi:G.pendingRiichi,riichiValidIdx:G.riichiValidIdx,
     mineSlots:G.mineSlots,mineRinshanIdxs:G.mineRinshanIdxs,mineOwners:G.mineOwners??{},mineRinshanOwners:G.mineRinshanOwners??{},mineCount:G.mineCount,mineStock:G.mineStock??{},minePlantPlayers:G.minePlantPlayers??[],yamiSelectMode:G.yamiSelectMode,hakuSelectPlayers:G.hakuSelectPlayers??[],stealMode:G.stealMode,lightMode:G.lightMode,lightUserIdx:G.lightUserIdx??null,yamiChallenge:G.yamiChallenge??null,lightRevealedSlots:G.lightRevealedSlots,lightRevealedHand:G.lightRevealedHand,lightExtraDora:G.lightExtraDora??[],penDrawings:G.penDrawings??{},
+    _mineHit:G._mineHit??null,
     players:G.players,numPlayers,pendingAction,
     guestPeerIds:NET.guestPeerIds,
     tobiMode:G_TOBI_MODE,
@@ -7933,7 +7940,7 @@ function remoteWallPick(pidx,slotIdx){
     SFX.mineExplode();
     addLog(`💥 ${p.name} が地雷を踏んだ！[${emj(mineTile)}] を強制捨て`,'log-win');
     G._mineHit={pidx,tile:mineTile};
-    renderAll();broadcastState();
+    renderAll();broadcastState({_mineExploding:true});
     setTimeout(()=>{
       if(!checkPon(pidx,mineTile)) nextTurn((pidx+1)%numPlayers);
       broadcastState();
@@ -8033,11 +8040,11 @@ function remoteHaku(pidx,tidx){
   broadcastState();
   renderAll();
 }
-function remoteRiichi(pidx,mode,tidx){
+function remoteRiichi(pidx,mode,tidx,isYami=false){
   G.pendingRiichi=mode;
   G.riichiValidIdx=getRiichiDiscards(G.players[pidx].hand);
   commitRiichi(G.players[pidx]);
-  discardAction(pidx,tidx);
+  discardAction(pidx,tidx,isYami);
   broadcastState();
 }
 
@@ -8056,8 +8063,10 @@ function startOnlineGame(){
     G_TOBI_MODE=NET.roomTobiMode;
     G_TONPUU_MODE=NET.roomTonpuuMode;
   } else {
-    G_TOBI_MODE=true; // ランクマッチは飛びあり固定
-    G_TONPUU_MODE=false; // ランクマッチは半荘固定
+    G_ABILITY_MODE=true;  // ランクマッチは能力あり固定
+    G_TIME_MODE=true;     // ランクマッチは時間制限あり固定
+    G_TOBI_MODE=true;     // ランクマッチは飛びあり固定
+    G_TONPUU_MODE=false;  // ランクマッチは半荘固定
   }
   hideRoomLobby();
   document.getElementById('lobby').style.display='none';
@@ -11043,7 +11052,7 @@ function humanDiscard(){
   if(isYamiDiscard) p.abilityUsed=true;
   selIdx=-1;
   if(NET.online&&!amIHost()){
-    if(G.pendingRiichi){netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx});}
+    if(G.pendingRiichi){netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,isYami:isYamiDiscard});}
     else{netSend({type:'discard',pidx:NET.myIdx,tidx:idx,isYami:isYamiDiscard});}
     return;
   }

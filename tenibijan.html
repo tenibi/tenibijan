@@ -1693,6 +1693,44 @@ body{
 .icon-col-owned-count{
   font-size:.55rem;color:#4a7a5a;margin-top:-6px;margin-bottom:10px;letter-spacing:.05em;
 }
+/* ===== アイコン装備スロット選択 ===== */
+#iconSlotSelectorWrap{
+  width:100%;max-width:520px;
+  display:flex;gap:10px;margin-bottom:16px;flex-shrink:0;
+}
+.icon-slot-btn{
+  flex:1;padding:10px 8px;border-radius:10px;cursor:pointer;
+  font-family:inherit;font-size:.62rem;font-weight:700;letter-spacing:.04em;
+  border:2px solid #2a4a3a;background:#040c12;color:#5a8a7a;
+  transition:all .18s;display:flex;flex-direction:column;align-items:center;gap:5px;
+}
+.icon-slot-btn.active-vc{
+  border-color:#88aaff;background:#0a0a28;color:#aaccff;
+  box-shadow:0 0 12px #4466ff44;
+}
+.icon-slot-btn.active-disp{
+  border-color:#ffaa44;background:#1a0e00;color:#ffcc88;
+  box-shadow:0 0 12px #ff880044;
+}
+.icon-slot-btn .slot-icon-wrap{
+  width:48px;height:67px;border-radius:6px;overflow:hidden;
+  background:#0a1420;border:1.5px solid #2a3a5a;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.55rem;color:#3a5a7a;text-align:center;
+}
+.icon-slot-btn .slot-icon-wrap img{width:100%;height:100%;object-fit:contain;background:#fff;}
+.icon-slot-btn .slot-label{font-size:.5rem;opacity:.7;}
+/* VCバッジ・見た目バッジ（図鑑カード内） */
+.ic-vc-badge{
+  position:absolute;top:3px;left:4px;
+  font-size:.36rem;background:#0a0a30;color:#88aaff;border:1px solid #4466ff;
+  border-radius:3px;padding:1px 3px;font-weight:700;
+}
+.ic-disp-badge{
+  position:absolute;top:3px;right:4px;
+  font-size:.36rem;background:#1a0a00;color:#ffcc66;border:1px solid #ff8800;
+  border-radius:3px;padding:1px 3px;font-weight:700;
+}
 
 /* ===== FRIEND SCREEN ===== */
 #friendScreen{
@@ -2139,6 +2177,22 @@ body{
         <button class="gacha-pull-btn gacha-pull-10" onclick="doPull10()">🎰 10連ガチャ（<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">10枚）</button>
         <button class="gacha-pull-btn gacha-pull-100" style="background:linear-gradient(135deg,#1a0a20,#0a0510);border-color:#aa33ff;color:#dd99ff;" onclick="doPull100()">🎰 100連ガチャ（<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）</button>
       </div>
+      <!-- 🔊 ガチャ音量設定 -->
+      <div style="margin-bottom:12px;background:#040c14;border:1px solid #1a3a2a;border-radius:10px;padding:10px 14px;">
+        <div style="font-size:.58rem;color:#5a8a6a;letter-spacing:.1em;margin-bottom:8px;">🔊 ガチャ演出 音量設定</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:.58rem;color:#5a7a6a;width:72px;flex-shrink:0;">🎬 動画音量</span>
+          <input id="sliderGachaVid" type="range" min="0" max="1" step="0.05" value="0.8" style="flex:1;accent-color:var(--gold);"
+            oninput="_gachaVideoVol=+this.value; document.getElementById('sliderGachaVidVal').textContent=Math.round(this.value*100)+'%'; saveSettings();">
+          <span id="sliderGachaVidVal" style="font-size:.55rem;color:#5a7a6a;width:26px;text-align:right;">80%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:.58rem;color:#5a7a6a;width:72px;flex-shrink:0;">⚡ SE音量</span>
+          <input id="sliderGachaSe" type="range" min="0" max="1" step="0.05" value="0.8" style="flex:1;accent-color:#ffaa33;"
+            oninput="_gachaSeVol=+this.value; document.getElementById('sliderGachaSeVal').textContent=Math.round(this.value*100)+'%'; saveSettings();">
+          <span id="sliderGachaSeVal" style="font-size:.55rem;color:#5a7a6a;width:26px;text-align:right;">80%</span>
+        </div>
+      </div>
       <!-- 所持能力コレクション -->
       <div class="gacha-collection" style="display:none;">
         <div class="gacha-col-title">⚡ 所持能力（タップで装備）</div>
@@ -2573,6 +2627,19 @@ body{
     <button class="icon-col-back" onclick="closeIconCollection()">← 戻る</button>
     <div class="icon-col-title">🖼️ アイコン図鑑</div>
   </div>
+  <!-- 装備スロット選択 -->
+  <div id="iconSlotSelectorWrap">
+    <button class="icon-slot-btn active-vc" id="iconSlotBtnVC" onclick="selectIconSlot('vc')">
+      <div class="slot-icon-wrap" id="iconSlotPreviewVC"><span>未設定</span></div>
+      <div>🎤 VCアイコン</div>
+      <div class="slot-label">音声が再生されます</div>
+    </button>
+    <button class="icon-slot-btn" id="iconSlotBtnDisp" onclick="selectIconSlot('disp')">
+      <div class="slot-icon-wrap" id="iconSlotPreviewDisp"><span>未設定</span></div>
+      <div>🖼 見た目アイコン</div>
+      <div class="slot-label">タイトル・ゲーム画面に表示</div>
+    </button>
+  </div>
   <div id="iconCollectionContent" style="width:100%;max-width:520px;"></div>
 </div>
 
@@ -2769,13 +2836,28 @@ body{
         <!-- アイコン -->
         <div style="display:flex;flex-direction:column;align-items:center;">
           <h3 style="margin-bottom:6px;text-align:center;">アイコン</h3>
-          <div id="iconDisplay" onclick="openIconCollection()" style="
-            aspect-ratio:3/4;width:90px;
-            display:flex;align-items:center;justify-content:center;
-            border:2px solid #2a5a3a;border-radius:12px;cursor:pointer;
-            background:#040c12;transition:border-color .15s;
-            font-size:.52rem;color:#3a5a4a;overflow:hidden;
-          " title="クリックで変更">未設定</div>
+          <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px;">
+            <div style="text-align:center;">
+              <div style="font-size:.45rem;color:#88aaff;margin-bottom:3px;">🎤 VCアイコン</div>
+              <div id="iconDisplayVC" onclick="openIconCollectionSlot('vc')" style="
+                aspect-ratio:3/4;width:64px;
+                display:flex;align-items:center;justify-content:center;
+                border:2px solid #4466aa;border-radius:10px;cursor:pointer;
+                background:#040c12;transition:border-color .15s;
+                font-size:.45rem;color:#3a5a7a;overflow:hidden;
+              " title="VCアイコンを変更">未設定</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:.45rem;color:#ffaa44;margin-bottom:3px;">🖼 見た目アイコン</div>
+              <div id="iconDisplay" onclick="openIconCollectionSlot('disp')" style="
+                aspect-ratio:3/4;width:64px;
+                display:flex;align-items:center;justify-content:center;
+                border:2px solid #aa6622;border-radius:10px;cursor:pointer;
+                background:#040c12;transition:border-color .15s;
+                font-size:.45rem;color:#5a3a1a;overflow:hidden;
+              " title="見た目アイコンを変更">未設定</div>
+            </div>
+          </div>
         </div>
         <!-- 名前 -->
         <div>
@@ -3041,7 +3123,7 @@ body{
           <div class="ll-lbs-inner" style="background:linear-gradient(135deg,#1a0505,#0d0202);border:1px solid #5a1a1a;">
             <span class="ll-lbs-tag" style="background:#2a0808;color:#ff8866;border:1px solid #aa3322;">💣 手にボム！</span>
             <div class="ll-lbs-title" style="color:#ffaa88;">爆弾を避けて山牌を引け！</div>
-            <div class="ll-lbs-desc" style="color:#aa6655;">ステージクリアごとに手にビコイン2枚獲得。どこまで進めるか挑戦しよう。</div>
+            <div class="ll-lbs-desc" style="color:#aa6655;">ステージ5到達で20枚獲得！以降1ステージごとに+7枚。どこまで進めるか挑戦しよう。</div>
           </div>
         </div>
       </div>
@@ -3334,7 +3416,7 @@ body{
         <div class="lbs-inner" style="background:linear-gradient(135deg,#1a0505,#0d0202);border:1px solid #5a1a1a;">
           <span class="lbs-tag" style="background:#2a0808;color:#ff8866;border:1px solid #aa3322;">💣 手にボム！</span>
           <div class="lbs-title" style="color:#ffaa88;">爆弾を避けて山牌を引け！</div>
-          <div class="lbs-desc" style="color:#aa6655;">ステージクリアごとに手にビコイン2枚獲得。どこまで進めるか挑戦しよう。</div>
+          <div class="lbs-desc" style="color:#aa6655;">ステージ5到達で20枚獲得！以降1ステージごとに+7枚。どこまで進めるか挑戦しよう。</div>
         </div>
       </div>
 
@@ -4280,6 +4362,8 @@ function saveSettings(){
       gameBgm:    _gameBgmKey,
       yakumanVideoVol: _yakumanVideoVol,
       agariVideoVol: _agariVideoVol,
+      gachaVideoVol: _gachaVideoVol,
+      gachaSeVol: _gachaSeVol,
       oneClickDiscard: oneClickDiscard,
       discardAnimEnabled: discardAnimEnabled,
       iconVoiceScale: Object.assign({}, iconVoiceScale),
@@ -4331,6 +4415,18 @@ function loadSettings(){
     if(data.agariVideoVol!=null){
       _agariVideoVol=+data.agariVideoVol;
       const sl=document.getElementById('sliderAgariVid'); if(sl) sl.value=_agariVideoVol;
+    }
+    // 常設ガチャ演出動画音量
+    if(data.gachaVideoVol!=null){
+      _gachaVideoVol=+data.gachaVideoVol;
+      const sl=document.getElementById('sliderGachaVid');
+      if(sl){ sl.value=_gachaVideoVol; const vl=document.getElementById('sliderGachaVidVal'); if(vl) vl.textContent=Math.round(_gachaVideoVol*100)+'%'; }
+    }
+    // 常設ガチャ演出SE音量
+    if(data.gachaSeVol!=null){
+      _gachaSeVol=+data.gachaSeVol;
+      const sl=document.getElementById('sliderGachaSe');
+      if(sl){ sl.value=_gachaSeVol; const vl=document.getElementById('sliderGachaSeVal'); if(vl) vl.textContent=Math.round(_gachaSeVol*100)+'%'; }
     }
     // 個別SE音量
     if(data.seScale){
@@ -4543,7 +4639,7 @@ async function attemptRejoin(){
         originalIdx: session.myIdx,
         name:        session.name,
         ability:     PROFILE.ability||'',
-        iconId:      PROFILE.iconId||'',
+        iconId:      _getProfileDisplayIconId(),
         peerId:      NET.peer?.id||''
       });
       setOnlineStatus('復帰リクエスト送信中…');
@@ -6059,7 +6155,7 @@ function _onRankMatched(data){
           setTimeout(()=>{
             // メンバー情報を集める（ホストはNET.guestIconIdsを使う）
             const membersInfo = [
-              {name: PROFILE.name||'あなた', iconId: PROFILE.iconId||'', ability: PROFILE.ability||''},
+              {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
               {name: NET.guestNames[0]||'ゲスト1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
               {name: NET.guestNames[1]||'ゲスト2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||''},
             ];
@@ -6177,7 +6273,7 @@ function _reconnectToNewHost(newHostPeerId, retryCount=0){
     NET._promotingToHost = false;
     if(conn.peer) peerRegistryAdd(conn.peer, newHostIdx, conn);
     conn.send({type:'reconnect', originalIdx: myOriginalIdx, peerId: NET.peer?.id||''});
-    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
     addLog('✅ 新ホストに再接続しました','log-new');
     hideReconnectOverlay();
   });
@@ -6587,7 +6683,7 @@ function hideRoomLobby(){
 
 function _buildMemberData(){
   return [
-    {name:PROFILE.name||'あなた', iconId:PROFILE.iconId||'', role:'ホスト', ready:true, isCpu:false},
+    {name:PROFILE.name||'あなた', iconId:_getProfileDisplayIconId(), role:'ホスト', ready:true, isCpu:false},
     ...NET.conns.map((c,i)=>({
       name: NET.guestIsCpu[i] ? (NET.guestNames[i]||'CPU') : (NET.guestNames[i]||`ゲスト${i+1}`),
       iconId: NET.guestIconIds[i]||'',
@@ -6848,7 +6944,7 @@ function hostStartGame(){
   if(!allReady) return;
   const totalPlayers = 1 + NET.conns.length; // ホスト + ゲスト（NET.connsにCPUスロットも含む）
   const membersInfo = [
-    {name: PROFILE.name||'あなた', iconId: PROFILE.iconId||'', ability: PROFILE.ability||'', isCpu:false},
+    {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu:false},
     ...NET.conns.map((c,i)=>({
       name: NET.guestNames[i]||`ゲスト${i+1}`,
       iconId: NET.guestIconIds[i]||'',
@@ -7115,7 +7211,7 @@ function onNetData(msg, senderIdx){
         G_ABILITY_MODE=msg.abilityMode;
       }
       // 自分のプロフィール名・アイコン・PeerIDをホストに送信
-      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
       if(isReconnecting){
         // 再接続完了：ゲーム状態は次の stateUpdate で同期される
         addLog('🔄 新ホストと同期中…','log-new');
@@ -7216,7 +7312,7 @@ function onNetData(msg, senderIdx){
       setTimeout(saveRejoinSession, 600);
       // ゲスト: ホストに自分のアイコン情報とPeerIDを送信（makePlayer後に反映させるため）
       setTimeout(()=>{
-        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:PROFILE.iconId||'',equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
       }, 400);
     } else if(msg.type==='emote'){
       // ホストから転送されたエモートをゲスト側で表示
@@ -7477,7 +7573,7 @@ function handleGuestAction(msg, senderIdx){
         NET.conn.send({type:'myName',
           name:PROFILE.name||'プレイヤー',
           ability:PROFILE.ability||'',
-          iconId:PROFILE.iconId||'',
+          iconId:_getProfileDisplayIconId(),
           equippedTitle:PROFILE.equippedTitle||'',
           emote:PROFILE.emote||'',
           emotes:PROFILE.emotes||['','','',''],
@@ -7609,9 +7705,9 @@ function applyHostState(msg){
     selIdx=-1;
     // Bug4修正: ゲストのPeerIDリストをホストから受け取って保持（ホスト昇格時に使用）
     if(s.guestPeerIds) NET.guestPeerIds = s.guestPeerIds;
-    // ゲスト: 自分の iconId は PROFILE.iconId で確実に上書き
+    // ゲスト: 自分の iconId は displayIconId優先で確実に上書き
     if(G.players[NET.myIdx]){
-      G.players[NET.myIdx].iconId = PROFILE.iconId||'';
+      G.players[NET.myIdx].iconId = _getProfileDisplayIconId();
       // ★ 自分の peerId を確実に保持（ホストが送ってきた state で上書きされないよう）
       if(NET.peer?.id) G.players[NET.myIdx].peerId = NET.peer.id;
     }
@@ -8346,7 +8442,7 @@ function makePlayer(id,dealer){
   }
 
   // アイコンIDはゲーム開始後に myName 受信時に上書きされるため、ここでは暫定値のみ
-  const pIconId = (id === NET.myIdx) ? (PROFILE.iconId || '') : (CPU_PROFILE[pAbility]?.icon || 'C01');
+  const pIconId = (id === NET.myIdx) ? (_getProfileDisplayIconId()) : (CPU_PROFILE[pAbility]?.icon || 'C01');
 
   const _cpuDefaultTitles = {'light':'一暗刻'};
   const pEquippedTitle = (id === NET.myIdx) ? (PROFILE.equippedTitle || '') : (G && G.players && G.players[id] && G.players[id].equippedTitle) || (_cpuDefaultTitles[pAbility] || '');
@@ -10102,10 +10198,14 @@ function handleWin(widx,winTile,isTsumo,losidx){
     const isYM = G.players[widx] && G.players[widx].hand &&
       evalYaku([...G.players[widx].hand,winTile].slice(-5),winTile,isTsumo,G.players[widx],G.roundWind).some(y=>y.han>=13);
     if(isYM){
-      // アイコンボイスがあれば動画前に流すのでここではSFX.yakumanのみ（ボイスなし時）
+      // アイコンボイスがあれば動画前に流す。ボイスなし時はSFX.yakumanを再生
       const _ymIconId = _getPlayerIconId(widx);
       const _hasVoice = ICON_SE_MAP[_ymIconId] && (ICON_SE_MAP[_ymIconId][isTsumo?'tsumo':'ron']);
-      if(!_hasVoice) SFX.yakuman();
+      if(_hasVoice){
+        playSeFallback(widx, isTsumo?'tsumo':'ron', ()=>SFX.yakuman());
+      } else {
+        SFX.yakuman();
+      }
     }
     else if(isTsumo) playSeFallback(widx, 'tsumo', ()=>SFX.tsumo());
     else playSeFallback(widx, 'ron', ()=>SFX.ron());
@@ -11388,7 +11488,7 @@ function checkEnd(){
 }
 // 💣 BOMBモード: 結果をDBに送信する共通ヘルパー
 function _bombSendResult(stage, score){
-  const bombEarned = stage >= 5 ? stage * 2 : 0;
+  const bombEarned = stage >= 5 ? 20 + (stage - 5) * 7 : 0;
   authFetch('/api/bomb/result',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({stage, score})})
   .then(r=>r.json()).then(d=>{
@@ -11433,8 +11533,8 @@ function _soloShowFinalResult(cleared){
       <span style="font-size:.65rem;color:#5a7a6a;letter-spacing:.1em;">持ち点</span><br>
       <span style="font-size:1.3rem;font-weight:700;color:${score>=0?'var(--gold2)':'#ff7777'};">${score.toLocaleString()} 点</span>
     </td></tr>`;
-  // 💣 BOMBモード: ステージクリアごとにコイン2枚付与
-  const bombEarned = stage >= 5 ? stage * 2 : 0;
+  // 💣 BOMBモード: ステージ5到達で20コイン、以降1ステージごとに+7コイン
+  const bombEarned = stage >= 5 ? 20 + (stage - 5) * 7 : 0;
   const rewardEl=document.getElementById('resultCoinReward');
   if(rewardEl) rewardEl.innerHTML=`🎯 スコア：ステージ ${stage} 到達 / ${score.toLocaleString()} 点`;
   // DB送信（共通ヘルパー）
@@ -12102,6 +12202,8 @@ function backToLobby(){
 // ============================================================
 // 役満動画マップ
 let _yakumanVideoVol = 0.1; // 役満動画音量
+let _gachaVideoVol   = 0.8; // 常設ガチャ演出動画音量
+let _gachaSeVol      = 0.8; // 常設ガチャ演出SE（ピカ）音量
 const YAKUMAN_VIDEOS = {
   '国士無双（東南西北中）': 'https://raw.githubusercontent.com/tenibi/tenibijan/main/yakuman/kokusimusou.mp4',
   '人和':         'https://raw.githubusercontent.com/tenibi/tenibijan/main/yakuman/renhou.mp4',
@@ -13836,7 +13938,7 @@ function renderTable(){
     leftPanel.classList.add('player-icon-panel');
     const windOrb2 = document.createElement('div');
     windOrb2.className='wind-orb'+(p.isDealer?' dealer-orb':'');
-    const _orbIconId = isHuman ? (PROFILE&&PROFILE.iconId||'') : (p.iconId||'');
+    const _orbIconId = isHuman ? (PROFILE&&_getProfileDisplayIconId()) : (p.iconId||'');
     if(_orbIconId){
       windOrb2.style.cssText='width:80px;height:112px;flex-shrink:0;border-radius:8px;overflow:hidden;background:transparent;display:flex;align-items:center;justify-content:center;';
       const _orbImg=document.createElement('img');
@@ -14678,7 +14780,11 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}};
+// vcIconId: VCアイコン（音声SE用）、未設定時はiconIdを使用
+// displayIconId: 見た目アイコン（画面表示用）、未設定時はiconIdを使用
+function _getProfileDisplayIconId(){ return PROFILE.displayIconId || PROFILE.iconId || ''; }
+function _getProfileVcIconId(){ return PROFILE.vcIconId || PROFILE.iconId || ''; }
 
 // ── タイトル背景リスト ──────────────────────────────
 const TITLE_BG_LIST = [
@@ -15456,6 +15562,8 @@ function loadProfile(){
         totalPulls: data.totalPulls ?? PROFILE.totalPulls,
         gachaIcons: data.gachaIcons ?? PROFILE.gachaIcons,
         iconId:          data.iconId          || PROFILE.iconId,
+        vcIconId:        data.vcIconId        ?? PROFILE.vcIconId      ?? '',
+        displayIconId:   data.displayIconId   ?? PROFILE.displayIconId ?? '',
         ability:         data.ability         ?? PROFILE.ability,
         name:            data.name            || PROFILE.name,
         ownedEmoteSets:       data.ownedEmoteSets      ?? PROFILE.ownedEmoteSets ?? ['01'],
@@ -15932,39 +16040,96 @@ function selectIcon(el,icon){ } // legacy (emoji icons removed)
 
 function updateIconDisplay(el){
   if(!el) return;
-  if(PROFILE.iconId){
+  const _dispId = _getProfileDisplayIconId();
+  if(_dispId){
     el.innerHTML='';
     el.style.fontSize='';
     el.style.color='';
     const img=document.createElement('img');
-    img.src=gachaIconUrl(PROFILE.iconId);
-    img.style.cssText='width:64px;height:90px;object-fit:contain;border-radius:8px;background:#fff;';
+    img.src=gachaIconUrl(_dispId);
+    img.style.cssText='width:100%;height:100%;object-fit:contain;border-radius:8px;background:#fff;';
     el.appendChild(img);
   } else {
     el.innerHTML='';
-    el.style.fontSize='.55rem';
-    el.style.color='#3a5a4a';
+    el.style.fontSize='.45rem';
+    el.style.color='#5a3a1a';
     el.textContent='未設定';
+  }
+  // VCアイコン欄も更新
+  const _vcEl = document.getElementById('iconDisplayVC');
+  if(_vcEl){
+    const _vcId = _getProfileVcIconId();
+    if(_vcId){
+      _vcEl.innerHTML='';
+      _vcEl.style.fontSize='';
+      _vcEl.style.color='';
+      const img2=document.createElement('img');
+      img2.src=gachaIconUrl(_vcId);
+      img2.style.cssText='width:100%;height:100%;object-fit:contain;border-radius:8px;background:#fff;';
+      _vcEl.appendChild(img2);
+    } else {
+      _vcEl.innerHTML='';
+      _vcEl.style.fontSize='.45rem';
+      _vcEl.style.color='#3a5a7a';
+      _vcEl.textContent='未設定';
+    }
   }
 }
 
 function toggleIconPopup(){
-  openIconCollection();
+  openIconCollectionSlot('vc');
+}
+
+function openIconCollectionSlot(slot){
+  _iconSlotMode = slot || 'vc';
+  const btnVC   = document.getElementById('iconSlotBtnVC');
+  const btnDisp = document.getElementById('iconSlotBtnDisp');
+  if(btnVC)   { btnVC.classList.toggle('active-vc',   _iconSlotMode==='vc');   btnVC.classList.toggle('active-disp', false); }
+  if(btnDisp) { btnDisp.classList.toggle('active-disp', _iconSlotMode==='disp'); btnDisp.classList.toggle('active-vc', false); }
+  document.getElementById('profileScreen').classList.remove('active');
+  document.getElementById('iconCollectionScreen').classList.add('active');
+  _updateIconSlotPreviews();
+  renderIconCollection();
 }
 
 // ============================================================
 // ICON COLLECTION SCREEN
 // ============================================================
-function openIconCollection(){
-  document.getElementById('profileScreen').classList.remove('active');
-  document.getElementById('iconCollectionScreen').classList.add('active');
+// 現在選択中のスロット: 'vc'=VCアイコン / 'disp'=見た目アイコン
+let _iconSlotMode = 'vc';
+
+function selectIconSlot(slot){
+  _iconSlotMode = slot;
+  const btnVC   = document.getElementById('iconSlotBtnVC');
+  const btnDisp = document.getElementById('iconSlotBtnDisp');
+  if(btnVC)   { btnVC.classList.toggle('active-vc',   slot==='vc');   btnVC.classList.remove('active-disp'); }
+  if(btnDisp) { btnDisp.classList.toggle('active-disp', slot==='disp'); btnDisp.classList.remove('active-vc'); }
   renderIconCollection();
 }
+
+function _updateIconSlotPreviews(){
+  const vcId   = PROFILE.vcIconId   || PROFILE.iconId || '';
+  const dispId = PROFILE.displayIconId || PROFILE.iconId || '';
+  const preVC   = document.getElementById('iconSlotPreviewVC');
+  const preDisp = document.getElementById('iconSlotPreviewDisp');
+  if(preVC){
+    preVC.innerHTML = vcId
+      ? `<img src="${gachaIconUrl(vcId)}" alt="${vcId}">`
+      : '<span>未設定</span>';
+  }
+  if(preDisp){
+    preDisp.innerHTML = dispId
+      ? `<img src="${gachaIconUrl(dispId)}" alt="${dispId}">`
+      : '<span>未設定</span>';
+  }
+}
+
+function openIconCollection(){ openIconCollectionSlot('vc'); }
 
 function closeIconCollection(){
   document.getElementById('iconCollectionScreen').classList.remove('active');
   document.getElementById('profileScreen').classList.add('active');
-  // refresh icon display after returning
+  // プロフィール画面のiconDisplayを更新（見た目アイコンを表示）
   const _id=document.getElementById('iconDisplay');
   if(_id) updateIconDisplay(_id);
 }
@@ -15973,7 +16138,9 @@ function renderIconCollection(){
   const content=document.getElementById('iconCollectionContent');
   if(!content) return;
   const owned=new Set(PROFILE.gachaIcons||[]);
-  const equippedId=PROFILE.iconId||'';
+  const vcId   = PROFILE.vcIconId   || PROFILE.iconId || '';
+  const dispId = PROFILE.displayIconId || PROFILE.iconId || '';
+  const isVC   = _iconSlotMode === 'vc';
 
   const rarityOrder=['legend','epic','rare','normal'];
   const rarityMeta={
@@ -15983,6 +16150,26 @@ function renderIconCollection(){
     normal:{label:'NORMAL', color:'#5a8a7a', bg:'#0a1a14', border:'#2a4a3a', labelBg:'#081410'},
   };
 
+  function _cardBadges(id){
+    const isVC2   = vcId   === id;
+    const isDisp2 = dispId === id;
+    let b = '';
+    if(isVC2)   b += '<div class="ic-vc-badge">🎤VC</div>';
+    if(isDisp2) b += '<div class="ic-disp-badge">🖼見た目</div>';
+    return b;
+  }
+  function _cardBorderColor(id, fallback){
+    const isVC2   = vcId   === id;
+    const isDisp2 = dispId === id;
+    if(isVC2 && isDisp2) return '#ffd700';
+    if(isVC2)   return '#88aaff';
+    if(isDisp2) return '#ffaa44';
+    return fallback;
+  }
+  function _cardClass(id){
+    return (vcId===id||dispId===id) ? 'equipped-card' : '';
+  }
+
   // ローカル管理アイコン（常時所持）を最初に表示
   let html='';
   if(LOCAL_ICONS.length > 0){
@@ -15991,11 +16178,11 @@ function renderIconCollection(){
       <div class="icon-col-rarity-label" style="color:#aaccaa;background:#081410;border:1px solid #2a4a3a;">スターター</div>
       <div class="icon-col-grid">`;
     for(const icon of LOCAL_ICONS){
-      const isEq = equippedId === icon.id;
-      html += `<div class="icon-col-card owned ${isEq?'equipped-card':''}" style="background:${m.bg};border-color:${isEq?'#ffd700':m.border};" onclick="pickGachaIconFromCollection('${icon.id}')">
+      const bc = _cardBorderColor(icon.id, m.border);
+      html += `<div class="icon-col-card owned ${_cardClass(icon.id)}" style="background:${m.bg};border-color:${bc};" onclick="pickGachaIconFromCollection('${icon.id}')">
         <img src="${gachaIconUrl(icon.id)}" alt="${icon.id}">
         <div class="ic-label" style="color:#aaccaa;">${icon.label}</div>
-        ${isEq?'<div class="ic-equip-badge">装備中</div>':''}
+        ${_cardBadges(icon.id)}
       </div>`;
     }
     html += `</div></div>`;
@@ -16010,13 +16197,13 @@ function renderIconCollection(){
       <div class="icon-col-grid">`;
     for(const icon of icons){
       const isOwned=owned.has(icon.id);
-      const isEq=equippedId===icon.id;
-      html+=`<div class="icon-col-card ${isOwned?'owned':'unowned'} ${isEq?'equipped-card':''}" style="background:${m.bg};border-color:${isEq?'#ffd700':m.border};" ${isOwned?`onclick="pickGachaIconFromCollection('${icon.id}')"`:''}>
+      const bc = _cardBorderColor(icon.id, m.border);
+      html+=`<div class="icon-col-card ${isOwned?'owned':'unowned'} ${_cardClass(icon.id)}" style="background:${m.bg};border-color:${bc};" ${isOwned?`onclick="pickGachaIconFromCollection('${icon.id}')"`:''}>
         ${isOwned
           ?`<img src="${gachaIconUrl(icon.id)}" alt="${icon.id}">`
           :`<div class="ic-question">？</div>`}
         <div class="ic-label" style="color:${m.color};">${isOwned?icon.label:'???'}</div>
-        ${isEq?'<div class="ic-equip-badge">装備中</div>':''}
+        ${isOwned?_cardBadges(icon.id):''}
       </div>`;
     }
     html+=`</div></div>`;
@@ -16027,11 +16214,20 @@ function renderIconCollection(){
 function pickGachaIconFromCollection(id){
   const isLocal = LOCAL_ICONS.some(i=>i.id===id);
   if(!isLocal && (!PROFILE.gachaIcons||!PROFILE.gachaIcons.includes(id))) return;
-  PROFILE.iconId=id;
-  const {coins:_c2, abilities:_ab2, ability:_abl2, tbbCoins:_tbb2, ...profileToCache2} = PROFILE; // coins/abilities/ability/tbbCoins はlocalStorageに保存しない
+
+  if(_iconSlotMode === 'vc'){
+    PROFILE.vcIconId = id;
+  } else {
+    PROFILE.displayIconId = id;
+    // 見た目アイコン変更時はiconId(ネットワーク送信用)も更新
+    PROFILE.iconId = id;
+  }
+
+  const {coins:_c2, abilities:_ab2, ability:_abl2, tbbCoins:_tbb2, ...profileToCache2} = PROFILE;
   try{ localStorage.setItem('mjProfile',JSON.stringify(profileToCache2)); }catch(e){}
   updateProfileBadge();
-  closeIconCollection();
+  _updateIconSlotPreviews();
+  renderIconCollection(); // バッジ表示をその場で更新（画面は閉じない）
 }
 
 function renderProfileGachaIcons(){
@@ -16045,20 +16241,28 @@ function renderProfileGachaIcons(){
     return;
   }
   if(noIcon) noIcon.style.display='none';
-  const equippedId=PROFILE.iconId||'';
+  const vcId   = PROFILE.vcIconId   || PROFILE.iconId || '';
+  const dispId = PROFILE.displayIconId || PROFILE.iconId || '';
   let html='';
   for(const id of owned){
     const info=GACHA_ICONS.find(i=>i.id===id);
     const rdKey=id.startsWith('L')?'legend':id.startsWith('E')?'epic':id.startsWith('R')?'rare':'normal';
     const rd=RARITY_TABLE.find(r=>r.rarity===rdKey)||RARITY_TABLE[3];
-    const isEq=equippedId===id;
-    html+=`<div onclick="pickGachaIcon('${id}');renderProfileGachaIcons();" style="cursor:pointer;text-align:center;border:2px solid ${isEq?'#ffd700':rd.border};border-radius:8px;padding:3px;background:${rd.bg};position:relative;">
+    const isVC   = vcId   === id;
+    const isDisp = dispId === id;
+    const borderColor = (isVC&&isDisp)?'#ffd700':isVC?'#88aaff':isDisp?'#ffaa44':rd.border;
+    html+=`<div onclick="pickGachaIcon('${id}');renderProfileGachaIcons();" style="cursor:pointer;text-align:center;border:2px solid ${borderColor};border-radius:8px;padding:3px;background:${rd.bg};position:relative;">
       <img src="${gachaIconUrl(id)}" style="width:80px;height:112px;object-fit:contain;border-radius:6px;display:block;margin:0 auto;background:#fff;" alt="${id}">
       <div style="font-size:.42rem;color:${rd.color};margin-top:1px;">${info?info.label:id}</div>
-      ${isEq?'<div style="position:absolute;top:2px;right:3px;font-size:.4rem;background:#2a1a00;color:#ffd700;border-radius:3px;padding:1px 3px;">装備</div>':''}
+      ${isVC?'<div style="position:absolute;top:2px;left:3px;font-size:.38rem;background:#0a0a30;color:#88aaff;border:1px solid #4466ff;border-radius:3px;padding:1px 3px;">🎤VC</div>':''}
+      ${isDisp?'<div style="position:absolute;top:2px;right:3px;font-size:.38rem;background:#1a0a00;color:#ffcc66;border:1px solid #ff8800;border-radius:3px;padding:1px 3px;">🖼見た目</div>':''}
     </div>`;
   }
   grid.innerHTML=html;
+}
+// プロフィールガチャグリッドからタップ → アイコン図鑑(VCスロット)へ誘導
+function pickGachaIcon(id){
+  openIconCollectionSlot('vc');
 }
 function pickIcon(icon){ } // legacy (emoji icons removed)
 // ============================================================
@@ -16386,10 +16590,10 @@ function _playIconSe(iconId, action, fallback) {
   a.play().catch(()=>{});
 }
 
-// pidxからiconIdを取得するヘルパー
+// pidxからiconIdを取得するヘルパー（VC用: 自分はvcIconId優先）
 function _getPlayerIconId(pidx) {
-  // 自分自身はPROFILEから確実に取得
-  if (pidx === NET.myIdx) return PROFILE.iconId || '';
+  // 自分自身はPROFILEから確実に取得（VCアイコン優先）
+  if (pidx === NET.myIdx) return _getProfileVcIconId();
   // 他プレイヤー: G.playersを優先、空ならNET.guestIconIds[pidx-1]で補完
   const fromG = (G && G.players && G.players[pidx]) ? (G.players[pidx].iconId || '') : '';
   if (fromG) return fromG;
@@ -16532,6 +16736,7 @@ function _playGachaVideo(results, onEnded){
   vid.src         = src;
   vid.autoplay    = true;
   vid.muted       = false;
+  vid.volume      = _gachaVideoVol;
   vid.playsInline = true;
   vid.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;';
 
@@ -16776,7 +16981,7 @@ function showGachaAnim10(results){
   if(doFlashOpening){
     // ピカ効果音
     if(!window._gachaFlashAudio){ window._gachaFlashAudio=new Audio('https://raw.githubusercontent.com/tenibi/tenibijan/main/pika.mp3'); }
-    try{ window._gachaFlashAudio.currentTime=0; window._gachaFlashAudio.play().catch(()=>{}); }catch(e){}
+    try{ window._gachaFlashAudio.currentTime=0; window._gachaFlashAudio.volume=_gachaSeVol; window._gachaFlashAudio.play().catch(()=>{}); }catch(e){}
 
     // 白フラッシュオーバーレイを作成
     const flashOverlay = document.createElement('div');
@@ -17045,6 +17250,61 @@ function updateTbbGachaStat(){
 }
 
 // TBBガチャ: 150TBBで1回、刺青01 or 指輪が排出
+// ── TBBガチャ演出動画 ──────────────────────────────────────────
+function _playTbbGachaVideo(callback){
+  // オーバーレイを作成（既存があれば使い回す）
+  let overlay = document.getElementById('_tbbVideoOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = '_tbbVideoOverlay';
+    overlay.style.cssText = [
+      'position:fixed','inset:0','z-index:99999',
+      'background:#000','display:flex',
+      'align-items:center','justify-content:center',
+      'cursor:pointer'
+    ].join(';');
+    const vid = document.createElement('video');
+    vid.id = '_tbbGachaVideo';
+    vid.src = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/gachaUI/TBBgacha.webm';
+    vid.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;';
+    vid.setAttribute('playsinline','');
+    vid.setAttribute('preload','auto');
+    overlay.appendChild(vid);
+    // スキップラベル
+    const skip = document.createElement('div');
+    skip.textContent = 'タップでスキップ ▶';
+    skip.style.cssText = [
+      'position:absolute','bottom:24px','left:50%',
+      'transform:translateX(-50%)',
+      'color:rgba(255,255,255,.45)','font-size:.65rem',
+      'letter-spacing:.1em','pointer-events:none'
+    ].join(';');
+    overlay.appendChild(skip);
+    document.body.appendChild(overlay);
+  }
+  const vid = document.getElementById('_tbbGachaVideo');
+  overlay.style.display = 'flex';
+  vid.currentTime = 0;
+
+  function _finish(){
+    overlay.style.display = 'none';
+    vid.pause();
+    overlay.removeEventListener('click', _onSkip);
+    vid.removeEventListener('ended', _finish);
+    callback();
+  }
+  function _onSkip(){ _finish(); }
+
+  vid.addEventListener('ended', _finish, {once:true});
+  overlay.addEventListener('click', _onSkip, {once:true});
+
+  vid.play().catch(()=>{
+    // 再生できない場合はそのまま結果画面へ
+    overlay.style.display = 'none';
+    callback();
+  });
+}
+
 function doPullTbb(){
   const cost = 150;
   const btn=document.getElementById('tbbPullBtn');
@@ -17103,7 +17363,7 @@ function doPullTbb(){
     saveProfileSilent();
     updateGachaTbbDisplay();
     updateTbbGachaStat();
-    _showTbbGachaAnim(wonItem, isNew);
+    _playTbbGachaVideo(()=>{ _showTbbGachaAnim(wonItem, isNew); });
   }).catch((e)=>{
     if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）'; }
     _showTbbMsg('通信エラーが発生しました。再度お試しください');
@@ -17979,6 +18239,8 @@ function saveProfileSilent(){
     body:JSON.stringify({
       gachaIcons:      PROFILE.gachaIcons||[],
       iconId:          PROFILE.iconId||'',
+      vcIconId:        PROFILE.vcIconId||'',
+      displayIconId:   PROFILE.displayIconId||'',
       ability:         PROFILE.ability||'',
       name:            PROFILE.name||'',
       ownedEmoteSets:  PROFILE.ownedEmoteSets||['01'],
@@ -18018,8 +18280,9 @@ function updateProfileBadge(){
   const lpcTbbCoins = document.getElementById('lpcTbbCoins');
   if(lpcTbbCoins) lpcTbbCoins.innerHTML = '<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:2px;">' + (PROFILE.tbbCoins!=null ? PROFILE.tbbCoins.toLocaleString() : '---');
   if(lpcIconInner){
-    if(PROFILE.iconId){
-      lpcIconInner.innerHTML = `<img src="${gachaIconUrl(PROFILE.iconId)}" alt="${PROFILE.iconId}">`;
+    const _dispId = _getProfileDisplayIconId();
+    if(_dispId){
+      lpcIconInner.innerHTML = `<img src="${gachaIconUrl(_dispId)}" alt="${_dispId}">`;
       lpcIconInner.style.fontSize='';
       lpcIconInner.style.color='';
     } else {
@@ -18038,8 +18301,9 @@ function updateProfileBadge(){
     const pt=g('llPTbb');   if(pt) pt.textContent = PROFILE.tbbCoins!=null ? PROFILE.tbbCoins.toLocaleString() : '---';
     const iconWrap=g('llIconInner');
     if(iconWrap){
-      if(PROFILE.iconId){
-        iconWrap.innerHTML = `<img src="${gachaIconUrl(PROFILE.iconId)}" alt="${PROFILE.iconId}">`;
+      const _dispId2 = _getProfileDisplayIconId();
+      if(_dispId2){
+        iconWrap.innerHTML = `<img src="${gachaIconUrl(_dispId2)}" alt="${_dispId2}">`;
       } else {
         iconWrap.innerHTML = '<span class="ll-icon-empty">アイコン<br>未設定</span>';
       }

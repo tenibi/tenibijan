@@ -546,6 +546,10 @@ body{
   .ll-trb.twitch:hover { border-color: #7a4acc; }
   .ll-trb.logout { border-color: #3a1a1a; color: #8a5a5a; }
   .ll-trb.logout:hover { border-color: #aa4444; }
+  @keyframes giftBannerPulse {
+    0%,100% { box-shadow: 0 0 0 0 #cc550033; border-color: #cc5500; }
+    50%      { box-shadow: 0 0 12px 4px #cc550055; border-color: #ff8833; }
+  }
 
   /* ===== 左アイコン (画面左1/3、中央右寄せ) ===== */
   #llCenterIconWrap {
@@ -2297,6 +2301,14 @@ body{
             <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
             <div style="font-size:.48rem;color:#ffd700;">L09</div>
           </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L10</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L11</div>
+          </div>
         </div>
       </div>
     </div>
@@ -3060,6 +3072,7 @@ body{
       <button class="ll-trb" onclick="openFriendScreen()" title="フレンド" id="llFriendBtn" style="position:relative;">
         <span>👥</span><span class="ll-label">フレンド</span>
         <span id="llFriendBadge" style="display:none;position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#ff4444;"></span>
+        <span id="llGiftBadge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:8px;background:#ff4444;color:#fff;font-size:.5rem;font-weight:700;line-height:16px;text-align:center;padding:0 3px;box-shadow:0 0 6px #ff444488;">0</span>
       </button>
       <button class="ll-trb logout" onclick="doGoogleLogout()" title="ログアウト">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;opacity:0.7;">
@@ -3092,6 +3105,18 @@ body{
       <button id="llModeBtn-bomb" class="ll-main-btn" onclick="_playBotanSe();startTitleBgmOnce();_llShowSub('bomb')" title="手にボム！">
         <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tbotan/bomu.png" alt="手にボム！">
       </button>
+    </div>
+  </div>
+
+  <!-- ギフト通知バナー（未受取ギフトがある場合のみ表示） -->
+  <div id="llGiftNotifyBanner" style="display:none;margin:0 auto 6px;max-width:900px;width:100%;cursor:pointer;" onclick="openFriendScreen()">
+    <div style="background:linear-gradient(135deg,#1a0a05,#0d0503);border:1px solid #cc5500;border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:10px;animation:giftBannerPulse 2s ease-in-out infinite;">
+      <span style="font-size:1.4rem;flex-shrink:0;">🎁</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.7rem;font-weight:700;color:#ffaa55;letter-spacing:.05em;">フレンドからのギフトが届いています！</div>
+        <div id="llGiftNotifyDesc" style="font-size:.58rem;color:#aa6633;margin-top:1px;">フレンド画面の受取ボックスを確認してください</div>
+      </div>
+      <span style="font-size:.6rem;color:#cc7733;flex-shrink:0;">タップして開く →</span>
     </div>
   </div>
 
@@ -3285,6 +3310,8 @@ body{
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L07 宣教師 斎藤勇貴</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L07',+this.value)"></div>
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L08 成金 斎藤勇貴</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L08',+this.value)"></div>
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L09 Ren</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L09',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L10 老拳師 チャン</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L10',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L11 工事現場 れいや</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L11',+this.value)"></div>
         </div>
       </div>
     </div>
@@ -9225,7 +9252,7 @@ function _updateAFKBtn(){
 function _applyIconVoiceSliders(){
   const container = document.getElementById('legendVoiceSliders');
   if(!container) return;
-  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09'];
+  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09','L10','L11'];
   const sliders = container.querySelectorAll('input[type=range]');
   sliders.forEach((sl, i) => {
     const id = ids[i];
@@ -15642,6 +15669,7 @@ function loadProfile(){
       loadDailyMissions();
       checkNewCharPresent();
       if(typeof refreshFriendBadge==='function') refreshFriendBadge();
+      if(typeof refreshGiftBadge==='function') refreshGiftBadge();
     })
     .catch(err=>{
       // 'unauthorized' は上のthenで処理済み（リダイレクト中）なのでスキップ
@@ -16455,7 +16483,7 @@ const GACHA_ICONS = [
   {id:'C07',rarity:'normal',label:'コモン07'},
   ...Array.from({length:2},(_,i)=>{const n=String(i+8).padStart(2,'0');return{id:`C${n}`,rarity:'normal',label:`コモン${n}`};}),
   ...Array.from({length:15},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`R${n}`,rarity:'rare',label:`レア${n}`};}),
-  ...Array.from({length:7},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`E${n}`,rarity:'epic',label:`エピック${n}`};}),
+  ...Array.from({length:13},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`E${n}`,rarity:'epic',label:`エピック${n}`};}),
   {id:'L01',rarity:'legend',label:'おはよう 手にビ'},
   {id:'L02',rarity:'legend',label:'添い寝 手にビ'},
   {id:'L03',rarity:'legend',label:'一緒にお風呂 手にビ'},
@@ -16465,6 +16493,8 @@ const GACHA_ICONS = [
   {id:'L07',rarity:'legend',label:'宣教師 斎藤勇貴'},
   {id:'L08',rarity:'legend',label:'成金 斎藤勇貴'},
   {id:'L09',rarity:'legend',label:'Ren'},
+  {id:'L10',rarity:'legend',label:'老拳師 チャン'},
+  {id:'L11',rarity:'legend',label:'工事現場 れいや'},
 ];
 // ローカル管理アイコン（ガチャ排出なし・常時所持）
 const LOCAL_ICONS = [
@@ -16561,12 +16591,26 @@ const ICON_SE_MAP = {
     ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron07.mp3',
     tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo07.mp3',
   },
+  'L10': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan08.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon08.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti08.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron08.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo08.mp3',
+  },
+  'L11': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan09.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon09.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti09.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron09.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo09.mp3',
+  },
 };
 
 // レジェンドアイコンごとの個別ボイス音量スケール (0〜1, デフォルト1)
 const iconVoiceScale = {
   'L01':1,'L02':1,'L03':1,'L04':1,'L05':1,
-  'L06':1,'L07':1,'L08':1,'L09':1,
+  'L06':1,'L07':1,'L08':1,'L09':1,'L10':1,'L11':1,
 };
 function setIconVoiceScale(iconId, val){
   iconVoiceScale[iconId] = Math.min(1, Math.max(0, val));
@@ -17307,7 +17351,7 @@ function _playTbbGachaVideo(callback){
 }
 
 function doPullTbb(){
-  const cost = 150;
+  const cost = 100;
   const btn=document.getElementById('tbbPullBtn');
   if((PROFILE.tbbCoins||0) < cost){
     const el=document.getElementById('gachaTbbDisplay');
@@ -17925,6 +17969,38 @@ function refreshFriendBadge(){
   }).catch(()=>{});
 }
 
+// タイトル画面ギフト通知バッジ＆バナー更新
+function refreshGiftBadge(){
+  authFetch('/api/gifts/inbox').then(r=>r.json()).then(d=>{
+    if(!d.ok) return;
+    const gifts = d.gifts || [];
+    const count = gifts.length;
+
+    // フレンドボタン上の数字バッジ
+    const giftBadge = document.getElementById('llGiftBadge');
+    if(giftBadge){
+      if(count > 0){
+        giftBadge.textContent = count > 99 ? '99+' : count;
+        giftBadge.style.display = '';
+      } else {
+        giftBadge.style.display = 'none';
+      }
+    }
+
+    // タイトル画面のギフト通知バナー
+    const banner = document.getElementById('llGiftNotifyBanner');
+    const desc   = document.getElementById('llGiftNotifyDesc');
+    if(banner){
+      if(count > 0){
+        if(desc) desc.textContent = count + '件のギフトが届いています。フレンド画面の受取ボックスを確認してください';
+        banner.style.display = '';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+  }).catch(()=>{});
+}
+
 // ============================================================
 // プレゼント機能
 // ============================================================
@@ -18225,6 +18301,8 @@ async function claimGift(giftId, btn){
     // バッジ更新
     const badge = document.getElementById('giftInboxBadge');
     if(badge){ const n=parseInt(badge.textContent||'1')-1; badge.textContent=n; if(n<=0) badge.style.display='none'; }
+    // タイトル画面のギフトバッジ＆バナーも更新
+    if(typeof refreshGiftBadge==='function') refreshGiftBadge();
   }catch(e){ alert('通信エラーが発生しました'); if(btn) btn.disabled=false; }
 }
 

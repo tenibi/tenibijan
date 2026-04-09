@@ -5941,6 +5941,7 @@ const RANK = {
   connectedGuests: 0,   // ホスト側: 接続済みゲスト数
   _gameStartFired: false, // ゲームスタート二重発火防止
   _cpuFillTimer: null,   // 1分タイムアウトでCPU埋めするタイマー
+  _isCpuFill: false,     // CPUで埋めてスタートしたランクマッチフラグ
   buttonCooldown: false, // ボタンクールタイム
   buttonClickCount: 0,   // 3人カウント用
 };
@@ -5998,8 +5999,9 @@ function _forceStartRankCPUGame(){
   document.getElementById('lobby').style.display='none';
   // RANKリセット（フラグは保持したまま画面だけ移行）
   RANK.searchStartAt=null; RANK.peerId=null; RANK.matchId=null;
+  RANK._isCpuFill=true; // CPUで埋めてスタートしたランクマッチフラグ
   // ゲーム設定（ランクマッチ相当）
-  NET.online=false; NET.isRankMatch=false;
+  NET.online=false; NET.isRankMatch=true; // ランクマッチ扱いを維持（レーティング変動のため）
   numPlayers=3;
   G_ABILITY_MODE=true; G_TIME_MODE=true; G_TOBI_MODE=true; G_TONPUU_MODE=false;
   // CPU能力をセット
@@ -6038,6 +6040,7 @@ function _rankReset(){
   RANK.opponents=[];
   RANK.connectedGuests=0;
   RANK._gameStartFired=false;
+  RANK._isCpuFill=false;
   RANK.buttonCooldown=false;
   RANK.buttonClickCount=0;
   const wp=document.getElementById('rankWaitPanel');
@@ -6175,11 +6178,11 @@ function _updateSearchTimer(){
 
 async function _pollRankStatus(){
   _updateSearchTimer();
-  // ── 1分経過・未マッチ → CPUで強制スタート ──
+  // ── 15秒経過・未マッチ → CPUで強制スタート ──
   if(RANK.searchStartAt && !RANK._gameStartFired){
     const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
-    if(elapsed >= 60){
-      console.log('マッチング1分経過 → CPUで強制スタート');
+    if(elapsed >= 15){
+      console.log('マッチング15秒経過 → CPUで強制スタート');
       _forceStartRankCPUGame();
       return;
     }
@@ -6299,17 +6302,17 @@ function _onRankMatched(data){
     // ★ランクマッチ ホストのPeerIDを記録（ゲストの復帰先として使う）
     NET.currentHostPeerId = NET.peer?.id || null;
 
-    // ── マッチング開始から累計1分でCPU埋め強制スタート ──────
+    // ── マッチング開始から累計15秒でCPU埋め強制スタート ──────
     {
       const elapsed = RANK.searchStartAt ? Math.floor((Date.now()-RANK.searchStartAt)/1000) : 0;
-      const remainingMs = Math.max(5000, (60 - elapsed) * 1000);
+      const remainingMs = Math.max(5000, (15 - elapsed) * 1000);
       RANK._cpuFillTimer = setTimeout(()=>{
         if(RANK._gameStartFired) return;
         if(!NET.isHost) return;
         RANK._gameStartFired = true;
-        console.log('ホスト: ゲスト待機タイムアウト → 空席をCPUで埋めてスタート');
+        console.log('ホスト: ゲスト待機タイムアウト → 空席をCPUで埋めてスタート (接続済みゲスト数:', RANK.connectedGuests, ')');
         _rankCpuUsedNames = NET.guestNames.filter(Boolean); // 既接続の名前を除外
-        // 不足スロットをCPUで埋める
+        // 不足スロットをCPUで埋める（既接続ゲストのスロットは保持）
         const needed = 2 - RANK.connectedGuests;
         for(let i=0;i<needed;i++){
           const cfg = _getRankCpuConfig();
@@ -6324,15 +6327,25 @@ function _onRankMatched(data){
           NET.guestEquippedTitles  = NET.guestEquippedTitles||[];
           NET.guestEquippedTitles[slot] = cfg.title;
         }
-        // ゲームスタート
-        const membersInfo = [
-          {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
-          {name: NET.guestNames[0]||'CPU1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
-          {name: NET.guestNames[1]||'CPU2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||''},
-        ];
-        // 接続中のゲストにだけ送信
-        NET.conns.forEach((c,i)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo}); });
-        setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
+        // ゲームスタート（接続中ゲストへの送信を少し待って確実に届けるため遅延を入れる）
+        RANK._isCpuFill = true; // CPUで埋めたランクマッチフラグ
+        const _doStart = ()=>{
+          const membersInfo = [
+            {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
+            {name: NET.guestNames[0]||'CPU1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
+            {name: NET.guestNames[1]||'CPU2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||''},
+          ];
+          console.log('CPU埋めスタート membersInfo:', membersInfo, 'connectedGuests:', RANK.connectedGuests);
+          // 接続中のゲスト全員に送信（CPUスロット=nullは除外）
+          NET.conns.forEach((c,i)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true}); });
+          setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
+        };
+        // 接続中ゲストがいる場合は少し待ってからスタート（myName受信猶予）
+        if(RANK.connectedGuests > 0){
+          setTimeout(_doStart, 1200);
+        } else {
+          _doStart();
+        }
       }, remainingMs);
     }
   } else {
@@ -7464,6 +7477,7 @@ function onNetData(msg, senderIdx){
       }
       
       NET.online=true;
+      if(msg.isCpuFill) RANK._isCpuFill = true; // CPUで埋めたランクマッチフラグをゲストにも反映
       bgmToGame();
       hideRoomLobby();
       document.getElementById('lobby').style.display='none';
@@ -8264,7 +8278,7 @@ function loadCpuGameSettings(){
 // ゲームモードボタンのactive状態を現在の変数値に合わせて反映
 function _applyCpuGameSettingsUI(){
   // 人数ボタン
-  const cntBtns=[...document.querySelectorAll('#lobbySolo .pcnt-btn')].filter(b=>['selectCount(2)','selectCount(3)','selectCount(4)'].some(s=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes(s)));
+  const cntBtns=[...document.querySelectorAll('.pcnt-btn')].filter(b=>['selectCount(2)','selectCount(3)','selectCount(4)'].some(s=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes(s)));
   cntBtns.forEach(b=>{
     const m=b.getAttribute('onclick').match(/selectCount\((\d)\)/);
     if(m) b.classList.toggle('active', parseInt(m[1])===numPlayers);
@@ -8353,7 +8367,8 @@ const CPU_ABILITY_OPTIONS = [
 function selectCount(n){
   numPlayers=n;
   // ２人=index0、３人=index1、４人=index2（人数ボタン3つのみ対象）
-  const cntBtns=[...document.querySelectorAll('#lobbySolo .pcnt-btn')].filter(b=>['selectCount(2)','selectCount(3)','selectCount(4)'].some(s=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes(s)));
+  // #lobbySoloがサブパネルに移動している場合も含めてdocument全体から検索
+  const cntBtns=[...document.querySelectorAll('.pcnt-btn')].filter(b=>['selectCount(2)','selectCount(3)','selectCount(4)'].some(s=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes(s)));
   cntBtns.forEach(b=>{
     const m=b.getAttribute('onclick').match(/selectCount\((\d)\)/);
     if(m) b.classList.toggle('active', parseInt(m[1])===n);
@@ -11848,6 +11863,18 @@ function showFinalResult(){
     }).then(r=>r.json()).then(d=>{
       if(d.ok && d.changes) _showRatingChanges(d.changes);
     }).catch(()=>{});
+  } else if(NET.isRankMatch && RANK._isCpuFill){
+    // CPUで埋めたランクマッチ: matchIdなしでサーバーにスコア提出
+    const myPlayer = G.players[NET.myIdx];
+    const myScore = myPlayer ? myPlayer.score : 0;
+    const myRank = sorted.findIndex(p=>p===myPlayer)+1 || 1;
+    authFetch('/rank/cpu-result',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({rank:myRank, score:myScore, numPlayers}),
+    }).then(r=>r.json()).then(d=>{
+      if(d.ok && d.changes) _showRatingChanges(d.changes);
+    }).catch(()=>{});
   }
 
   document.getElementById('resultOverlay').classList.add('show');
@@ -11932,6 +11959,15 @@ function showFinalResultData(sorted){
   if(ratingBox) ratingBox.style.display='none';
   if(NET.isRankMatch && !NET.isHost && RANK.matchId){
     _fetchRankResultForGuestWithRetry(0);
+  } else if(NET.isRankMatch && RANK._isCpuFill){
+    // CPUで埋めたランクマッチ（ゲスト側）: 自分のスコアをサーバーに提出
+    authFetch('/rank/cpu-result',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({rank:myRankG, score:myPlayer?myPlayer.score:0, numPlayers}),
+    }).then(r=>r.json()).then(d=>{
+      if(d.ok && d.changes) _showRatingChanges(d.changes);
+    }).catch(()=>{});
   }
 
   document.getElementById('resultOverlay').classList.add('show');
@@ -12355,7 +12391,7 @@ function backToLobby(){
   if(NET.peer){try{NET.peer.destroy();}catch(e){} NET.peer=null;NET.conn=null;NET.conns=[];NET.online=false;}
   NET.roomCode=null; NET.isHost=false; NET.isRankMatch=false; NET.roomTimeMode=false; NET.roomTobiMode=true;
   NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[]; NET.peerRegistry=[]; NET._lastActionId=0; stopSyncBroadcast();
-  RANK.matchId=null; RANK.connectedGuests=0;
+  RANK.matchId=null; RANK.connectedGuests=0; RANK._isCpuFill=false;
   setOnlineStatus('');
   document.getElementById('roomCodeBox').style.display='none';
   document.getElementById('waitingDots').style.display='';
@@ -18790,37 +18826,49 @@ function selectAbility(el,ability){
   // ---- サブパネル ----
   window._llCurrentSub = null;
 
+  // lobby-card の元の親要素を記憶しておく（移動後に元に戻すため）
+  const _llCardOrigParent = {};
+  const _llCardOrigNextSibling = {};
+
   window._llShowSub = function(mode){
-    // 縦画面側の同名関数を呼んでから、その lobby-card の中身をサブパネルにコピー表示
     const cardMap = { solo:'lobbySolo', online:'lobbyOnline', rank:'lobbyRank', bomb:'lobbyBomb' };
     const srcId = cardMap[mode];
     if(!srcId) return;
 
-    // まず縦画面側のモード選択関数を呼んで状態を初期化
-    if(mode==='solo')   { startTitleBgmOnce(); showSolo(); }
-    else if(mode==='online') { showOnline(); }
-    else if(mode==='rank')   { showRank(); }
-    else if(mode==='bomb')   { startTitleBgmOnce(); showBomb(); }
+    // 前のカードがあれば元の場所に戻す
+    if(_llCurrentSub && _llCurrentSub !== mode){
+      const prevId = cardMap[_llCurrentSub];
+      const prevEl = document.getElementById(prevId);
+      if(prevEl && _llCardOrigParent[prevId]){
+        const origParent = _llCardOrigParent[prevId];
+        const origNext   = _llCardOrigNextSibling[prevId];
+        if(origNext && origNext.parentNode === origParent){
+          origParent.insertBefore(prevEl, origNext);
+        } else {
+          origParent.appendChild(prevEl);
+        }
+        prevEl.style.display = 'none';
+      }
+    }
 
-    // lobby-card の中身をクローンしてサブパネルに表示
     const src = document.getElementById(srcId);
     const panel = document.getElementById('llSubPanelInner');
     if(!src || !panel) return;
 
-    panel.innerHTML = '';
-    // タイトル
-    const h3 = src.querySelector('h3');
-    if(h3){ const t=h3.cloneNode(true); panel.appendChild(t); }
-    // 中身（h3以外）
-    Array.from(src.children).forEach(child=>{
-      if(child.tagName!=='H3') panel.appendChild(child.cloneNode(true));
-    });
+    // まず縦画面側のモード選択関数を呼んで状態を初期化
+    if(mode==='solo')        { startTitleBgmOnce(); showSolo(); }
+    else if(mode==='online') { showOnline(); }
+    else if(mode==='rank')   { showRank(); }
+    else if(mode==='bomb')   { startTitleBgmOnce(); showBomb(); }
 
-    // ボタンのonclick属性を再バインド（cloneではイベントが消えるため）
-    panel.querySelectorAll('[onclick]').forEach(el=>{
-      const fn = el.getAttribute('onclick');
-      el.onclick = ()=>{ try{ eval(fn); }catch(e){} };
-    });
+    // 元の場所を記憶してからサブパネルに移動（cloneではなく実要素を移動）
+    if(!_llCardOrigParent[srcId]){
+      _llCardOrigParent[srcId]      = src.parentNode;
+      _llCardOrigNextSibling[srcId] = src.nextSibling;
+    }
+    panel.innerHTML = '';
+    src.style.display = '';  // 表示状態にする
+    panel.appendChild(src);  // 実要素をそのまま移動
 
     document.getElementById('llSubPanel').classList.add('open');
     _llCurrentSub = mode;

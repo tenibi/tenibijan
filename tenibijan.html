@@ -6207,16 +6207,15 @@ async function _pollRankStatus(){
   // ── status確認後: 未マッチかつ15秒経過 → CPUで強制スタート ──
   if(RANK.searchStartAt && !RANK._gameStartFired){
     const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
+    console.log('[RANK] elapsed:', elapsed, 'queueSize:', data.queueSize, 'matched:', data.matched, 'gameStartFired:', RANK._gameStartFired);
     if(elapsed >= 15){
-      // キューに2人以上いる場合（自分＋ホスト等）はホスト側がCPU埋めしてgameStartを送ってくるので待機継続
-      if(data.queueSize >= 2){
-        console.log('マッチング15秒経過 待機中:', data.queueSize, '人 → ホストのgameStartを待機継続');
-        return;
-      }
-      console.log('マッチング15秒経過 → CPUで強制スタート');
+      // 2人以上いる場合: サーバーでマッチング成立していないならCPUで強制スタート
+      console.log('マッチング15秒経過 (queueSize:', data.queueSize, ') → CPUで強制スタート');
       _forceStartRankCPUGame();
       return;
     }
+  } else {
+    console.log('[RANK] poll skip: searchStartAt=', RANK.searchStartAt, 'gameStartFired=', RANK._gameStartFired);
   }
 }
 
@@ -6300,8 +6299,8 @@ function _onRankMatched(data){
             const needed1 = 2 - RANK.connectedGuests;
             for(let i=0;i<needed1;i++){
               const cfg1 = _getRankCpuConfig();
-              const slot1 = NET.conns.filter(Boolean).length;
-              NET.conns.push(null);
+              const slot1 = RANK.connectedGuests + i; // 接続済みゲスト数の次のスロット
+              if(NET.conns.length <= slot1) NET.conns.push(null); else NET.conns[slot1]=null;
               NET.guestNames[slot1]     = cfg1.name;
               NET.guestAbilities[slot1] = cfg1.ability;
               NET.guestIconIds[slot1]   = cfg1.iconId;

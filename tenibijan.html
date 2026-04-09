@@ -6178,15 +6178,9 @@ function _updateSearchTimer(){
 
 async function _pollRankStatus(){
   _updateSearchTimer();
-  // ── 15秒経過・未マッチ → CPUで強制スタート ──
-  if(RANK.searchStartAt && !RANK._gameStartFired){
-    const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
-    if(elapsed >= 15){
-      console.log('マッチング15秒経過 → CPUで強制スタート');
-      _forceStartRankCPUGame();
-      return;
-    }
-  }
+  // ── まず /rank/status を確認してからCPUフォールバックを判断する ──
+  // ※ 15秒チェックをstatusより先に行うと、マッチング成立直後(15秒ちょうど)に
+  //   ゲスト側がマッチング情報を取得する前にCPU単独戦を始めてしまうバグが発生する
   let res;
   try { res = await authFetch('/rank/status'); } catch(e){ 
     console.error('ポーリングエラー:', e);
@@ -6208,6 +6202,16 @@ async function _pollRankStatus(){
     console.log('ゲスト側もマッチ検知');
     if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
     _onRankMatched(data);
+    return; // マッチング成立済みなので15秒チェックは不要
+  }
+  // ── status確認後: 未マッチかつ15秒経過 → CPUで強制スタート ──
+  if(RANK.searchStartAt && !RANK._gameStartFired){
+    const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
+    if(elapsed >= 15){
+      console.log('マッチング15秒経過 → CPUで強制スタート');
+      _forceStartRankCPUGame();
+      return;
+    }
   }
 }
 
@@ -6305,7 +6309,10 @@ function _onRankMatched(data){
     // ── マッチング開始から累計15秒でCPU埋め強制スタート ──────
     {
       const elapsed = RANK.searchStartAt ? Math.floor((Date.now()-RANK.searchStartAt)/1000) : 0;
-      const remainingMs = Math.max(5000, (15 - elapsed) * 1000);
+      // ★修正: ゲストの接続に最低でも12秒は確保する（旧:5秒では短すぎてゲストが間に合わない）
+      // ゲスト側の接続フロー: _rankGuestConnect 2500ms待機 + PeerJS接続 ~1-3s + joined送受信
+      // 2人分の接続を待つため余裕を持って12秒をミニマムに設定
+      const remainingMs = Math.max(12000, (15 - elapsed) * 1000);
       RANK._cpuFillTimer = setTimeout(()=>{
         if(RANK._gameStartFired) return;
         if(!NET.isHost) return;
@@ -8112,8 +8119,13 @@ function remoteWallPick(pidx,slotIdx){
   }
   const drawnIsKita=tile.suit==='honor'&&tile.num==='北';
   if(p.riichi&&!drawnIsKita){
-    addLog(`${emj(tile)} ツモ切り（リーチ中）`,'log-riichi');
-    scheduleForPlayer(pidx,550,()=>{discardAction(pidx,p.hand.length-1);broadcastState();});
+    // 暗槓可能な場合は自動ツモ切りをスキップし、プレイヤーに選択させる
+    const _ankanAvail = pidx===NET.myIdx ? canAnkan(pidx).length>0 : false;
+    if(!_ankanAvail){
+      addLog(`${emj(tile)} ツモ切り（リーチ中）`,'log-riichi');
+      scheduleForPlayer(pidx,550,()=>{discardAction(pidx,p.hand.length-1);broadcastState();});
+    }
+    // 暗槓できる場合はrenderAllで右下クイックボタンを表示して待つ
   }else{
     addLog(`${emj(tile)} ツモ`,'log-new');
     // 自分の番なら自動切りを発火
@@ -8758,7 +8770,7 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
 
   for(const p of G.players){
     for(let i=0;i<4;i++)p.hand.push(G.deck.pop());
-    p.hand=sortTiles(p.hand);
+    if(!p.isCpu) p.hand=sortTiles(p.hand);
     updateTenpai(p);
   }
 
@@ -9013,9 +9025,9 @@ function discardAction(pidx,tidx,isYami=false){ if(pidx===NET.myIdx){ _timerSave
   // 闇指定牌を捨てた場合はyamiTileIdxをリセット、そうでなければソート後に再計算
   if(isYami || tile===yamiTileObj){
     p.yamiTileIdx=-1;
-    if(pidx!==NET.myIdx||autoSortEnabled) p.hand=sortTiles(p.hand);
+    if((pidx!==NET.myIdx&&!p.isCpu)||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);
   } else {
-    if(pidx!==NET.myIdx||autoSortEnabled) p.hand=sortTiles(p.hand);
+    if((pidx!==NET.myIdx&&!p.isCpu)||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);
     p.yamiTileIdx = yamiTileObj ? p.hand.findIndex(t=>t===yamiTileObj) : -1;
   }
   updateTenpai(p);
@@ -9078,7 +9090,7 @@ function handleKakan(pidx, handIdx){
   }
   // 槍槓チェック: 他プレイヤーがこの牌でロンできるか
   if(_startRonQueue(pidx, tile, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op), true)) return;
-  if(pidx!==NET.myIdx||autoSortEnabled) p.hand=sortTiles(p.hand);updateTenpai(p);
+  if((pidx!==NET.myIdx&&!p.isCpu)||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);updateTenpai(p);
   G.phase='discard';
   // 嶺上牌を選択状態にする（自分の番のみ）
   if(pidx===NET.myIdx){ const rIdx=p.hand.findIndex(t=>t===rep); selIdx=rIdx>=0?rIdx:p.hand.length-1; }
@@ -9152,7 +9164,7 @@ function handleAnkan(pidx, tileKey){
     scheduleForPlayer(pidx,900,()=>{if(!checkPon(pidx,rep))nextTurn((pidx+1)%numPlayers);broadcastState();});
     return;
   }
-  if(pidx!==NET.myIdx||autoSortEnabled) p.hand=sortTiles(p.hand);updateTenpai(p);
+  if((pidx!==NET.myIdx&&!p.isCpu)||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);updateTenpai(p);
   G.phase='discard';
   // 嶺上牌を選択状態にする（自分の番のみ）
   if(pidx===NET.myIdx){ const rIdx=p.hand.findIndex(t=>t===rep); selIdx=rIdx>=0?rIdx:p.hand.length-1; }
@@ -9201,7 +9213,7 @@ function handlePon(pidx,tile,fromPidx){
   let rm=0;p.hand=p.hand.filter(t=>{if(rm<2&&teq(t,tile)){rm++;return false;}return true;});
   p.melds.push({type:'pon',tiles:[tile,tile,tile],from:fromPidx});
   const yamiTileP = (p.yamiTileIdx>=0&&p.yamiTileIdx<p.hand.length)?p.hand[p.yamiTileIdx]:null;
-  if(pidx!==NET.myIdx||autoSortEnabled) p.hand=sortTiles(p.hand);
+  if((pidx!==NET.myIdx&&!p.isCpu)||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);
   p.yamiTileIdx = yamiTileP ? p.hand.findIndex(t=>t===yamiTileP) : -1;
   updateTenpai(p);
   addLog(`${p.name} がポン！ ${emj(tile)}`,'log-new');
@@ -11388,7 +11400,7 @@ function handleMinkan(pidx,tile,fromPidx){
     scheduleForPlayer(pidx,900,()=>{if(!checkPon(pidx,rep))nextTurn((pidx+1)%numPlayers);broadcastState();});
     return;
   }
-  if(pidx!==NET.myIdx||autoSortEnabled) p.hand=sortTiles(p.hand);updateTenpai(p);
+  if((pidx!==NET.myIdx&&!p.isCpu)||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);updateTenpai(p);
   G.phase='discard';G.current=pidx;
   if(canWin(p.hand)){
     p.isRinshanKaihou=true;
@@ -14793,7 +14805,7 @@ function renderActions(){
       // ツモ上がり・北抜き・暗槓のいずれかができる場合のみツモ切りボタンを表示（赤色）
       if(canTsumo||canKita||canAnkanNow)html+=`<button class="btn btn-tsumogiri" onclick="humanDiscard()">ツモ切り [${tileLabel(drn)}]</button>`;
       // リーチ中の暗槓（待ちが変わらない場合のみ canAnkan が返す）
-      // 暗槓は右下クイックボタンへ
+      if(canAnkanNow){const _ras=canAnkan(NET.myIdx);for(const _ra of _ras){html+=`<button class="btn btn-default" onclick="humanAnkan('${_ra.key}')">暗槓 [${tileLabel(_ra.tile)}]</button>`;}}
     }else if(isPR){
       const sel=selIdx>=0?p.hand[selIdx]:null;
       const vs=sel&&G.riichiValidIdx&&G.riichiValidIdx.includes(selIdx);

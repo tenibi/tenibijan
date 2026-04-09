@@ -16794,14 +16794,24 @@ function _playGachaVideo(results, onEnded){
   vid.playsInline = true;
   vid.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;';
 
+  // スキップヒント
+  const skipHint = document.createElement('div');
+  skipHint.textContent = 'タップでスキップ ▶';
+  skipHint.style.cssText = 'position:absolute;bottom:20px;right:20px;color:#ffffff88;font-size:.72rem;pointer-events:none;letter-spacing:.05em;';
   overlay.appendChild(vid);
+  overlay.appendChild(skipHint);
+  overlay.style.cursor = 'pointer';
   document.body.appendChild(overlay);
 
+  let _finished = false;
   function finish(){
+    if(_finished) return;
+    _finished = true;
     overlay.remove();
     onEnded();
   }
 
+  overlay.addEventListener('click', finish);
   vid.addEventListener('ended', finish, {once:true});
   // 動画読み込み失敗時はスキップ
   vid.addEventListener('error', finish, {once:true});
@@ -17132,40 +17142,80 @@ function showGachaAnim10(results){
     const COLS=10, INTERVAL=320;
     const totalRows=Math.ceil(results.length/COLS);
 
+    // スキップ用状態管理
+    const _shownSet100 = new Set();
+    const _pendingTOs100 = [];
+    let _currentRow100 = 0;
+    let _spotlight100 = false;
+    function _safeTO100(fn,d){ const id=setTimeout(fn,d); _pendingTOs100.push(id); return id; }
+    function _cancelAll100(){ _pendingTOs100.forEach(clearTimeout); _pendingTOs100.length=0; }
+    function _popCard100(card){ if(_shownSet100.has(card)) return; _shownSet100.add(card); popCard(card); }
+
     function showRow100(row){
+      _currentRow100 = row;
       if(row >= totalRows){
-        // 全行完了
+        anim.removeEventListener('click', _skip100);
         if(best.rarity==='legend') SFX.yakuman?.();
         else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
         return;
       }
       _playPonSe();
-      // この行のカードをポップ & NEW収集
       const rowNewItems = [];
       for(let col=0; col<COLS; col++){
         const idx = row*COLS+col;
         const card = items[idx];
         if(card){
-          popCard(card);
+          _popCard100(card);
           if(results[idx] && (results[idx].isNew || results[idx].iconIsNew)){
             rowNewItems.push(results[idx]);
           }
         }
       }
       if(rowNewItems.length > 0){
-        // NEWあり: ポップアニメ後にスポットライト → 完了後に次行へ
-        setTimeout(()=>{
+        _spotlight100 = true;
+        _safeTO100(()=>{
           _showNewSpotlight(rowNewItems, 0, ()=>{
-            setTimeout(()=>showRow100(row+1), INTERVAL);
+            _spotlight100 = false;
+            _safeTO100(()=>showRow100(row+1), INTERVAL);
           });
         }, 420);
       } else {
-        // NEWなし: インターバル後に次行へ
-        setTimeout(()=>showRow100(row+1), INTERVAL);
+        _safeTO100(()=>showRow100(row+1), INTERVAL);
       }
     }
 
-    setTimeout(()=>showRow100(0), 300);
+    function _skip100(){
+      if(_spotlight100) return;
+      _cancelAll100();
+      // 現在行から次のNEWがある行を探す
+      let nextNewRow = -1;
+      for(let r=_currentRow100; r<totalRows; r++){
+        for(let c=0; c<COLS; c++){
+          const idx=r*COLS+c;
+          if(results[idx]&&(results[idx].isNew||results[idx].iconIsNew)){ nextNewRow=r; break; }
+        }
+        if(nextNewRow!==-1) break;
+      }
+      const endRow = nextNewRow!==-1 ? nextNewRow : totalRows-1;
+      const newItemsInRows=[];
+      for(let r=_currentRow100; r<=endRow; r++){
+        for(let c=0; c<COLS; c++){
+          const idx=r*COLS+c;
+          const card=items[idx];
+          if(card){ _popCard100(card); if(results[idx]&&(results[idx].isNew||results[idx].iconIsNew)) newItemsInRows.push(results[idx]); }
+        }
+      }
+      _currentRow100 = endRow+1;
+      if(newItemsInRows.length>0){
+        _spotlight100=true;
+        setTimeout(()=>{ _showNewSpotlight(newItemsInRows,0,()=>{ _spotlight100=false; showRow100(_currentRow100); }); },420);
+      } else {
+        showRow100(_currentRow100);
+      }
+    }
+
+    anim.addEventListener('click', _skip100);
+    _safeTO100(()=>showRow100(0), 300);
   } else {
     // 10連: 1枚ずつぽん、NEWが出るたびに一時停止→スポットライト→つぎへで再開
     const INTERVAL=300;
@@ -17175,35 +17225,40 @@ function showGachaAnim10(results){
       .map((r,i) => ({ r, i }))
       .filter(({r}) => r.isNew || r.iconIsNew);
 
+    // スキップ用状態管理
+    const _shownSet10 = new Set();
+    const _pendingTOs10 = [];
+    let _cursor10 = 0;
+    let _spotlight10 = false;
+    function _safeTO10(fn,d){ const id=setTimeout(fn,d); _pendingTOs10.push(id); return id; }
+    function _cancelAll10(){ _pendingTOs10.forEach(clearTimeout); _pendingTOs10.length=0; }
+    function _popCard10(card){ if(_shownSet10.has(card)) return; _shownSet10.add(card); popCard(card); }
+
     // 再帰的にカードをポンポンしてNEWで止める
     function ponFrom(startIdx, newQueue, onAllDone){
-      if(startIdx >= results.length){
-        onAllDone();
-        return;
-      }
-      // 次のNEWのインデックスを探す
+      _cursor10 = startIdx;
+      if(startIdx >= results.length){ onAllDone(); return; }
       const nextNew = newQueue.find(({i}) => i >= startIdx);
       const stopAt = nextNew ? nextNew.i : results.length - 1;
 
-      // startIdx から stopAt まで順番にポン
       let delay = 200;
       for(let i = startIdx; i <= stopAt; i++){
         (function(idx, d){
-          setTimeout(()=>{
+          _safeTO10(()=>{
             _playPonSe();
-            popCard(items[idx]);
+            _popCard10(items[idx]);
+            _cursor10 = idx + 1;
             if(idx === stopAt){
               if(nextNew){
-                // このカードがNEW → 420ms後にスポットライト
-                setTimeout(()=>{
+                _spotlight10 = true;
+                _safeTO10(()=>{
                   _showNewSpotlight([nextNew.r], 0, ()=>{
-                    // 残りのNEWキューから今回使ったものを除く
+                    _spotlight10 = false;
                     const remainQueue = newQueue.filter(({i}) => i > stopAt);
                     ponFrom(stopAt + 1, remainQueue, onAllDone);
                   });
                 }, 420);
               } else {
-                // NEWなし・最後まで完了
                 onAllDone();
               }
             }
@@ -17213,7 +17268,37 @@ function showGachaAnim10(results){
       }
     }
 
+    function _skip10(){
+      if(_spotlight10) return;
+      _cancelAll10();
+      const nextNew = newItemsWithIdx.find(({i}) => i >= _cursor10);
+      const stopAt = nextNew ? nextNew.i : results.length - 1;
+      for(let i = _cursor10; i <= stopAt; i++) _popCard10(items[i]);
+      _cursor10 = stopAt + 1;
+      if(nextNew){
+        _spotlight10 = true;
+        setTimeout(()=>{
+          _showNewSpotlight([nextNew.r], 0, ()=>{
+            _spotlight10 = false;
+            const remainQueue = newItemsWithIdx.filter(({i}) => i >= _cursor10);
+            ponFrom(_cursor10, remainQueue, ()=>{
+              anim.removeEventListener('click', _skip10);
+              if(best.rarity==='legend') SFX.yakuman?.();
+              else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
+            });
+          });
+        }, 420);
+      } else {
+        anim.removeEventListener('click', _skip10);
+        if(best.rarity==='legend') SFX.yakuman?.();
+        else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
+      }
+    }
+
+    anim.addEventListener('click', _skip10);
+
     ponFrom(0, newItemsWithIdx, ()=>{
+      anim.removeEventListener('click', _skip10);
       if(best.rarity==='legend') SFX.yakuman?.();
       else if(best.rarity==='rare'||best.rarity==='epic') SFX.draw?.();
     });

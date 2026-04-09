@@ -6208,6 +6208,11 @@ async function _pollRankStatus(){
   if(RANK.searchStartAt && !RANK._gameStartFired){
     const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
     if(elapsed >= 15){
+      // キューに2人以上いる場合（自分＋ホスト等）はホスト側がCPU埋めしてgameStartを送ってくるので待機継続
+      if(data.queueSize >= 2){
+        console.log('マッチング15秒経過 待機中:', data.queueSize, '人 → ホストのgameStartを待機継続');
+        return;
+      }
       console.log('マッチング15秒経過 → CPUで強制スタート');
       _forceStartRankCPUGame();
       return;
@@ -6280,6 +6285,43 @@ function _onRankMatched(data){
         conn.send({type:'joined', myIdx:guestIdx, abilityMode:true, members:3});
         RANK.connectedGuests++;
         setRankStatus(`対戦相手を待っています… (${RANK.connectedGuests}/2)`);
+        // ゲストが1人接続した時点で残り待機を短縮（累計15秒でCPU埋めスタート）
+        if(RANK.connectedGuests === 1 && !RANK._gameStartFired){
+          if(RANK._cpuFillTimer){ clearTimeout(RANK._cpuFillTimer); RANK._cpuFillTimer=null; }
+          const elapsed1 = RANK.searchStartAt ? Math.floor((Date.now()-RANK.searchStartAt)/1000) : 0;
+          const remainingMs1 = Math.max(5000, (15 - elapsed1) * 1000);
+          console.log('ゲスト1人接続: 残り', remainingMs1, 'ms でCPU埋めタイマーをリセット');
+          RANK._cpuFillTimer = setTimeout(()=>{
+            if(RANK._gameStartFired) return;
+            if(!NET.isHost) return;
+            RANK._gameStartFired = true;
+            console.log('ホスト: ゲスト1人のみ→CPU1体補填してスタート');
+            _rankCpuUsedNames = NET.guestNames.filter(Boolean);
+            const needed1 = 2 - RANK.connectedGuests;
+            for(let i=0;i<needed1;i++){
+              const cfg1 = _getRankCpuConfig();
+              const slot1 = NET.conns.filter(Boolean).length;
+              NET.conns.push(null);
+              NET.guestNames[slot1]     = cfg1.name;
+              NET.guestAbilities[slot1] = cfg1.ability;
+              NET.guestIconIds[slot1]   = cfg1.iconId;
+              NET.guestEmotes[slot1]    = '';
+              NET.guestReady[slot1]     = true;
+              NET.guestIsCpu[slot1]     = true;
+              NET.guestEquippedTitles   = NET.guestEquippedTitles||[];
+              NET.guestEquippedTitles[slot1] = cfg1.title;
+            }
+            RANK._isCpuFill = true;
+            const membersInfo1 = [
+              {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
+              {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
+              {name: NET.guestNames[1]||'CPU', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||''},
+            ];
+            console.log('CPU1体補填スタート:', membersInfo1);
+            NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfo1,isCpuFill:true}); });
+            setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
+          }, remainingMs1);
+        }
         if(RANK.connectedGuests >= 2 && !RANK._gameStartFired){
           RANK._gameStartFired = true;
           // 2人揃ったらゲームスタート（名前受信のため少し待つ）

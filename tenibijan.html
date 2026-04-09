@@ -5942,6 +5942,7 @@ const RANK = {
   _gameStartFired: false, // ゲームスタート二重発火防止
   _cpuFillTimer: null,   // 1分タイムアウトでCPU埋めするタイマー
   _isCpuFill: false,     // CPUで埋めてスタートしたランクマッチフラグ
+  _forceTried: false,    // 15秒CPU補填接続を試みたフラグ
   buttonCooldown: false, // ボタンクールタイム
   buttonClickCount: 0,   // 3人カウント用
 };
@@ -6041,6 +6042,7 @@ function _rankReset(){
   RANK.connectedGuests=0;
   RANK._gameStartFired=false;
   RANK._isCpuFill=false;
+  RANK._forceTried=false;
   RANK.buttonCooldown=false;
   RANK.buttonClickCount=0;
   const wp=document.getElementById('rankWaitPanel');
@@ -6204,18 +6206,110 @@ async function _pollRankStatus(){
     _onRankMatched(data);
     return; // マッチング成立済みなので15秒チェックは不要
   }
-  // ── status確認後: 未マッチかつ15秒経過 → CPUで強制スタート ──
+  // ── status確認後: 未マッチかつ15秒経過 ──────────────────────────
   if(RANK.searchStartAt && !RANK._gameStartFired){
     const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
-    console.log('[RANK] elapsed:', elapsed, 'queueSize:', data.queueSize, 'matched:', data.matched, 'gameStartFired:', RANK._gameStartFired);
     if(elapsed >= 15){
-      // 2人以上いる場合: サーバーでマッチング成立していないならCPUで強制スタート
-      console.log('マッチング15秒経過 (queueSize:', data.queueSize, ') → CPUで強制スタート');
+      // キューに2人以上いる場合: otherPeerIds があればP2P直接接続でCPU補填スタート
+      const others = data.otherPeerIds || data.queuePeerIds || [];
+      if(others.length > 0 && !RANK._forceTried){
+        RANK._forceTried = true;
+        console.log('マッチング15秒経過 queueSize>=2 → 相手PeerIDに直接接続してCPU補填スタート');
+        _rankForceConnectAndStart(others[0]);
+        return;
+      }
+      // 1人のみ or サーバーがotherPeerIdsを返さない場合はCPU2体でスタート
+      console.log('マッチング15秒経過 → CPUで強制スタート (queueSize:', data.queueSize, ')');
       _forceStartRankCPUGame();
       return;
     }
+  }
+}
+
+// ── 15秒タイムアウト時: 相手のPeerIDに直接接続してCPU1体補填でスタート ──
+function _rankForceConnectAndStart(otherPeerId){
+  if(RANK._gameStartFired) return;
+  // 自分のPeerIDと相手のPeerIDを比較し、辞書順で小さい方がホスト役
+  const myPeerId = RANK.peerId || '';
+  const iAmHost = myPeerId < otherPeerId;
+  console.log('[RANK forceFill] myPeer:', myPeerId, 'otherPeer:', otherPeerId, 'iAmHost:', iAmHost);
+
+  if(iAmHost){
+    // ── ホスト役: 相手からの接続を待ち、タイムアウトしたらCPU2体でスタート ──
+    RANK._gameStartFired = false; // 接続待ちなのでまだfalse
+    if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
+    NET.isHost = true;
+    NET.isRankMatch = true;
+    RANK.connectedGuests = 0;
+    _rankCpuUsedNames = [];
+    NET.guestNames = []; NET.guestAbilities = []; NET.guestIconIds = [];
+    NET.guestEmotes = []; NET.guestReady = []; NET.guestIsCpu = [];
+
+    NET.peer.off('connection');
+    NET.peer.on('connection', conn => {
+      if(RANK._gameStartFired) return;
+      const guestIdx = 1;
+      conn._playerIdx = guestIdx;
+      NET.conns = [conn]; NET.conn = conn;
+      conn.on('data', msg => onNetData(msg, conn._playerIdx ?? guestIdx));
+      attachConnHandlers(conn, () => getPlayerIdxByConn(conn));
+      const onOpen = () => {
+        if(RANK._gameStartFired) return;
+        conn.send({type:'joined', myIdx:guestIdx, abilityMode:true, members:3});
+        RANK.connectedGuests = 1;
+        if(RANK._cpuFillTimer){clearTimeout(RANK._cpuFillTimer);RANK._cpuFillTimer=null;}
+        // 名前受信のため1.2秒待ってCPU1体補填でスタート
+        RANK._cpuFillTimer = setTimeout(()=>{
+          if(RANK._gameStartFired) return;
+          RANK._gameStartFired = true;
+          const cfg = _getRankCpuConfig();
+          NET.conns.push(null);
+          NET.guestNames[1]     = cfg.name;
+          NET.guestAbilities[1] = cfg.ability;
+          NET.guestIconIds[1]   = cfg.iconId;
+          NET.guestEmotes[1]    = '';
+          NET.guestReady[1]     = true;
+          NET.guestIsCpu[1]     = true;
+          NET.guestEquippedTitles = NET.guestEquippedTitles||[];
+          NET.guestEquippedTitles[1] = cfg.title;
+          RANK._isCpuFill = true;
+          const membersInfo = [
+            {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
+            {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
+            {name: cfg.name, iconId: cfg.iconId, ability: cfg.ability},
+          ];
+          authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{});
+          authFetch('/rank/done',{method:'DELETE'}).catch(()=>{});
+          NET.conns.forEach(c=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true}); });
+          setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
+        }, 1200);
+      };
+      if(conn.open){ onOpen(); } else { conn.on('open', onOpen); }
+    });
+    NET.currentHostPeerId = myPeerId;
+    // 8秒以内に相手が接続しなければCPU2体で強制スタート
+    RANK._cpuFillTimer = setTimeout(()=>{
+      if(RANK._gameStartFired) return;
+      console.log('[RANK forceFill] ホスト: 相手未接続 → CPU2体でスタート');
+      _forceStartRankCPUGame();
+    }, 8000);
   } else {
-    console.log('[RANK] poll skip: searchStartAt=', RANK.searchStartAt, 'gameStartFired=', RANK._gameStartFired);
+    // ── ゲスト役: ホスト役の相手のPeerIDに接続 ──
+    if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
+    authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{});
+    authFetch('/rank/done',{method:'DELETE'}).catch(()=>{});
+    NET.isHost = false;
+    NET.isRankMatch = true;
+    NET.myIdx = 1;
+    RANK._gameStartFired = false;
+    setRankStatus('ホストに接続中…');
+    _rankGuestConnect(otherPeerId, 0);
+    // 10秒以内にgameStartが来なければCPU2体で強制スタート
+    RANK._cpuFillTimer = setTimeout(()=>{
+      if(RANK._gameStartFired || NET.online) return;
+      console.log('[RANK forceFill] ゲスト: gameStart未受信 → CPU2体でスタート');
+      _forceStartRankCPUGame();
+    }, 10000);
   }
 }
 

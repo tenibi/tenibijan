@@ -5940,12 +5940,97 @@ const RANK = {
   opponents: [],        // [{name, rating}]
   connectedGuests: 0,   // ホスト側: 接続済みゲスト数
   _gameStartFired: false, // ゲームスタート二重発火防止
+  _cpuFillTimer: null,   // 1分タイムアウトでCPU埋めするタイマー
   buttonCooldown: false, // ボタンクールタイム
   buttonClickCount: 0,   // 3人カウント用
 };
 
+// ── ランクマッチ CPU設定 ──────────────────────────────────────
+const RANK_CPU_NAMES = [
+  '黒影ノ零','風見トウヤ','朱雀レイ','夜叉丸','ミッドナイト33',
+  '蒼月ハルト','無銘ノ牙','カルマ・ブレイド','霧島クロウ','ラストエコー',
+  '雷電シン','ノクス・アルカ','白狼ユキト','ギアスパーク','月詠アヤト',
+  'バグキャット','虚無ログ','フレアナイト','ゼロコード','影縫イツキ'
+];
+let _rankCpuUsedNames = []; // 同一マッチで名前が被らないようにする
+
+function _getRankCpuConfig(){
+  // 能力: yami か pinzu をランダム
+  const ability = Math.random() < 0.5 ? 'yami' : 'pinzu';
+
+  // 名前: まだ使われていない名前からランダム
+  const available = RANK_CPU_NAMES.filter(n=>!_rankCpuUsedNames.includes(n));
+  const pool = available.length > 0 ? available : RANK_CPU_NAMES;
+  const name = pool[Math.floor(Math.random()*pool.length)];
+  _rankCpuUsedNames.push(name);
+
+  // アイコン: プレイヤーが所持しているgachaIconsからランダム、なければ能力デフォルト
+  const ownedIcons = (PROFILE.gachaIcons||[]).filter(id=>id&&id!=='C00');
+  const defaultIcon = ability==='yami'?'C03':'C06';
+  const iconId = ownedIcons.length>0
+    ? ownedIcons[Math.floor(Math.random()*ownedIcons.length)]
+    : defaultIcon;
+
+  // 称号: プレイヤーが解禁している称号からランダム、なければなし
+  const ownedTitles = PROFILE.yakumanTitles||[];
+  const title = ownedTitles.length>0
+    ? ownedTitles[Math.floor(Math.random()*ownedTitles.length)]
+    : '';
+
+  return {name, ability, iconId, title};
+}
+
+// マッチング1分経過・未マッチ時にCPUで埋めてCPU戦を開始する
+function _forceStartRankCPUGame(){
+  if(RANK._gameStartFired) return;
+  RANK._gameStartFired = true;
+  // ポーリング停止
+  if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
+  // サーバーからキュー離脱
+  authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{});
+  authFetch('/rank/done',{method:'DELETE'}).catch(()=>{});
+  // PeerJS後片付け
+  if(NET.peer){try{NET.peer.destroy();}catch(e){} NET.peer=null;}
+  // UI非表示
+  ['rankWaitPanel','rankSearchPanel','rankMatchedPanel'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  document.getElementById('lobby').style.display='none';
+  // RANKリセット（フラグは保持したまま画面だけ移行）
+  RANK.searchStartAt=null; RANK.peerId=null; RANK.matchId=null;
+  // ゲーム設定（ランクマッチ相当）
+  NET.online=false; NET.isRankMatch=false;
+  numPlayers=3;
+  G_ABILITY_MODE=true; G_TIME_MODE=true; G_TOBI_MODE=true; G_TONPUU_MODE=false;
+  // CPU能力をセット
+  _rankCpuUsedNames=[];
+  const cpu1=_getRankCpuConfig();
+  const cpu2=_getRankCpuConfig();
+  cpuSelectedAbilities[0]=cpu1.ability;
+  cpuSelectedAbilities[1]=cpu2.ability;
+  // ゲーム開始
+  bgmToGame();
+  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
+  scaleTable();
+  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,
+     lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},stealMode:false,
+     mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},
+     penDrawings:{},yamiChallenge:null,
+     dealer:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
+     pendingRiichi:null,riichiValidIdx:null,
+     phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,_sessionYakuman:[]};
+  startRound();
+  // CPU名・アイコン・称号を上書き
+  if(G.players[1]){G.players[1].name=cpu1.name;G.players[1].iconId=cpu1.iconId;G.players[1].equippedTitle=cpu1.title;}
+  if(G.players[2]){G.players[2].name=cpu2.name;G.players[2].iconId=cpu2.iconId;G.players[2].equippedTitle=cpu2.title;}
+  updateEmoteAreaVisibility();
+  renderAll();
+}
+
 function _rankReset(){
   if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
+  if(RANK._cpuFillTimer){clearTimeout(RANK._cpuFillTimer);RANK._cpuFillTimer=null;}
+  _rankCpuUsedNames=[];
   RANK.searchStartAt=null;
   RANK.peerId=null;
   RANK.matchId=null;
@@ -5967,6 +6052,8 @@ function _rankReset(){
 
 function cancelRankQueue(){
   if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
+  if(RANK._cpuFillTimer){clearTimeout(RANK._cpuFillTimer);RANK._cpuFillTimer=null;}
+  _rankCpuUsedNames=[];
   if(RANK.searchStartAt){
     authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{});
   }
@@ -6088,6 +6175,15 @@ function _updateSearchTimer(){
 
 async function _pollRankStatus(){
   _updateSearchTimer();
+  // ── 1分経過・未マッチ → CPUで強制スタート ──
+  if(RANK.searchStartAt && !RANK._gameStartFired){
+    const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
+    if(elapsed >= 60){
+      console.log('マッチング1分経過 → CPUで強制スタート');
+      _forceStartRankCPUGame();
+      return;
+    }
+  }
   let res;
   try { res = await authFetch('/rank/status'); } catch(e){ 
     console.error('ポーリングエラー:', e);
@@ -6202,6 +6298,43 @@ function _onRankMatched(data){
     });
     // ★ランクマッチ ホストのPeerIDを記録（ゲストの復帰先として使う）
     NET.currentHostPeerId = NET.peer?.id || null;
+
+    // ── マッチング開始から累計1分でCPU埋め強制スタート ──────
+    {
+      const elapsed = RANK.searchStartAt ? Math.floor((Date.now()-RANK.searchStartAt)/1000) : 0;
+      const remainingMs = Math.max(5000, (60 - elapsed) * 1000);
+      RANK._cpuFillTimer = setTimeout(()=>{
+        if(RANK._gameStartFired) return;
+        if(!NET.isHost) return;
+        RANK._gameStartFired = true;
+        console.log('ホスト: ゲスト待機タイムアウト → 空席をCPUで埋めてスタート');
+        _rankCpuUsedNames = NET.guestNames.filter(Boolean); // 既接続の名前を除外
+        // 不足スロットをCPUで埋める
+        const needed = 2 - RANK.connectedGuests;
+        for(let i=0;i<needed;i++){
+          const cfg = _getRankCpuConfig();
+          const slot = NET.conns.length;
+          NET.conns.push(null);
+          NET.guestNames[slot]     = cfg.name;
+          NET.guestAbilities[slot] = cfg.ability;
+          NET.guestIconIds[slot]   = cfg.iconId;
+          NET.guestEmotes[slot]    = '';
+          NET.guestReady[slot]     = true;
+          NET.guestIsCpu[slot]     = true;
+          NET.guestEquippedTitles  = NET.guestEquippedTitles||[];
+          NET.guestEquippedTitles[slot] = cfg.title;
+        }
+        // ゲームスタート
+        const membersInfo = [
+          {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
+          {name: NET.guestNames[0]||'CPU1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
+          {name: NET.guestNames[1]||'CPU2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||''},
+        ];
+        // 接続中のゲストにだけ送信
+        NET.conns.forEach((c,i)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo}); });
+        setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
+      }, remainingMs);
+    }
   } else {
     // ゲスト: ホストのPeerIDに接続（ホストがリスナー登録するまで時間がかかる場合があるのでリトライ）
     const hostPeerId = data.hostPeerId;
@@ -10611,12 +10744,26 @@ function cpuDecidePon(pidx,tile){
 function cpuDeclareRiichi(pidx){
   const p=G.players[pidx];
   // テンパイ時3回に1回オープンリーチ（ダブルリーチ条件時はダブル優先）
+  // 🌑 闇使いカゲ: 聴牌時は必ずオープンリーチ
   let mode;
-  if(canDoubleRiichi()) mode=Math.random()<0.333?'double-open':'double';
-  else mode=Math.random()<0.333?'open':'riichi';
+  if(p.ability==='yami'){
+    if(canDoubleRiichi()) mode='double-open';
+    else mode='open';
+  } else {
+    if(canDoubleRiichi()) mode=Math.random()<0.333?'double-open':'double';
+    else mode=Math.random()<0.333?'open':'riichi';
+  }
   G.pendingRiichi=mode;
   G.riichiValidIdx=getRiichiDiscards(p.hand);
   commitRiichi(p);
+  // 🌑 闇能力: 聴牌時に手牌の1枚（ツモ牌以外）を闇牌に指定
+  if(p.ability==='yami' && !p.abilityUsed && p.hand.length>1){
+    const candidates=Array.from({length:p.hand.length-1},(_,i)=>i);
+    p.yamiTileIdx=candidates[Math.floor(Math.random()*candidates.length)];
+    p.abilityUsed=true;
+    addLog(`🌑 ${p.name}が闇を使った！手牌を隠す...`,'log-dora');
+    SFX.yami();
+  }
   scheduleForPlayer(G.current,550,cpuDiscard);
 }
 
@@ -10634,12 +10781,7 @@ function cpuDiscard(){
     }
   }
 
-  // 🌑 闇能力: 30%で次の捨て牌を闇に
-  if(p.ability==='yami' && !p.abilityUsed && !p.riichi && Math.random()<0.3){
-    p.abilityUsed=true;
-    p._cpuNextYami=true;
-    addLog(`🌑 ${p.name}が闇を使う...`,'log-dora');
-  }
+  // 🌑 闇能力: 聴牌時のみ発動（cpuDeclareRiichiで処理済み）
 
   // 手にビCPU: 萬子・索子・筒子が手牌にあれば必ずそれを捨てる（字牌のみ残す）
   if(p.ability==='tenbi' && !p.riichi){

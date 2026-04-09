@@ -32,6 +32,7 @@ const _botanAudio = new Audio('https://raw.githubusercontent.com/tenibi/tenibija
 function _playBotanSe(){
   try {
     _botanAudio.currentTime = 0;
+    _botanAudio.volume = SFX.getSeVol ? SFX.getSeVol() : 0.42;
     _botanAudio.play().catch(()=>{});
   } catch(e) {}
 }
@@ -16926,7 +16927,7 @@ const _PON_URLS = [
 function _playPonSe(){
   try{
     const a=new Audio(_PON_URLS[Math.floor(Math.random()*3)]);
-    a.volume=0.8; a.play().catch(()=>{});
+    a.volume=_gachaSeVol; a.play().catch(()=>{});
   }catch(e){}
 }
 
@@ -17053,10 +17054,10 @@ function showGachaAnim10(results){
 
     if(res.rarity==='legend'){
       if(!window._gnsLegendAudio){ window._gnsLegendAudio=new Audio('https://raw.githubusercontent.com/tenibi/tenibijan/main/legendary.mp3'); }
-      try{ window._gnsLegendAudio.currentTime=0; window._gnsLegendAudio.play().catch(()=>{}); }catch(e){}
+      try{ window._gnsLegendAudio.currentTime=0; window._gnsLegendAudio.volume=_gachaSeVol; window._gnsLegendAudio.play().catch(()=>{}); }catch(e){}
     } else if(res.rarity==='epic'){
       if(!window._gnsEpicAudio){ window._gnsEpicAudio=new Audio('https://raw.githubusercontent.com/tenibi/tenibijan/main/epic.mp3'); }
-      try{ window._gnsEpicAudio.currentTime=0; window._gnsEpicAudio.play().catch(()=>{}); }catch(e){}
+      try{ window._gnsEpicAudio.currentTime=0; window._gnsEpicAudio.volume=_gachaSeVol; window._gnsEpicAudio.play().catch(()=>{}); }catch(e){}
     } else if(res.rarity==='rare') SFX.draw?.();
 
     window._gnsResolve = ()=>{ _hideNewSpotlight(()=>{ _showNewSpotlight(newList, idx+1, onDone); }); };

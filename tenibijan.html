@@ -6213,8 +6213,7 @@ async function _pollRankStatus(){
     return; // マッチング成立済みなので15秒チェックは不要
   }
   // ── status確認後: 未マッチかつ15秒経過 ──────────────────────────
-  // ★修正: !RANK.matchId を追加 ─ マッチング成立後はホストのタイマーが管理するため、ゲスト側は介入しない
-  if(RANK.searchStartAt && !RANK._gameStartFired && !RANK.matchId){
+  if(RANK.searchStartAt && !RANK._gameStartFired){
     const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
     if(elapsed >= 15){
       // キューに2人以上いる場合: otherPeerIds があればP2P直接接続でCPU補填スタート
@@ -6285,6 +6284,9 @@ function _rankForceConnectAndStart(otherPeerId){
             {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: false},
             {name: cfg.name, iconId: cfg.iconId, ability: cfg.ability, isCpu: true},
           ];
+          // ★修正: ゲストに gameStart を送信してからゲームを開始する
+          // 未送信だとゲスト役が10秒後に _forceStartRankCPUGame() を呼び「自分以外がCPU代打」になるバグを修正
+          NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true}); });
           setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
         }, 1200);
       };

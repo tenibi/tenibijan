@@ -2206,7 +2206,7 @@ body{
       <!-- 統計 -->
       <div style="margin-top:12px;text-align:center;font-size:.55rem;color:#2a4a3a;" id="gachaStat"></div>
       <!-- 排出内訳 -->
-      <div class="gacha-sub" style="margin-top:16px;">LEGEND排出で全17種から完全均等抽選（各1/17）！</div>
+      <div class="gacha-sub" style="margin-top:16px;">LEGEND排出で全18種から完全均等抽選（各1/18）！</div>
       <!-- レアリティ表 -->
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;justify-content:center;">
         <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#0a1a14;border:1px solid #2a4a3a;color:#5a8a7a;">NORMAL 89.9%</span>
@@ -2263,7 +2263,7 @@ body{
           </div>
         </div>
         <!-- レジェンドアイコン -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F5BC;&#xFE0F; レジェンドアイコン（各1/17・9種）</div>
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F5BC;&#xFE0F; レジェンドアイコン（各1/17・10種）</div>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
           <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
             <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
@@ -2308,6 +2308,10 @@ body{
           <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
             <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
             <div style="font-size:.48rem;color:#ffd700;">L11</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L12</div>
           </div>
         </div>
       </div>
@@ -3312,6 +3316,7 @@ body{
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L09 Ren</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L09',+this.value)"></div>
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L10 老拳師 チャン</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L10',+this.value)"></div>
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L11 工事現場 れいや</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L11',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L12 手にビの中の人 JAN</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L12',+this.value)"></div>
         </div>
       </div>
     </div>
@@ -6002,6 +6007,7 @@ function _forceStartRankCPUGame(){
   RANK.searchStartAt=null; RANK.peerId=null; RANK.matchId=null;
   RANK._isCpuFill=true; // CPUで埋めてスタートしたランクマッチフラグ
   // ゲーム設定（ランクマッチ相当）
+  NET.myIdx=0; NET.isHost=true; // ★修正: ゲスト役だった場合にmyIdxが1のままになるバグを修正
   NET.online=false; NET.isRankMatch=true; // ランクマッチ扱いを維持（レーティング変動のため）
   numPlayers=3;
   G_ABILITY_MODE=true; G_TIME_MODE=true; G_TOBI_MODE=true; G_TONPUU_MODE=false;
@@ -6274,13 +6280,10 @@ function _rankForceConnectAndStart(otherPeerId){
           NET.guestEquippedTitles[1] = cfg.title;
           RANK._isCpuFill = true;
           const membersInfo = [
-            {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
-            {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
-            {name: cfg.name, iconId: cfg.iconId, ability: cfg.ability},
+            {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
+            {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: false},
+            {name: cfg.name, iconId: cfg.iconId, ability: cfg.ability, isCpu: true},
           ];
-          authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{});
-          authFetch('/rank/done',{method:'DELETE'}).catch(()=>{});
-          NET.conns.forEach(c=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true}); });
           setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
         }, 1200);
       };
@@ -6406,9 +6409,9 @@ function _onRankMatched(data){
             }
             RANK._isCpuFill = true;
             const membersInfo1 = [
-              {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
-              {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
-              {name: NET.guestNames[1]||'CPU', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||''},
+              {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
+              {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
+              {name: NET.guestNames[1]||'CPU', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
             ];
             console.log('CPU1体補填スタート:', membersInfo1);
             NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfo1,isCpuFill:true}); });
@@ -6421,9 +6424,9 @@ function _onRankMatched(data){
           setTimeout(()=>{
             // メンバー情報を集める（ホストはNET.guestIconIdsを使う）
             const membersInfo = [
-              {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
-              {name: NET.guestNames[0]||'ゲスト1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
-              {name: NET.guestNames[1]||'ゲスト2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||''},
+              {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
+              {name: NET.guestNames[0]||'ゲスト1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
+              {name: NET.guestNames[1]||'ゲスト2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
             ];
             console.log('ホストからgameStart送信:', membersInfo);
             NET.conns.forEach((c)=>{
@@ -6473,9 +6476,9 @@ function _onRankMatched(data){
         RANK._isCpuFill = true; // CPUで埋めたランクマッチフラグ
         const _doStart = ()=>{
           const membersInfo = [
-            {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||''},
-            {name: NET.guestNames[0]||'CPU1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||''},
-            {name: NET.guestNames[1]||'CPU2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||''},
+            {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
+            {name: NET.guestNames[0]||'CPU1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
+            {name: NET.guestNames[1]||'CPU2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
           ];
           console.log('CPU埋めスタート membersInfo:', membersInfo, 'connectedGuests:', RANK.connectedGuests);
           // 接続中のゲスト全員に送信（CPUスロット=nullは除外）
@@ -7612,9 +7615,10 @@ function onNetData(msg, senderIdx){
             NET.guestIconIds[guestSlot] = msg.membersInfo[i]?.iconId || '';
             NET.guestNames[guestSlot] = msg.membersInfo[i]?.name || '';
             NET.guestAbilities[guestSlot] = msg.membersInfo[i]?.ability || '';
+            NET.guestIsCpu[guestSlot] = !!(msg.membersInfo[i]?.isCpu); // ★修正: CPUフラグをゲスト側にも復元
             guestSlot++;
           }
-          console.log('ゲスト側メンバー情報を設定:', {myIdx: NET.myIdx, guestIconIds: NET.guestIconIds, guestNames: NET.guestNames});
+          console.log('ゲスト側メンバー情報を設定:', {myIdx: NET.myIdx, guestIconIds: NET.guestIconIds, guestNames: NET.guestNames, guestIsCpu: NET.guestIsCpu});
         }
       }
       
@@ -8903,6 +8907,20 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
     return p;
   });
 
+  // ソロCPU対戦 & ランクマッチCPU補填: id !== NET.myIdx のプレイヤーはCPUとしてフラグを立てる
+  if(!NET.online){
+    G.players.forEach((p,i)=>{ if(i !== NET.myIdx) p.isCpu = true; });
+  } else {
+    // ★修正: オンライン時もCPUスロット（guestIsCpu=true）のプレイヤーにisCpu=trueをセット
+    // ゲスト側ではNET.isHostがfalseのためmakePlayer内でCPUフラグが立たないバグを修正
+    G.players.forEach((p,i)=>{
+      if(i === NET.myIdx) return;
+      // myIdxより小さいインデックスはslot=i、大きいインデックスはslot=i-1
+      const slot = i < NET.myIdx ? i : i - 1;
+      if(NET.guestIsCpu[slot]) p.isCpu = true;
+    });
+  }
+
   for(const p of G.players){
     for(let i=0;i<4;i++)p.hand.push(G.deck.pop());
     if(!p.isCpu) p.hand=sortTiles(p.hand);
@@ -9556,7 +9574,7 @@ function _updateAFKBtn(){
 function _applyIconVoiceSliders(){
   const container = document.getElementById('legendVoiceSliders');
   if(!container) return;
-  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09','L10','L11'];
+  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09','L10','L11','L12'];
   const sliders = container.querySelectorAll('input[type=range]');
   sliders.forEach((sl, i) => {
     const id = ids[i];
@@ -16829,6 +16847,7 @@ const GACHA_ICONS = [
   {id:'L09',rarity:'legend',label:'Ren'},
   {id:'L10',rarity:'legend',label:'老拳師 チャン'},
   {id:'L11',rarity:'legend',label:'工事現場 れいや'},
+  {id:'L12',rarity:'legend',label:'手にビの中の人 JAN'},
 ];
 // ローカル管理アイコン（ガチャ排出なし・常時所持）
 const LOCAL_ICONS = [
@@ -16939,12 +16958,19 @@ const ICON_SE_MAP = {
     ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron09.mp3',
     tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo09.mp3',
   },
+  'L12': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan10.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon10.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti10.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron10.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo10.mp3',
+  },
 };
 
 // レジェンドアイコンごとの個別ボイス音量スケール (0〜1, デフォルト1)
 const iconVoiceScale = {
   'L01':1,'L02':1,'L03':1,'L04':1,'L05':1,
-  'L06':1,'L07':1,'L08':1,'L09':1,'L10':1,'L11':1,
+  'L06':1,'L07':1,'L08':1,'L09':1,'L10':1,'L11':1,'L12':1,
 };
 function setIconVoiceScale(iconId, val){
   iconVoiceScale[iconId] = Math.min(1, Math.max(0, val));

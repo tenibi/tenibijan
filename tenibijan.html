@@ -6137,6 +6137,17 @@ async function _loadMyRating(){
 async function joinRankQueue(){
   // ボタンがクールタイム中か確認
   if(RANK.buttonCooldown) return;
+
+  // ★修正: await より前に即座にロックする（レースコンディション対策）
+  // await 中にボタンが有効なまま残るとキューに二重登録されるバグを防ぐ
+  RANK.buttonCooldown = true;
+  const btn = document.querySelector('#lobbyRank .start-btn');
+  if(btn){
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+  }
+
   // ★修正: 古いマッチング残存バグ対策 - 参加前にサーバーの古いエントリを掃除する
   // （ゲーム切断後に searchStartAt がnullのままでキャンセルが送られないケースを防ぐ）
   try{
@@ -6145,15 +6156,6 @@ async function joinRankQueue(){
       authFetch('/rank/done',{method:'DELETE'}).catch(()=>{}),
     ]);
   }catch(e){}
-  
-  // ボタンをクールタイム状態にする
-  RANK.buttonCooldown = true;
-  const btn = document.querySelector('#lobbyRank .start-btn');
-  if(btn){
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.style.cursor = 'not-allowed';
-  }
   
   // 5秒後にボタンを再度有効化
   setTimeout(()=>{
@@ -6168,6 +6170,8 @@ async function joinRankQueue(){
   setRankStatus('接続中…');
   const peerId = 'mj-rank-'+Date.now()+'-'+Math.floor(Math.random()*9999);
   RANK.peerId = peerId;
+  // ★修正: 古いピアが残っていた場合は必ず破棄してから新規作成（二重 open イベント防止）
+  if(NET.peer){ try{ NET.peer.destroy(); }catch(e){} NET.peer=null; }
   NET.peer = new Peer(peerId, {debug:0});
 
   NET.peer.on('open', async ()=>{
@@ -9014,9 +9018,12 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   // ソロCPU対戦 & ランクマッチCPU補填: id !== NET.myIdx のプレイヤーはCPUとしてフラグを立てる
   if(!NET.online){
     G.players.forEach((p,i)=>{
-      if(i !== NET.myIdx) p.isCpu = true;
-      // ランクマッチCPU補填（1人CPU戦）は_rankCpuFillフラグを立てる（CPU代打ラベル非表示用）
-      if(i !== NET.myIdx && NET.isRankMatch && RANK._isCpuFill) p._rankCpuFill = true;
+      if(i !== NET.myIdx) {
+        p.isCpu = true;
+        // ★修正: ソロCPU対戦のCPUも最初からCPUなので「CPU代打」ラベルを非表示にする
+        // （_rankCpuFillはランクマッチ限定でなく「最初からCPU」を示すフラグとして使用）
+        p._rankCpuFill = true;
+      }
     });
   } else {
     // ★修正: オンライン時もCPUスロット（guestIsCpu=true）のプレイヤーにisCpu=trueをセット

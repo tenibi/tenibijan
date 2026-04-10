@@ -6317,7 +6317,15 @@ function _rankForceConnectAndStart(otherPeerId){
           // ★修正: gameStart送信前にguestPeerIds[0]を確実にセット
           // myName受信よりstartOnlineGame()が先に走るとisOnlineGuestIdx()がfalseになり
           // ゲストのターンでCPU行動が実行されてゲストが操作不能になるバグを修正
-          if(!NET.guestPeerIds[0]) NET.guestPeerIds[0] = conn.peer || '';
+          if(!NET.guestPeerIds[0]) {
+            if(conn.peer) {
+              NET.guestPeerIds[0] = conn.peer;
+            } else {
+              // peerRegistry から playerIdx=1 の接続を検索（第3フォールバック）
+              const reg = NET.peerRegistry && NET.peerRegistry.find(r => r.playerIdx === 1 && r.conn && r.conn.open);
+              if(reg) NET.guestPeerIds[0] = reg.peerId;
+            }
+          }
           NET.conns.push(null);
           NET.guestNames[1]     = cfg.name;
           NET.guestAbilities[1] = cfg.ability;
@@ -6480,7 +6488,7 @@ function _onRankMatched(data){
             }
             RANK._isCpuFill = true;
             // ★修正: gameStart前にguestPeerIds[i]を確実にセット（myName受信より先にstartOnlineGame()が走るケース対策）
-            NET.conns.forEach((c, ci)=>{ if(c && c.peer && !NET.guestPeerIds[ci]) NET.guestPeerIds[ci] = c.peer; });
+            NET.conns.forEach((c, ci)=>{ if(!NET.guestPeerIds[ci]) { if(c && c.peer) { NET.guestPeerIds[ci] = c.peer; } else { const reg = NET.peerRegistry && NET.peerRegistry.find(r => r.playerIdx === ci + 1 && r.conn && r.conn.open); if(reg) NET.guestPeerIds[ci] = reg.peerId; } } });
             const membersInfo1 = [
               {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
               {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
@@ -6496,7 +6504,7 @@ function _onRankMatched(data){
           // 2人揃ったらゲームスタート（名前受信のため少し待つ）
           setTimeout(()=>{
             // ★修正: gameStart前にguestPeerIds[i]を確実にセット（myName受信より先にstartOnlineGame()が走るケース対策）
-            NET.conns.forEach((c, ci)=>{ if(c && c.peer && !NET.guestPeerIds[ci]) NET.guestPeerIds[ci] = c.peer; });
+            NET.conns.forEach((c, ci)=>{ if(!NET.guestPeerIds[ci]) { if(c && c.peer) { NET.guestPeerIds[ci] = c.peer; } else { const reg = NET.peerRegistry && NET.peerRegistry.find(r => r.playerIdx === ci + 1 && r.conn && r.conn.open); if(reg) NET.guestPeerIds[ci] = reg.peerId; } } });
             // メンバー情報を集める（ホストはNET.guestIconIdsを使う）
             const membersInfo = [
               {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
@@ -6553,7 +6561,7 @@ function _onRankMatched(data){
         RANK._isCpuFill = true; // CPUで埋めたランクマッチフラグ
         const _doStart = ()=>{
           // ★修正: gameStart前にguestPeerIds[i]を確実にセット（myName受信より先にstartOnlineGame()が走るケース対策）
-          NET.conns.forEach((c, ci)=>{ if(c && c.peer && !NET.guestPeerIds[ci]) NET.guestPeerIds[ci] = c.peer; });
+          NET.conns.forEach((c, ci)=>{ if(!NET.guestPeerIds[ci]) { if(c && c.peer) { NET.guestPeerIds[ci] = c.peer; } else { const reg = NET.peerRegistry && NET.peerRegistry.find(r => r.playerIdx === ci + 1 && r.conn && r.conn.open); if(reg) NET.guestPeerIds[ci] = reg.peerId; } } });
           const membersInfo = [
             {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
             {name: NET.guestNames[0]||'CPU1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
@@ -8467,8 +8475,21 @@ function startOnlineGame(){
     G.players.forEach((p, i) => {
       if(i === NET.myIdx) return;
       const slot = i - 1; // ゲストスロットはi-1（ホストがidx0固定の場合）
-      if(NET.guestPeerIds[slot]) p.peerId = NET.guestPeerIds[slot];
-      else if(NET.conns[slot] && NET.conns[slot].peer) p.peerId = NET.conns[slot].peer;
+      // ① guestPeerIds が設定済みなら優先
+      if(NET.guestPeerIds[slot]) {
+        p.peerId = NET.guestPeerIds[slot];
+      // ② conn.peer から取得してキャッシュも更新
+      } else if(NET.conns[slot] && NET.conns[slot].peer) {
+        p.peerId = NET.conns[slot].peer;
+        NET.guestPeerIds[slot] = NET.conns[slot].peer;
+      // ③ peerRegistry から playerIdx で検索（第3フォールバック）
+      } else {
+        const reg = NET.peerRegistry && NET.peerRegistry.find(r => r.playerIdx === i && r.conn && r.conn.open);
+        if(reg) {
+          p.peerId = reg.peerId;
+          NET.guestPeerIds[slot] = reg.peerId;
+        }
+      }
     });
   } else if(NET.online && !amIHost()){
     // ★修正: ゲスト側でも各プレイヤーのpeerIdを設定する

@@ -5613,7 +5613,7 @@ function startSyncBroadcast(){
     s._lastActionId = NET._lastActionId;
     netBroadcastAll({type:'sync', state:s});
 
-    // ping keepalive: pongが5秒以内に返らなければ切断扱い
+    // ping keepalive: pongが10秒以内に返らなければ切断扱い
     NET.conns.forEach(c=>{
       if(!c||!c.open) return;
       const pid = c.peer;
@@ -5627,7 +5627,7 @@ function startSyncBroadcast(){
         if(c.open){
           try{ c.close(); }catch(e){}
         }
-      }, 5000);
+      }, 10000);
     });
   }, 2000);
 }
@@ -5655,30 +5655,52 @@ function getPlayerIdxByConn(conn){
 }
 
 // ── ピア切断時のホスト再選出 ─────────────────────────────
-function onPeerDisconnected(pidx){
-  // isCpu 未設定なら確定させる
-  if(G && G.players && G.players[pidx] && !G.players[pidx].isCpu){
+// 再接続猶予タイマー管理 {pidx: timerId}
+if(typeof NET._reconnectWaitTimers === 'undefined') NET._reconnectWaitTimers = {};
+
+function _doCpuReplace(pidx){
+  // 実際にCPU化して対局を再開する
+  if(G && G.players && G.players[pidx]){
     G.players[pidx].isCpu = true;
+    G.players[pidx].isReconnecting = false;
   }
   peerRegistryRemove(G?.players?.[pidx]?.peerId);
-
+  NET.conns = NET.conns.filter(c => c && c.open);
+  NET.peerRegistry = NET.peerRegistry.filter(p => p.conn && p.conn.open);
   if(NET.isHost){
-    // 自分がホスト → CPU化して resumeGameAfterHostLost で包括的に処理
-    if(G && G.players && G.players[pidx]){
-      G.players[pidx].isCpu = true;
-    }
-    // 切断したゲストを NET.conns / peerRegistry から除去
-    NET.conns = NET.conns.filter(c => c && c.open);
-    NET.peerRegistry = NET.peerRegistry.filter(p => p.conn && p.conn.open);
-    // ★修正: 旧コードは G.current===pidx の場合のみ CPU をスケジュールしていたが、
-    // draw_wait→draw 変換・pending_ron/pon フェーズ・3人以上での複雑な局面など
-    // あらゆるフェーズに正しく対応するため resumeGameAfterHostLost に統一する。
-    // 「引く前に切断した場合でも CPU が引き継がない」バグの修正。
     resumeGameAfterHostLost(pidx);
   } else {
-    // 自分が次ホスト候補 → 昇格
     saveRejoinSession();
     promoteGuestToHost(pidx);
+  }
+}
+
+function onPeerDisconnected(pidx){
+  if(!G || !G.players || !G.players[pidx]) return;
+  // すでに猶予タイマーが走っていれば二重起動しない
+  if(NET._reconnectWaitTimers[pidx]) return;
+
+  // ★ 即CPU化せず「再接続待ち」状態にして10秒猶予を与える
+  G.players[pidx].isReconnecting = true;
+  try{ broadcastState(); }catch(e){}  // 他プレイヤーに状態通知
+
+  NET._reconnectWaitTimers[pidx] = setTimeout(()=>{
+    delete NET._reconnectWaitTimers[pidx];
+    // 10秒後もまだ再接続していなければCPU代打
+    if(G && G.players && G.players[pidx] && G.players[pidx].isReconnecting){
+      _doCpuReplace(pidx);
+    }
+  }, 10000); // 10秒の再接続猶予
+}
+
+// 再接続成功時に猶予タイマーをキャンセルする
+function cancelReconnectWait(pidx){
+  if(NET._reconnectWaitTimers && NET._reconnectWaitTimers[pidx]){
+    clearTimeout(NET._reconnectWaitTimers[pidx]);
+    delete NET._reconnectWaitTimers[pidx];
+  }
+  if(G && G.players && G.players[pidx]){
+    G.players[pidx].isReconnecting = false;
   }
 }
 
@@ -6104,6 +6126,14 @@ async function _loadMyRating(){
 async function joinRankQueue(){
   // ボタンがクールタイム中か確認
   if(RANK.buttonCooldown) return;
+  // ★修正: 古いマッチング残存バグ対策 - 参加前にサーバーの古いエントリを掃除する
+  // （ゲーム切断後に searchStartAt がnullのままでキャンセルが送られないケースを防ぐ）
+  try{
+    await Promise.all([
+      authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{}),
+      authFetch('/rank/done',{method:'DELETE'}).catch(()=>{}),
+    ]);
+  }catch(e){}
   
   // ボタンをクールタイム状態にする
   RANK.buttonCooldown = true;
@@ -6293,12 +6323,16 @@ function _rankForceConnectAndStart(otherPeerId){
       if(conn.open){ onOpen(); } else { conn.on('open', onOpen); }
     });
     NET.currentHostPeerId = myPeerId;
-    // 8秒以内に相手が接続しなければCPU2体で強制スタート
+    // ★修正: 待機時間を8秒→25秒に延長
+    // 理由: 後から参加したゲスト役は「自分の15秒タイムアウト後にさらに接続遅延」が加わるため
+    //   最悪ケース: ホスト役15秒後に発動 → ゲスト役が14秒後に参加していた場合
+    //   ゲスト役の15秒タイムアウト = +14秒、接続遅延 = +4秒 → 計18秒後に接続試みる
+    //   8秒ではゲスト役が来る前にホストがCPU単独戦を開始してしまう
     RANK._cpuFillTimer = setTimeout(()=>{
       if(RANK._gameStartFired) return;
       console.log('[RANK forceFill] ホスト: 相手未接続 → CPU2体でスタート');
       _forceStartRankCPUGame();
-    }, 8000);
+    }, 25000);
   } else {
     // ── ゲスト役: ホスト役の相手のPeerIDに接続 ──
     if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
@@ -6310,12 +6344,12 @@ function _rankForceConnectAndStart(otherPeerId){
     RANK._gameStartFired = false;
     setRankStatus('ホストに接続中…');
     _rankGuestConnect(otherPeerId, 0);
-    // 10秒以内にgameStartが来なければCPU2体で強制スタート
+    // ★修正: 待機時間を10秒→15秒に延長（接続+名前送受信の余裕を確保）
     RANK._cpuFillTimer = setTimeout(()=>{
       if(RANK._gameStartFired || NET.online) return;
       console.log('[RANK forceFill] ゲスト: gameStart未受信 → CPU2体でスタート');
       _forceStartRankCPUGame();
-    }, 10000);
+    }, 15000);
   }
 }
 
@@ -6378,7 +6412,7 @@ function _onRankMatched(data){
           // ゲーム中: rejoin か通常接続かを判断するため少し待つ
           setTimeout(()=>{
             if(!_rejoinHandled && conn.open) conn.close();
-          }, 5000);
+          }, 10000);
           return;
         }
         conn.send({type:'joined', myIdx:guestIdx, abilityMode:true, members:3});
@@ -6948,7 +6982,7 @@ async function createRoom(){
             // rejoinが届かなければ通常の新規参加として閉じる
             conn.close();
           }
-        }, 5000);
+        }, 10000);
       }
     });
 
@@ -7404,6 +7438,8 @@ function _handleRejoin(conn, msg){
   }
   if(msg.iconId) p.iconId = msg.iconId;
   p.isCpu = false;
+  // ★ 再接続猶予タイマーをキャンセル（CPU代打化を防ぐ）
+  cancelReconnectWait(originalIdx);
 
   addLog(`🔄 ${p.name} が対局に復帰しました！`,'log-new');
 
@@ -9568,6 +9604,12 @@ function _afkTick(){
 function _updateAFKBtn(){
   const btn=document.getElementById('afkBtn');
   if(!btn) return;
+  // ランクマッチ中はCPU代打ボタンを非表示
+  if(NET.isRankMatch){
+    btn.style.display='none';
+    return;
+  }
+  btn.style.display='';
   const isCpu = G&&G.players&&G.players[NET.myIdx]&&G.players[NET.myIdx].isCpu;
   btn.textContent=isCpu?'🤖 CPU代打 ON':'🤖 CPU代打';
   btn.style.borderColor=isCpu?'#cc3333':'#3a1a1a';

@@ -164,11 +164,22 @@ window.addEventListener('beforeunload', ()=>{
 const BACKEND = "https://tenibijan.duckdns.org";
 
 // ── 認証付きfetchヘルパー ─────────────────────────────────────
-function authFetch(path, opts = {}) {
+// 401が返ったらセッション切れとみなし、jwt_tokenを削除してGoogleログインへリダイレクト
+let _authRedirecting = false; // 二重リダイレクト防止フラグ
+function authFetch(path, opts = {}, noRedirect = false) {
   const token = localStorage.getItem('jwt_token');
   const headers = Object.assign({}, opts.headers || {});
   if (token) headers['Authorization'] = 'Bearer ' + token;
-  return fetch(BACKEND + path, Object.assign({}, opts, { headers }));
+  return fetch(BACKEND + path, Object.assign({}, opts, { headers }))
+    .then(r => {
+      if (r.status === 401 && !_authRedirecting && !noRedirect) {
+        _authRedirecting = true;
+        localStorage.removeItem('jwt_token');
+        window.location.href = BACKEND + '/auth/google';
+        throw new Error('unauthorized');
+      }
+      return r;
+    });
 }
 
 // ── 画面暗転防止 (Wake Lock API) ──────────────────────────────
@@ -6378,6 +6389,7 @@ function _onRankMatched(data){
   NET.conns = [];
   NET.isRankMatch = true;
   G_ABILITY_MODE = true;
+  _rankCpuUsedNames = []; // CPU名の重複防止リストをリセット
 
   authFetch('/rank/done', {method:'DELETE'}).catch(()=>{});
 
@@ -8415,8 +8427,19 @@ function startOnlineGame(){
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,_sessionYakuman:[]};
   startRound();
-  // 自分（ホスト = playerIdx 0）の peerId をセット
+  // 自分（ホスト）の peerId をセット
   if(G.players[NET.myIdx]) G.players[NET.myIdx].peerId = NET.peer?.id || '';
+  // ★修正: ゲストのpeerIdをNET.guestPeerIdsから設定する
+  // startRound→nextTurnが呼ばれる前にpeerIdが必要（isOnlineGuestIdxがpeerIdを参照するため）
+  // peerIdが未設定だとゲストのターンでもCPU扱いになりゲストが操作不能になるバグを修正
+  if(NET.online && amIHost()){
+    G.players.forEach((p, i) => {
+      if(i === NET.myIdx) return;
+      const slot = i - 1; // ゲストスロットはi-1（ホストがidx0固定の場合）
+      if(NET.guestPeerIds[slot]) p.peerId = NET.guestPeerIds[slot];
+      else if(NET.conns[slot] && NET.conns[slot].peer) p.peerId = NET.conns[slot].peer;
+    });
+  }
   broadcastState();
   if(amIHost()){
     startSyncBroadcast();
@@ -8948,7 +8971,11 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
 
   // ソロCPU対戦 & ランクマッチCPU補填: id !== NET.myIdx のプレイヤーはCPUとしてフラグを立てる
   if(!NET.online){
-    G.players.forEach((p,i)=>{ if(i !== NET.myIdx) p.isCpu = true; });
+    G.players.forEach((p,i)=>{
+      if(i !== NET.myIdx) p.isCpu = true;
+      // ランクマッチCPU補填（1人CPU戦）は_rankCpuFillフラグを立てる（CPU代打ラベル非表示用）
+      if(i !== NET.myIdx && NET.isRankMatch && RANK._isCpuFill) p._rankCpuFill = true;
+    });
   } else {
     // ★修正: オンライン時もCPUスロット（guestIsCpu=true）のプレイヤーにisCpu=trueをセット
     // ゲスト側ではNET.isHostがfalseのためmakePlayer内でCPUフラグが立たないバグを修正
@@ -8956,7 +8983,11 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
       if(i === NET.myIdx) return;
       // myIdxより小さいインデックスはslot=i、大きいインデックスはslot=i-1
       const slot = i < NET.myIdx ? i : i - 1;
-      if(NET.guestIsCpu[slot]) p.isCpu = true;
+      if(NET.guestIsCpu[slot]){
+        p.isCpu = true;
+        // ランクマッチCPU補填は_rankCpuFillフラグを立てる（CPU代打ラベル非表示用）
+        if(NET.isRankMatch) p._rankCpuFill = true;
+      }
     });
   }
 
@@ -11894,7 +11925,7 @@ function checkEnd(){
 function _bombSendResult(stage, score){
   const bombEarned = stage >= 5 ? 20 + (stage - 5) * 7 : 0;
   authFetch('/api/bomb/result',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({stage, score})})
+    body:JSON.stringify({stage, score})}, true) // noRedirect: ゲーム中に強制リダイレクトしない
   .then(r=>r.json()).then(d=>{
     if(d.ok){
       PROFILE.coins = d.coins ?? PROFILE.coins;
@@ -14296,7 +14327,7 @@ function renderTable(){
     ].join('');
 
     const riichiStick=p.riichi?`<span class="riichi-stick">リーチ</span>`:''; 
-    const afkBadge=((isHuman&&playerAFK)||p.isCpu)?`<span class="badge" style="background:#1a0000;border:1px solid #cc3333;color:#ff6666;">離席</span>`:'';
+    const afkBadge=((isHuman&&playerAFK)||(p.isCpu&&!p._rankCpuFill))?`<span class="badge" style="background:#1a0000;border:1px solid #cc3333;color:#ff6666;">離席</span>`:'';
 
     const abilityLabels2={'':'','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン'};
     const abilityBadge = (G_ABILITY_MODE && p.ability) ? `<span class="ability-badge">${abilityLabels2[p.ability]||p.ability}</span>` : '';
@@ -14348,8 +14379,10 @@ function renderTable(){
     const isDOR = p.riichi && p.openRiichi && p.doubleRiichi;
     const isDR = p.riichi && p.doubleRiichi && !p.openRiichi;
 
-    // ── 離席: 手牌の左上に絶対配置 ──
-    if((isHuman && playerAFK) || p.isCpu){
+    // ── 離席/CPU代打: 手牌の左上に絶対配置 ──
+    // ランクマッチのCPU補填（最初からCPUとして参加）には「CPU代打」を表示しない
+    // 切断してCPUが代打している場合のみ表示する
+    if((isHuman && playerAFK) || (p.isCpu && !p._rankCpuFill)){
       const afkEl=document.createElement('div');
       afkEl.className='hand-outer-afk-label';
       afkEl.style.cssText='position:absolute;top:-50px;left:228px;font-size:1.875rem;color:#ff6666;background:#1a0000;border:1px solid #cc3333;border-radius:4px;padding:4px 12px;z-index:5;pointer-events:none;font-weight:700;';
@@ -15970,12 +16003,7 @@ function loadProfile(){
   // サーバーから最新データを取得して上書き（Neon PostgreSQL連携）
   authFetch('/api/profile')
     .then(r=>{
-      // 401: JWTが無効 / セッション切れ → localTokenを削除してGoogleログインへ
-      if(r.status === 401){
-        localStorage.removeItem('jwt_token');
-        window.location.href = BACKEND + '/auth/google';
-        throw new Error('unauthorized');
-      }
+      // 401はauthFetch内で共通処理済み（_authRedirectingフラグ＋リダイレクト）
       if(!r.ok) throw new Error('server_error');
       return r.json();
     })
@@ -16075,7 +16103,8 @@ function loadProfile(){
       // localStorageにキャッシュがあればそのまま使う（オフライン許容）
       // キャッシュもない場合はDBセッションが壊れている可能性が高いのでログインへ
       const hasCache = !!localStorage.getItem('mjProfile');
-      if(!hasCache){
+      if(!hasCache && !_authRedirecting){
+        _authRedirecting = true;
         localStorage.removeItem('jwt_token');
         window.location.href = BACKEND + '/auth/google';
       }

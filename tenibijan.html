@@ -6310,6 +6310,10 @@ function _rankForceConnectAndStart(otherPeerId){
           if(RANK._gameStartFired) return;
           RANK._gameStartFired = true;
           const cfg = _getRankCpuConfig();
+          // ★修正: gameStart送信前にguestPeerIds[0]を確実にセット
+          // myName受信よりstartOnlineGame()が先に走るとisOnlineGuestIdx()がfalseになり
+          // ゲストのターンでCPU行動が実行されてゲストが操作不能になるバグを修正
+          if(!NET.guestPeerIds[0]) NET.guestPeerIds[0] = conn.peer || '';
           NET.conns.push(null);
           NET.guestNames[1]     = cfg.name;
           NET.guestAbilities[1] = cfg.ability;
@@ -6466,6 +6470,8 @@ function _onRankMatched(data){
               NET.guestEquippedTitles[slot1] = cfg1.title;
             }
             RANK._isCpuFill = true;
+            // ★修正: gameStart前にguestPeerIds[i]を確実にセット（myName受信より先にstartOnlineGame()が走るケース対策）
+            NET.conns.forEach((c, ci)=>{ if(c && c.peer && !NET.guestPeerIds[ci]) NET.guestPeerIds[ci] = c.peer; });
             const membersInfo1 = [
               {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
               {name: NET.guestNames[0]||'ゲスト', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
@@ -6480,6 +6486,8 @@ function _onRankMatched(data){
           RANK._gameStartFired = true;
           // 2人揃ったらゲームスタート（名前受信のため少し待つ）
           setTimeout(()=>{
+            // ★修正: gameStart前にguestPeerIds[i]を確実にセット（myName受信より先にstartOnlineGame()が走るケース対策）
+            NET.conns.forEach((c, ci)=>{ if(c && c.peer && !NET.guestPeerIds[ci]) NET.guestPeerIds[ci] = c.peer; });
             // メンバー情報を集める（ホストはNET.guestIconIdsを使う）
             const membersInfo = [
               {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
@@ -6535,6 +6543,8 @@ function _onRankMatched(data){
         // ゲームスタート（接続中ゲストへの送信を少し待って確実に届けるため遅延を入れる）
         RANK._isCpuFill = true; // CPUで埋めたランクマッチフラグ
         const _doStart = ()=>{
+          // ★修正: gameStart前にguestPeerIds[i]を確実にセット（myName受信より先にstartOnlineGame()が走るケース対策）
+          NET.conns.forEach((c, ci)=>{ if(c && c.peer && !NET.guestPeerIds[ci]) NET.guestPeerIds[ci] = c.peer; });
           const membersInfo = [
             {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
             {name: NET.guestNames[0]||'CPU1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
@@ -8449,6 +8459,21 @@ function startOnlineGame(){
       const slot = i - 1; // ゲストスロットはi-1（ホストがidx0固定の場合）
       if(NET.guestPeerIds[slot]) p.peerId = NET.guestPeerIds[slot];
       else if(NET.conns[slot] && NET.conns[slot].peer) p.peerId = NET.conns[slot].peer;
+    });
+  } else if(NET.online && !amIHost()){
+    // ★修正: ゲスト側でも各プレイヤーのpeerIdを設定する
+    // これがないとホスト側がisOnlineGuestIdx()でゲストを正しく認識できず、
+    // ゲストのターンでCPU行動が実行されてしまい操作不能になるバグを修正
+    G.players.forEach((p, i) => {
+      if(i === NET.myIdx) return;
+      const slot = i < NET.myIdx ? i : i - 1;
+      if(NET.guestIsCpu && NET.guestIsCpu[slot]) return; // CPUはpeerIdなし
+      // ホスト(idx=0)のpeerIdはNET.conn.peerまたはcurrentHostPeerIdから取得
+      if(i === 0){
+        p.peerId = NET.currentHostPeerId || (NET.conn && NET.conn.peer) || '';
+      } else if(NET.guestPeerIds && NET.guestPeerIds[slot]){
+        p.peerId = NET.guestPeerIds[slot];
+      }
     });
   }
   broadcastState();

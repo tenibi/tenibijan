@@ -6566,8 +6566,8 @@ function _onRankMatched(data){
           NET.conns.forEach((c, ci)=>{ if(!NET.guestPeerIds[ci]) { if(c && c.peer) { NET.guestPeerIds[ci] = c.peer; } else { const reg = NET.peerRegistry && NET.peerRegistry.find(r => r.playerIdx === ci + 1 && r.conn && r.conn.open); if(reg) NET.guestPeerIds[ci] = reg.peerId; } } });
           const membersInfo = [
             {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
-            {name: NET.guestNames[0]||'CPU1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
-            {name: NET.guestNames[1]||'CPU2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
+            {name: NET.guestNames[0]||(RANK_CPU_NAMES[Math.floor(Math.random()*RANK_CPU_NAMES.length)]), iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
+            {name: NET.guestNames[1]||(RANK_CPU_NAMES[Math.floor(Math.random()*RANK_CPU_NAMES.length)]), iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
           ];
           console.log('CPU埋めスタート membersInfo:', membersInfo, 'connectedGuests:', RANK.connectedGuests);
           // 接続中のゲスト全員に送信（CPUスロット=nullは除外）
@@ -8118,15 +8118,19 @@ function applyHostState(msg){
     G.pendingRiichi=s.pendingRiichi;G.riichiValidIdx=s.riichiValidIdx;
     G.mineSlots=s.mineSlots??[];G.mineRinshanIdxs=s.mineRinshanIdxs??[];G.mineOwners=s.mineOwners??{};G.mineRinshanOwners=s.mineRinshanOwners??{};G.mineCount=s.mineCount??0;G.mineStock=s.mineStock??{};G.minePlantPlayers=s.minePlantPlayers??[];
     // ★ 闇バグ修正: ゲストが自分で闇選択中（yamiSelectMode=true）なら、ホストのstateで上書きしない
-    const _guestYamiActive = (NET.myIdx!=null && G.yamiSelectMode===true);
-    G.yamiSelectMode=_guestYamiActive?true:(s.yamiSelectMode??false);
+    const _guestYamiSelecting = (NET.myIdx!=null && G.yamiSelectMode===true);
+    // ★ 闇バグ修正2: ゲストが牌を闇指定済み（yamiTileIdx>=0）だが未捨てなら、yamiTileIdxもホストのstateで上書きしない
+    //   ※牌選択直後にyamiSelectMode=falseになるため、従来の_guestYamiActiveだけでは保護されていなかった
+    const _localYamiTileIdx = (NET.myIdx!=null && G.players[NET.myIdx]) ? (G.players[NET.myIdx].yamiTileIdx??-1) : -1;
+    const _guestYamiSelected = (_localYamiTileIdx >= 0);
+    G.yamiSelectMode=_guestYamiSelecting?true:(s.yamiSelectMode??false);
     G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
     G._mineHit=s._mineHit??null;
-    // ★ 闇バグ修正: ゲストが闇選択中なら、自分のyamiTileIdxをホストstateで上書きされる前に保存
-    const _savedYamiTileIdx = (_guestYamiActive && typeof NET.myIdx==='number' && G.players[NET.myIdx]) ? G.players[NET.myIdx].yamiTileIdx : -1;
+    // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みなら、自分のyamiTileIdxをホストstateで上書きされる前に保存
+    const _savedYamiTileIdx = (_guestYamiSelecting||_guestYamiSelected) ? _localYamiTileIdx : -1;
     G.players=s.players;
-    // ★ 闇バグ修正: ゲストが闇選択中だった場合、自分のyamiTileIdxをローカルの値で復元
-    if(_guestYamiActive && NET.myIdx!=null && G.players[NET.myIdx] && _savedYamiTileIdx>=0){
+    // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みだった場合、自分のyamiTileIdxをローカルの値で復元
+    if((_guestYamiSelecting||_guestYamiSelected) && NET.myIdx!=null && G.players[NET.myIdx] && _savedYamiTileIdx>=0){
       G.players[NET.myIdx].yamiTileIdx=_savedYamiTileIdx;
     }
     numPlayers=s.numPlayers;
@@ -8393,6 +8397,14 @@ function remoteKita(pidx){
   const rep=drawRinshanTile(pidx);
   // 北抜きはカンドラを開かない
   if(!rep){handleExhausted();broadcastState();return;}
+  // 💣 嶺上地雷チェック（北抜き後）
+  if(G._mineHit){
+    G._mineHit=null;
+    p.discards.push(rep);updateTenpai(p);
+    G.phase='discard';renderAll();broadcastState();
+    scheduleForPlayer(pidx,900,()=>{if(!checkPon(pidx,rep))nextTurn((pidx+1)%numPlayers);broadcastState();});
+    return;
+  }
   updateTenpai(p);
   if(canWin(p.hand)){handleWin(pidx,rep,true,-1);broadcastState();return;}
   if(p.riichi){
@@ -9681,6 +9693,8 @@ function setAFK(on){
 }
 function toggleCpuMode(){
   if(!G||!G.players) return;
+  // ランクマッチ中はCPU代打を使用不可（ボタンが消えるバグ防止）
+  if(NET.isRankMatch) return;
   const myIdx=NET.myIdx;
   const p=G.players[myIdx];
   if(!p) return;

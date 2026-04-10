@@ -6345,7 +6345,7 @@ function _rankForceConnectAndStart(otherPeerId){
           ];
           // ★修正: ゲストに gameStart を送信してからゲームを開始する
           // 未送信だとゲスト役が10秒後に _forceStartRankCPUGame() を呼び「自分以外がCPU代打」になるバグを修正
-          NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true}); });
+          NET.conns.forEach((c,ci)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true,myIdx:ci+1}); });
           setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
         }, 1200);
       };
@@ -6497,7 +6497,7 @@ function _onRankMatched(data){
               {name: NET.guestNames[1]||'CPU', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
             ];
             console.log('CPU1体補填スタート:', membersInfo1);
-            NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfo1,isCpuFill:true}); });
+            NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfo1,isCpuFill:true,myIdx:NET.conns.indexOf(c)+1}); });
             setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
           }, remainingMs1);
         }
@@ -6515,7 +6515,7 @@ function _onRankMatched(data){
             ];
             console.log('ホストからgameStart送信:', membersInfo);
             NET.conns.forEach((c)=>{
-              if(c&&c.open) c.send({type:'gameStart', totalPlayers:3, abilityMode:true, timeMode:true, tobiMode:true, tonpuuMode:false, membersInfo});
+              if(c&&c.open) c.send({type:'gameStart', totalPlayers:3, abilityMode:true, timeMode:true, tobiMode:true, tonpuuMode:false, membersInfo, myIdx:NET.conns.indexOf(c)+1});
             });
             setTimeout(()=>{
               G_TIME_MODE = true;
@@ -6571,7 +6571,7 @@ function _onRankMatched(data){
           ];
           console.log('CPU埋めスタート membersInfo:', membersInfo, 'connectedGuests:', RANK.connectedGuests);
           // 接続中のゲスト全員に送信（CPUスロット=nullは除外）
-          NET.conns.forEach((c,i)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true}); });
+          NET.conns.forEach((c,i)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true,myIdx:i+1}); });
           setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
         };
         // 接続中ゲストがいる場合は少し待ってからスタート（myName受信猶予）
@@ -7363,7 +7363,10 @@ function hostStartGame(){
     })),
     // 末尾にCPUスロット（connsには含まれない純粋CPU）は既にconns側に入っているので不要
   ];
-  realConns.forEach(c=>{if(c&&c.open)c.send({type:'gameStart',totalPlayers,abilityMode:NET.roomAbilityMode,timeMode:NET.roomTimeMode,tobiMode:NET.roomTobiMode,tonpuuMode:NET.roomTonpuuMode,membersInfo});});
+  realConns.forEach((c,ri)=>{
+    const guestIdx = NET.conns.indexOf(realConns[ri]) + 1; // ゲストのプレイヤーインデックス（1始まり）
+    if(c&&c.open) c.send({type:'gameStart',totalPlayers,abilityMode:NET.roomAbilityMode,timeMode:NET.roomTimeMode,tobiMode:NET.roomTobiMode,tonpuuMode:NET.roomTonpuuMode,membersInfo,myIdx:guestIdx});
+  });
   // ゲーム開始後はサーバーから部屋を削除する（新規参加を防ぐ）
   if(NET.roomCode) authFetch('/room/'+NET.roomCode, {method:'DELETE'}).catch(()=>{});
   if(NET.roomTimeMode) G_TIME_MODE=true;
@@ -7699,6 +7702,12 @@ function onNetData(msg, senderIdx){
       G_TONPUU_MODE = msg.tonpuuMode === true;
       
       console.log('gameStart受信:', {myIdx: NET.myIdx, isHost: NET.isHost, membersInfo: msg.membersInfo});
+      
+      // ★修正: gameStart受信時に myIdx を確実にセット（joined より後に届く場合のレースコンディション対策）
+      if(!NET.isHost && msg.myIdx !== undefined){
+        NET.myIdx = msg.myIdx;
+        console.log('[gameStart] NET.myIdx を上書き設定:', NET.myIdx);
+      }
       
       // ゲスト側: メンバー情報からアイコンIDを取得
       if(msg.membersInfo && Array.isArray(msg.membersInfo)){

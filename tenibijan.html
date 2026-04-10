@@ -6607,6 +6607,8 @@ function _rankGuestConnect(hostPeerId, attempt){
     let opened = false;
     conn.on('open', ()=>{
       opened = true;
+      // ★修正: 接続確立時点でCPU埋めタイマーをクリア（gameStart受信前の競合対策）
+      if(RANK._cpuFillTimer){ clearTimeout(RANK._cpuFillTimer); RANK._cpuFillTimer = null; }
       // ★ランクマッチゲスト: 接続先ホストのPeerIDを記録（復帰時に使う）
       NET.currentHostPeerId = hostPeerId;
       setRankStatus('ホストに接続しました！ゲーム開始を待っています…');
@@ -7679,6 +7681,12 @@ function onNetData(msg, senderIdx){
       document.getElementById('lobby').style.display='block';
       setOnlineStatus('ホストにキックされました');
     } else if(msg.type==='gameStart'){
+      // ★修正: ゲスト側のCPU埋めタイマーを確実に無効化
+      // gameStart受信前にRANK._cpuFillTimerが発火するレースコンディション対策
+      // （タイマー発火→_forceStartRankCPUGame()→NET.myIdx=0/NET.online=false上書き
+      //   → 2Pゲストが自分の手牌を見ているのにCPUに操作されるバグを修正）
+      RANK._gameStartFired = true;
+      if(RANK._cpuFillTimer){ clearTimeout(RANK._cpuFillTimer); RANK._cpuFillTimer = null; }
       // 準備ボタンをリセット
       const _grb=document.getElementById('rlsReadyBtn');
       if(_grb){_grb.dataset.ready='0';_grb.textContent='準備OK ✓';_grb.style.background='';_grb.style.borderColor='';_grb.style.color='';}
@@ -8106,9 +8114,19 @@ function applyHostState(msg){
     G.phase=s.phase;G.firstRound=s.firstRound;G.log=s.log;
     G.savedScores=s.savedScores;G._dealerWon=s._dealerWon;
     G.pendingRiichi=s.pendingRiichi;G.riichiValidIdx=s.riichiValidIdx;
-    G.mineSlots=s.mineSlots??[];G.mineRinshanIdxs=s.mineRinshanIdxs??[];G.mineOwners=s.mineOwners??{};G.mineRinshanOwners=s.mineRinshanOwners??{};G.mineCount=s.mineCount??0;G.mineStock=s.mineStock??{};G.minePlantPlayers=s.minePlantPlayers??[];G.yamiSelectMode=s.yamiSelectMode??false;G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
+    G.mineSlots=s.mineSlots??[];G.mineRinshanIdxs=s.mineRinshanIdxs??[];G.mineOwners=s.mineOwners??{};G.mineRinshanOwners=s.mineRinshanOwners??{};G.mineCount=s.mineCount??0;G.mineStock=s.mineStock??{};G.minePlantPlayers=s.minePlantPlayers??[];
+    // ★ 闇バグ修正: ゲストが自分で闇選択中（yamiSelectMode=true）なら、ホストのstateで上書きしない
+    const _guestYamiActive = (NET.myIdx!=null && G.yamiSelectMode===true);
+    G.yamiSelectMode=_guestYamiActive?true:(s.yamiSelectMode??false);
+    G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
     G._mineHit=s._mineHit??null;
+    // ★ 闇バグ修正: ゲストが闇選択中なら、自分のyamiTileIdxをホストstateで上書きされる前に保存
+    const _savedYamiTileIdx = (_guestYamiActive && typeof NET.myIdx==='number' && G.players[NET.myIdx]) ? G.players[NET.myIdx].yamiTileIdx : -1;
     G.players=s.players;
+    // ★ 闇バグ修正: ゲストが闇選択中だった場合、自分のyamiTileIdxをローカルの値で復元
+    if(_guestYamiActive && NET.myIdx!=null && G.players[NET.myIdx] && _savedYamiTileIdx>=0){
+      G.players[NET.myIdx].yamiTileIdx=_savedYamiTileIdx;
+    }
     numPlayers=s.numPlayers;
     pendingAction=s.pendingAction;
     if(s.tobiMode !== undefined) G_TOBI_MODE = s.tobiMode;

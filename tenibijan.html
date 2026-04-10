@@ -6359,12 +6359,16 @@ function _rankForceConnectAndStart(otherPeerId){
     RANK._gameStartFired = false;
     setRankStatus('ホストに接続中…');
     _rankGuestConnect(otherPeerId, 0);
-    // ★修正: 待機時間を10秒→15秒に延長（接続+名前送受信の余裕を確保）
-    RANK._cpuFillTimer = setTimeout(()=>{
-      if(RANK._gameStartFired || NET.online) return;
-      console.log('[RANK forceFill] ゲスト: gameStart未受信 → CPU2体でスタート');
-      _forceStartRankCPUGame();
-    }, 15000);
+    // 5〜15秒ランダムでgameStart未受信の場合にCPU2体でスタート
+    {
+      const _guestRandomWait = Math.floor(Math.random() * 11000) + 5000; // 5000〜15000ms ランダム
+      console.log('[RANK] ゲスト側CPU埋めタイムアウト:', _guestRandomWait, 'ms');
+      RANK._cpuFillTimer = setTimeout(()=>{
+        if(RANK._gameStartFired || NET.online) return;
+        console.log('[RANK forceFill] ゲスト: gameStart未受信 → CPU2体でスタート');
+        _forceStartRankCPUGame();
+      }, _guestRandomWait);
+    }
   }
 }
 
@@ -6434,12 +6438,13 @@ function _onRankMatched(data){
         conn.send({type:'joined', myIdx:guestIdx, abilityMode:true, members:3});
         RANK.connectedGuests++;
         setRankStatus(`対戦相手を待っています… (${RANK.connectedGuests}/2)`);
-        // ゲストが1人接続した時点で残り待機を短縮（累計15秒でCPU埋めスタート）
+        // ゲストが1人接続した時点で残り待機を短縮（5〜15秒ランダムでCPU埋めスタート）
         if(RANK.connectedGuests === 1 && !RANK._gameStartFired){
           if(RANK._cpuFillTimer){ clearTimeout(RANK._cpuFillTimer); RANK._cpuFillTimer=null; }
           const elapsed1 = RANK.searchStartAt ? Math.floor((Date.now()-RANK.searchStartAt)/1000) : 0;
-          const remainingMs1 = Math.max(5000, (15 - elapsed1) * 1000);
-          console.log('ゲスト1人接続: 残り', remainingMs1, 'ms でCPU埋めタイマーをリセット');
+          const randomWait1 = Math.floor(Math.random() * 11000) + 5000; // 5000〜15000ms ランダム
+          const remainingMs1 = Math.max(5000, Math.min(randomWait1, (15 - elapsed1) * 1000 + randomWait1));
+          console.log('ゲスト1人接続: 残り', remainingMs1, 'ms でCPU埋めタイマーをリセット (ランダム待機)');
           RANK._cpuFillTimer = setTimeout(()=>{
             if(RANK._gameStartFired) return;
             if(!NET.isHost) return;
@@ -6510,13 +6515,13 @@ function _onRankMatched(data){
     // ★ランクマッチ ホストのPeerIDを記録（ゲストの復帰先として使う）
     NET.currentHostPeerId = NET.peer?.id || null;
 
-    // ── マッチング開始から累計15秒でCPU埋め強制スタート ──────
+    // ── マッチング開始から5〜15秒ランダムでCPU埋め強制スタート ──────
     {
       const elapsed = RANK.searchStartAt ? Math.floor((Date.now()-RANK.searchStartAt)/1000) : 0;
-      // ★修正: ゲストの接続に最低でも12秒は確保する（旧:5秒では短すぎてゲストが間に合わない）
       // ゲスト側の接続フロー: _rankGuestConnect 2500ms待機 + PeerJS接続 ~1-3s + joined送受信
-      // 2人分の接続を待つため余裕を持って12秒をミニマムに設定
-      const remainingMs = Math.max(12000, (15 - elapsed) * 1000);
+      // 最低5秒は確保しつつ、5〜15秒ランダムで待機
+      const randomWait = Math.floor(Math.random() * 11000) + 5000; // 5000〜15000ms ランダム
+      const remainingMs = Math.max(5000, randomWait);
       RANK._cpuFillTimer = setTimeout(()=>{
         if(RANK._gameStartFired) return;
         if(!NET.isHost) return;
@@ -8307,6 +8312,7 @@ function remoteWallPick(pidx,slotIdx){
     G._mineHit={pidx,tile:mineTile};
     renderAll();broadcastState({_mineExploding:true});
     setTimeout(()=>{
+      G._mineHit=null; // ★修正: nextTurn前にクリアしないと次プレイヤーのdraw_wait遷移がブロックされるバグを修正
       if(!checkPon(pidx,mineTile)) nextTurn((pidx+1)%numPlayers);
       broadcastState();
     },900);
@@ -10439,6 +10445,7 @@ function humanPickWall(slotIdx, _fromAuto){
       addLog(`💥 ${p.name} が地雷を踏んだ！[${emj(mineTile)}] を強制捨て`,'log-win');
       renderAll();broadcastState();
       setTimeout(()=>{
+        G._mineHit=null; // ★修正: nextTurn前にクリアしないと次プレイヤーのdraw_wait遷移がブロックされるバグを修正
         if(!checkPon(myIdx,mineTile)) nextTurn((myIdx+1)%numPlayers);
         broadcastState();
       },900);

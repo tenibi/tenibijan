@@ -6439,13 +6439,22 @@ function _onRankMatched(data){
           RANK._cpuFillTimer = setTimeout(()=>{
             if(RANK._gameStartFired) return;
             if(!NET.isHost) return;
+            // ★修正: onOpen未発火の実接続も考慮するため、NET.connsのnon-nullエントリ数で判定
+            // RANK.connectedGuestsはonOpen発火済みのみカウントするため、接続確立済みだが
+            // onOpenが未発火のゲストがいる場合に誤ってCPU化してしまうバグを修正
+            const actualConns1 = NET.conns.filter(c => c != null).length;
+            const needed1 = 2 - actualConns1;
+            if(needed1 <= 0){
+              // 実接続が2つ存在するのでCPU補填不要。onOpenを待つ
+              console.log('ホスト: 実接続が2つ存在するためCPU補填をスキップ (onOpen待ち)');
+              return;
+            }
             RANK._gameStartFired = true;
             console.log('ホスト: ゲスト1人のみ→CPU1体補填してスタート');
             _rankCpuUsedNames = NET.guestNames.filter(Boolean);
-            const needed1 = 2 - RANK.connectedGuests;
             for(let i=0;i<needed1;i++){
               const cfg1 = _getRankCpuConfig();
-              const slot1 = RANK.connectedGuests + i; // 接続済みゲスト数の次のスロット
+              const slot1 = actualConns1 + i; // ★修正: actualConns1を使用
               if(NET.conns.length <= slot1) NET.conns.push(null); else NET.conns[slot1]=null;
               NET.guestNames[slot1]     = cfg1.name;
               NET.guestAbilities[slot1] = cfg1.ability;
@@ -6504,13 +6513,15 @@ function _onRankMatched(data){
         if(RANK._gameStartFired) return;
         if(!NET.isHost) return;
         RANK._gameStartFired = true;
-        console.log('ホスト: ゲスト待機タイムアウト → 空席をCPUで埋めてスタート (接続済みゲスト数:', RANK.connectedGuests, ')');
+        // ★修正: onOpen未発火の実接続も考慮するため、NET.connsのnon-nullエントリ数で判定
+        const actualConns = NET.conns.filter(c => c != null).length;
+        console.log('ホスト: ゲスト待機タイムアウト → 空席をCPUで埋めてスタート (接続済みゲスト数:', RANK.connectedGuests, '/ 実接続数:', actualConns, ')');
         _rankCpuUsedNames = NET.guestNames.filter(Boolean); // 既接続の名前を除外
         // 不足スロットをCPUで埋める（既接続ゲストのスロットは保持）
-        const needed = 2 - RANK.connectedGuests;
+        const needed = 2 - actualConns; // ★修正: actualConnsを使用
         for(let i=0;i<needed;i++){
           const cfg = _getRankCpuConfig();
-          const slot = NET.conns.length;
+          const slot = actualConns + i; // ★修正: actualConnsを基準にスロット計算
           NET.conns.push(null);
           NET.guestNames[slot]     = cfg.name;
           NET.guestAbilities[slot] = cfg.ability;

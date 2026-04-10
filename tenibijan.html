@@ -6213,7 +6213,8 @@ async function _pollRankStatus(){
     return; // マッチング成立済みなので15秒チェックは不要
   }
   // ── status確認後: 未マッチかつ15秒経過 ──────────────────────────
-  if(RANK.searchStartAt && !RANK._gameStartFired){
+  // ★修正: !RANK.matchId を追加 ─ マッチング成立後はホストのタイマーが管理するため、ゲスト側は介入しない
+  if(RANK.searchStartAt && !RANK._gameStartFired && !RANK.matchId){
     const elapsed = Math.floor((Date.now()-RANK.searchStartAt)/1000);
     if(elapsed >= 15){
       // キューに2人以上いる場合: otherPeerIds があればP2P直接接続でCPU補填スタート

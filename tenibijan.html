@@ -6306,6 +6306,8 @@ function _rankForceConnectAndStart(otherPeerId){
       attachConnHandlers(conn, () => getPlayerIdxByConn(conn));
       const onOpen = () => {
         if(RANK._gameStartFired) return;
+        // ★修正: peerRegistryに登録（isOnlineGuestIdx()がfalseを返しCPU扱いになるバグを修正）
+        if(conn.peer) peerRegistryAdd(conn.peer, guestIdx, conn);
         conn.send({type:'joined', myIdx:guestIdx, abilityMode:true, members:3});
         RANK.connectedGuests = 1;
         if(RANK._cpuFillTimer){clearTimeout(RANK._cpuFillTimer);RANK._cpuFillTimer=null;}

@@ -7734,6 +7734,15 @@ function onNetData(msg, senderIdx){
       setTimeout(()=>{
         if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
       }, 400);
+      // ★修正: ゲスト側でbroadcastStateが届かなかった場合の保険
+      // ホストはstartOnlineGame()後にbroadcastState()を呼ぶが、ネットワーク遅延等で
+      // 届かないとゲスト画面に牌が表示されないままになるため、1.5秒後に未受信なら再要求する
+      setTimeout(()=>{
+        if(NET.online && NET.conn && NET.conn.open && (!G.players || G.players.length === 0)){
+          console.log('[RANK] gameStart後にstateが未着 → ホストにrequestState送信');
+          NET.conn.send({type:'requestState'});
+        }
+      }, 1500);
     } else if(msg.type==='emote'){
       // ホストから転送されたエモートをゲスト側で表示
       showEmoteOverlay(msg.pidx, msg.emoteId);
@@ -7831,6 +7840,7 @@ function handleGuestAction(msg, senderIdx){
     case 'tsumo':     remoteWin(msg.pidx, true, -1); break;
     case 'ron':       remoteRon(msg.pidx, msg.tile, msg.from); break;
     case 'skipRon':   remoteSkipRon(msg.from, msg.pidx ?? senderIdx); break;
+    case 'requestState': if(amIHost()&&NET.online) { console.log('[HOST] ゲストからrequestState受信 → broadcastState'); broadcastState(); } break;
     case 'skipRonToPon': if(amIHost()){ pendingAction=null; handlePon(msg.pidx,msg.tile,msg.from); broadcastState(); } break;
     case 'skipRonToKan': if(amIHost()){ pendingAction=null; handleMinkan(msg.pidx,msg.tile,msg.from); broadcastState(); } break;
     case 'pon':       handlePon(msg.pidx, msg.tile, msg.from); broadcastState(); break;

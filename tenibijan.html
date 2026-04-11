@@ -144,7 +144,22 @@ function scaleTable(){
 window.addEventListener('resize', scaleTable);
 
 // ── ブラウザ閉じ・タブ閉じ時にピアを確実に閉じる ──────────
+// ランクマッチ中の切断をサーバーに通知するヘルパー
+// keepalive:true でページが閉じられた後もリクエストを送り続ける
+function _sendRankDisconnectNotify(){
+  try{
+    if(typeof NET!=='undefined' && NET.isRankMatch && typeof RANK!=='undefined' && RANK.matchId){
+      const token = localStorage.getItem('jwt_token') || '';
+      fetch(BACKEND+'/rank/disconnect-notify',{
+        method:'POST', keepalive:true,
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({matchId:RANK.matchId})
+      }).catch(()=>{});
+    }
+  }catch(e){}
+}
 window.addEventListener('pagehide', ()=>{
+  _sendRankDisconnectNotify();
   if(NET.peer){
     try{ if(typeof saveRejoinSession==='function') saveRejoinSession(); }catch(e){}
     try{ netBroadcastAll({type:'hostDisconnect'}); }catch(e){}
@@ -152,6 +167,7 @@ window.addEventListener('pagehide', ()=>{
   }
 });
 window.addEventListener('beforeunload', ()=>{
+  _sendRankDisconnectNotify();
   if(NET.peer){
     try{ if(typeof saveRejoinSession==='function') saveRejoinSession(); }catch(e){}
     try{ netBroadcastAll({type:'hostDisconnect'}); }catch(e){}
@@ -5700,6 +5716,16 @@ function onPeerDisconnected(pidx){
     // 10秒後もまだ再接続していなければCPU代打
     if(G && G.players && G.players[pidx] && G.players[pidx].isReconnecting){
       _doCpuReplace(pidx);
+      // ★ ランクマッチ中: 相手が切断確定 → 自分もサーバーに切断通知を送る
+      // （自分がページを閉じた場合は beforeunload/pagehide で送信済み）
+      // ここでは「自分は接続中だが相手が切れた」ケースをカバー
+      if(NET.isRankMatch && RANK.matchId){
+        authFetch('/rank/disconnect-notify',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({matchId:RANK.matchId})
+        }).catch(()=>{});
+      }
     }
   }, 10000); // 10秒の再接続猶予
 }
@@ -6058,7 +6084,7 @@ function _forceStartRankCPUGame(){
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,
-     lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},stealMode:false,
+     lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,
      mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},
      penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
@@ -6460,10 +6486,11 @@ function _onRankMatched(data){
         // ゲストが1人接続した時点で残り待機を短縮（5〜15秒ランダムでCPU埋めスタート）
         if(RANK.connectedGuests === 1 && !RANK._gameStartFired){
           if(RANK._cpuFillTimer){ clearTimeout(RANK._cpuFillTimer); RANK._cpuFillTimer=null; }
-          const elapsed1 = RANK.searchStartAt ? Math.floor((Date.now()-RANK.searchStartAt)/1000) : 0;
-          const randomWait1 = Math.floor(Math.random() * 11000) + 5000; // 5000〜15000ms ランダム
-          const remainingMs1 = Math.max(5000, Math.min(randomWait1, (15 - elapsed1) * 1000 + randomWait1));
-          console.log('ゲスト1人接続: 残り', remainingMs1, 'ms でCPU埋めタイマーをリセット (ランダム待機)');
+          // ★修正: 1人目接続後のCPU埋め待機時間を固定10秒に変更
+          // 旧コード: (15 - elapsed1) * 1000 + randomWait1 の計算が elapsed1>=15 のとき
+          // 負になりランダム値のみ(最短5秒)になってしまい、3人目の接続前にタイマーが発火していた
+          const remainingMs1 = 10000; // 10秒固定: 3人目ゲストの接続に十分な猶予
+          console.log('ゲスト1人接続: 残り', remainingMs1, 'ms でCPU埋めタイマーをリセット');
           RANK._cpuFillTimer = setTimeout(()=>{
             if(RANK._gameStartFired) return;
             if(!NET.isHost) return;
@@ -6473,8 +6500,22 @@ function _onRankMatched(data){
             const actualConns1 = NET.conns.filter(c => c != null).length;
             const needed1 = 2 - actualConns1;
             if(needed1 <= 0){
-              // 実接続が2つ存在するのでCPU補填不要。onOpenを待つ
-              console.log('ホスト: 実接続が2つ存在するためCPU補填をスキップ (onOpen待ち)');
+              // ★修正: 実接続が2つあるのにonOpenが未発火の場合、さらに猶予を与えてからゲーム開始
+              // 旧コード: returnするだけでゲームが開始されず全員揃っているのに止まるバグがあった
+              console.log('ホスト: 実接続が2つ存在するためCPU補填をスキップ。3秒後にゲーム開始を試みる');
+              setTimeout(()=>{
+                if(RANK._gameStartFired) return;
+                RANK._gameStartFired = true;
+                NET.conns.forEach((c, ci)=>{ if(!NET.guestPeerIds[ci]) { if(c && c.peer) { NET.guestPeerIds[ci] = c.peer; } else { const reg = NET.peerRegistry && NET.peerRegistry.find(r => r.playerIdx === ci + 1 && r.conn && r.conn.open); if(reg) NET.guestPeerIds[ci] = reg.peerId; } } });
+                const membersInfoFull = [
+                  {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
+                  {name: NET.guestNames[0]||'ゲスト1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
+                  {name: NET.guestNames[1]||'ゲスト2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
+                ];
+                console.log('ホスト: 3人全員接続確認 → ゲームスタート:', membersInfoFull);
+                NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfoFull,myIdx:NET.conns.indexOf(c)+1}); });
+                setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
+              }, 3000);
               return;
             }
             RANK._gameStartFired = true;
@@ -6544,10 +6585,26 @@ function _onRankMatched(data){
       RANK._cpuFillTimer = setTimeout(()=>{
         if(RANK._gameStartFired) return;
         if(!NET.isHost) return;
-        RANK._gameStartFired = true;
         // ★修正: onOpen未発火の実接続も考慮するため、NET.connsのnon-nullエントリ数で判定
         const actualConns = NET.conns.filter(c => c != null).length;
         console.log('ホスト: ゲスト待機タイムアウト → 空席をCPUで埋めてスタート (接続済みゲスト数:', RANK.connectedGuests, '/ 実接続数:', actualConns, ')');
+        // ★修正: 全員揃っている場合はCPU補填不要でそのままゲーム開始
+        if(actualConns >= 2){
+          RANK._gameStartFired = true;
+          setTimeout(()=>{
+            NET.conns.forEach((c, ci)=>{ if(!NET.guestPeerIds[ci]) { if(c && c.peer) { NET.guestPeerIds[ci] = c.peer; } else { const reg = NET.peerRegistry && NET.peerRegistry.find(r => r.playerIdx === ci + 1 && r.conn && r.conn.open); if(reg) NET.guestPeerIds[ci] = reg.peerId; } } });
+            const membersInfoAll = [
+              {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu: false},
+              {name: NET.guestNames[0]||'ゲスト1', iconId: NET.guestIconIds[0]||'', ability: NET.guestAbilities[0]||'', isCpu: !!NET.guestIsCpu[0]},
+              {name: NET.guestNames[1]||'ゲスト2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
+            ];
+            console.log('ホスト: タイムアウト時に全員揃っていたためCPU補填なしでスタート:', membersInfoAll);
+            NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfoAll,myIdx:NET.conns.indexOf(c)+1}); });
+            setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
+          }, 1200);
+          return;
+        }
+        RANK._gameStartFired = true;
         _rankCpuUsedNames = NET.guestNames.filter(Boolean); // 既接続の名前を除外
         // 不足スロットをCPUで埋める（既接続ゲストのスロットは保持）
         const needed = 2 - actualConns; // ★修正: actualConnsを使用
@@ -7755,7 +7812,7 @@ function onNetData(msg, senderIdx){
              log:[],dealer:0,current:0,roundNum:1,roundWind:'東',honba:0,
              riichiPot:0,savedScores:null,_dealerWon:false,
              lightMode:false,lightUserIdx:null,lightRevealedSlots:{},
-             lightRevealedHand:{},stealMode:false,mineSlots:[],mineOwners:{},
+             lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineOwners:{},
              mineRinshanIdxs:[],mineRinshanOwners:{},mineCount:0,mineStock:{},
              penDrawings:{},yamiChallenge:null,_sessionYakuman:[]};
       }
@@ -8165,7 +8222,7 @@ function applyHostState(msg){
     const _localYamiTileIdx = (NET.myIdx!=null && G.players[NET.myIdx]) ? (G.players[NET.myIdx].yamiTileIdx??-1) : -1;
     const _guestYamiSelected = (_localYamiTileIdx >= 0);
     G.yamiSelectMode=_guestYamiSelecting?true:(s.yamiSelectMode??false);
-    G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.penDrawings=s.penDrawings??{};
+    G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.lightAutoRevealedTurn=s.lightAutoRevealedTurn??{};G.penDrawings=s.penDrawings??{};
     G._mineHit=s._mineHit??null;
     // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みなら、自分のyamiTileIdxをホストstateで上書きされる前に保存
     const _savedYamiTileIdx = (_guestYamiSelecting||_guestYamiSelected) ? _localYamiTileIdx : -1;
@@ -8244,6 +8301,11 @@ function applyHostState(msg){
     // リセットしないと前局のストローク（_penCommitted 等）が残ったまま
     // renderWall() に混入し、前局の絵が全体に再描画されるバグが発生する。
     if(s._newRound){
+      // ★バグ修正: _newRound受信時にも闇状態をリセット（nextRoundでのリセット漏れに対する二重保護）
+      G.yamiSelectMode = false;
+      if(G.players && NET.myIdx != null && G.players[NET.myIdx]){
+        G.players[NET.myIdx].yamiTileIdx = -1;
+      }
       window._activePenOC = null;
       window._activeDoraOC = null;
       window._penCommitted = null;
@@ -8289,7 +8351,7 @@ function _buildStateSnapshot(extra={}){
     phase:G.phase,firstRound:G.firstRound,log:G.log,
     savedScores:G.savedScores,_dealerWon:G._dealerWon,
     pendingRiichi:G.pendingRiichi,riichiValidIdx:G.riichiValidIdx,
-    mineSlots:G.mineSlots,mineRinshanIdxs:G.mineRinshanIdxs,mineOwners:G.mineOwners??{},mineRinshanOwners:G.mineRinshanOwners??{},mineCount:G.mineCount,mineStock:G.mineStock??{},minePlantPlayers:G.minePlantPlayers??[],yamiSelectMode:G.yamiSelectMode,hakuSelectPlayers:G.hakuSelectPlayers??[],stealMode:G.stealMode,lightMode:G.lightMode,lightUserIdx:G.lightUserIdx??null,yamiChallenge:G.yamiChallenge??null,lightRevealedSlots:G.lightRevealedSlots,lightRevealedHand:G.lightRevealedHand,lightExtraDora:G.lightExtraDora??[],penDrawings:G.penDrawings??{},
+    mineSlots:G.mineSlots,mineRinshanIdxs:G.mineRinshanIdxs,mineOwners:G.mineOwners??{},mineRinshanOwners:G.mineRinshanOwners??{},mineCount:G.mineCount,mineStock:G.mineStock??{},minePlantPlayers:G.minePlantPlayers??[],yamiSelectMode:G.yamiSelectMode,hakuSelectPlayers:G.hakuSelectPlayers??[],stealMode:G.stealMode,lightMode:G.lightMode,lightUserIdx:G.lightUserIdx??null,yamiChallenge:G.yamiChallenge??null,lightRevealedSlots:G.lightRevealedSlots,lightRevealedHand:G.lightRevealedHand,lightExtraDora:G.lightExtraDora??[],lightAutoRevealedTurn:G.lightAutoRevealedTurn??{},penDrawings:G.penDrawings??{},
     _mineHit:G._mineHit??null,
     players:G.players,numPlayers,pendingAction,
     guestPeerIds:NET.guestPeerIds,
@@ -8494,6 +8556,7 @@ function remoteHaku(pidx,tidx){
   t._hakuOriginal={suit:t.suit,num:t.num};
   t.suit='honor';t.num='白';t._isHaku=true;
   p.hakuTileId=t._id;
+  p.hakuUsedTurn=p.turnCount;
   p.abilityUsed=true;
   G.hakuSelectPlayers=(G.hakuSelectPlayers||[]).filter(i=>i!==pidx);
   addLog(`🀆 白！${p.name}が手牌の1枚を白に変換した`,'log-dora');
@@ -8534,7 +8597,7 @@ function startOnlineGame(){
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable();
   updateEmoteAreaVisibility();
-  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
+  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:numPlayers===1?0:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,_sessionYakuman:[]};
@@ -8905,7 +8968,7 @@ function initGame(){
   document.getElementById('lobby').style.display='none';
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable();
-  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
+  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:numPlayers===1?1:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,
@@ -8992,7 +9055,7 @@ function makePlayer(id,dealer){
     score:0,isDealer:dealer,riichi:false,doubleRiichi:false,openRiichi:false,
     ippatsu:false,isTenhou:false,isChiihou:false,isRenhou:false,
     isHaite:false,isRinshanKaihou:false,isChankan:false,
-    drawnTile:null,tenpai:false,waits:[],riichiDiscardIdx:-1,kanCount:0,yamiTileIdx:-1,hakuTileId:null,turnCount:0,
+    drawnTile:null,tenpai:false,waits:[],riichiDiscardIdx:-1,kanCount:0,yamiTileIdx:-1,hakuTileId:null,turnCount:0,hakuUsedTurn:-1,
     ability:pAbility, abilityUsed:false,
 };
 }
@@ -9187,6 +9250,7 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   G.lightUserIdx=null;
   G.lightRevealedSlots={};  // slotIdx->true for revealed wall tiles
   G.lightRevealedHand={};   // 'pidx_handIdx'->true
+  G.lightAutoRevealedTurn={};  // pidx->true: 毎ターン自動表示済みフラグ
 
   const dealer=G.players[G.dealer];
 
@@ -9581,6 +9645,8 @@ function handlePon(pidx,tile,fromPidx){
   const p=G.players[pidx];
   let rm=0;p.hand=p.hand.filter(t=>{if(rm<2&&teq(t,tile)){rm++;return false;}return true;});
   p.melds.push({type:'pon',tiles:[tile,tile,tile],from:fromPidx});
+  // ポン元の最後の捨て牌に_claimedフラグをつける（薄く表示用）
+  const fp=G.players[fromPidx]; if(fp&&fp.discards.length>0) fp.discards[fp.discards.length-1]._claimed=true;
   const yamiTileP = (p.yamiTileIdx>=0&&p.yamiTileIdx<p.hand.length)?p.hand[p.yamiTileIdx]:null;
   if((pidx!==NET.myIdx&&!p.isCpu)||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);
   p.yamiTileIdx = yamiTileP ? p.hand.findIndex(t=>t===yamiTileP) : -1;
@@ -9596,6 +9662,33 @@ function handlePon(pidx,tile,fromPidx){
 
 function nextTurn(pidx){
   G.current=pidx;G.phase='draw';
+
+  // ☀️ 光: 自分のターンに牌を引く前に山牌1枚をランダムで自動表示（光能力装備者のみ）
+  // ホスト（またはオフライン）のみが実行し、broadcastStateで同期する
+  if(G_ABILITY_MODE && (!NET.online || amIHost())){
+    const _lightP = G.players && G.players[pidx];
+    if(_lightP && _lightP.ability==='light'){
+      if(!G.lightAutoRevealedTurn) G.lightAutoRevealedTurn={};
+      const _lightKey = `${G.roundWind}${G.roundNum}_${G.honba}_${pidx}_${(G.deck?G.deck.length:0)}`;
+      if(!G.lightAutoRevealedTurn[_lightKey] && G.deckSlots && G.deck && G.deck.length>0){
+        G.lightAutoRevealedTurn[_lightKey]=true;
+        // まだ表示されていないスロットからランダムに1枚
+        const avail = G.deckSlots.map((s,i)=>s&&!G.lightRevealedSlots[i]?i:-1).filter(i=>i>=0);
+        if(avail.length>0){
+          const si = avail[Math.floor(Math.random()*avail.length)];
+          const tile = G.deckSlots[si];
+          if(tile && tile.suit){
+            if(!G.lightRevealedSlots) G.lightRevealedSlots={};
+            G.lightRevealedSlots[si]=true;
+            addLog(`☀️ 光【${_lightP.name}】山牌が1枚表になった: ${emj(tile)}`,'log-dora');
+            flashLightEffect();
+            SFX.light();
+          }
+        }
+      }
+    }
+  }
+
   // Online: ホスト（amIHost()）だけがCPU/ドロー進行。ゲストはstate pushを待つ
   if(NET.online&&!amIHost()){renderAll();broadcastState();return;}
   if(NET.online&&amIHost()){
@@ -9737,11 +9830,12 @@ function setAFK(on){
 }
 function toggleCpuMode(){
   if(!G||!G.players) return;
-  // ランクマッチ中はCPU代打を使用不可（ボタンが消えるバグ防止）
-  if(NET.isRankMatch) return;
+  // ランクマッチ中はCPU代打を新たにONにすることは不可
+  // ただし時間切れ等で既にCPU代打がONになっている場合は解除できる
   const myIdx=NET.myIdx;
   const p=G.players[myIdx];
   if(!p) return;
+  if(NET.isRankMatch && !p.isCpu) return;
   if(p.isCpu){
     // CPU解除: 自分を人間に戻す
     p.isCpu=false;
@@ -10132,6 +10226,7 @@ function humanHakuSelectOpponent(pidx, tidx){
   t.suit='honor';t.num='白';t._isHaku=true;
   p.hakuTileId=t._id;
   G.players[NET.myIdx].abilityUsed=true;
+  if(pidx===NET.myIdx) G.players[NET.myIdx].hakuUsedTurn=G.players[NET.myIdx].turnCount;
   G.hakuSelectPlayers=(G.hakuSelectPlayers||[]).filter(i=>i!==NET.myIdx);
   SFX.haku();
   addLog(`🀆 白！${p.name}の手牌1枚を白に変換した`,'log-dora');
@@ -10173,6 +10268,7 @@ function humanHakuAuto(){
   t._hakuOriginal={suit:t.suit,num:t.num};
   t.suit='honor';t.num='白';t._isHaku=true;
   p.hakuTileId=t._id;
+  p.hakuUsedTurn=p.turnCount;
   p.abilityUsed=true;
   G.hakuSelectPlayers=(G.hakuSelectPlayers||[]).filter(i=>i!==NET.myIdx);
   SFX.haku();
@@ -11623,7 +11719,17 @@ function humanTsumo(){
 function humanRon(){
   if(!pendingAction||pendingAction.type!=='ron')return;
   const{tile,from}=pendingAction;
-  if(NET.online&&!amIHost()){netSend({type:'ron',pidx:NET.myIdx,tile,from});pendingAction=null;return;}
+  if(NET.online&&!amIHost()){
+    netSend({type:'ron',pidx:NET.myIdx,tile,from});
+    // ダブロン方式: pendingActionをnullにせず、自分だけwaitingリストから除く
+    // （nullにするとホストが2人目のronを受けた時に_ronDecisions判定が通らずシングルロンになるバグを防ぐ）
+    if(pendingAction?._ronDecisions !== undefined){
+      pendingAction._ronWaiting = pendingAction._ronWaiting.filter(i=>i!==NET.myIdx);
+    } else {
+      pendingAction=null;
+    }
+    return;
+  }
   // ダブロン: 自分の決断を記録して全員確定を待つ
   if(pendingAction._ronDecisions !== undefined){
     if(!pendingAction._ronWaiting.includes(NET.myIdx)) return;
@@ -11643,7 +11749,16 @@ function humanSkipRon(){
   if(!pendingAction)return;
   const tile=pendingAction.tile;
   const f=pendingAction.from;
-  if(NET.online&&!amIHost()){netSend({type:'skipRon',from:f,pidx:NET.myIdx});pendingAction=null;return;}
+  if(NET.online&&!amIHost()){
+    netSend({type:'skipRon',from:f,pidx:NET.myIdx});
+    // ダブロン方式: pendingActionをnullにせず、自分だけwaitingリストから除く
+    if(pendingAction?._ronDecisions !== undefined){
+      pendingAction._ronWaiting = pendingAction._ronWaiting.filter(i=>i!==NET.myIdx);
+    } else {
+      pendingAction=null;
+    }
+    return;
+  }
 
   // ── ダブロン方式: 自分のスキップを記録して全員確定を待つ ──
   if(pendingAction._ronDecisions !== undefined){
@@ -11766,6 +11881,8 @@ function handleMinkan(pidx,tile,fromPidx){
   const p=G.players[pidx];
   let rm=0;p.hand=p.hand.filter(t=>{if(rm<3&&teq(t,tile)){rm++;return false;}return true;});
   p.melds.push({type:'minkan',tiles:[tile,tile,tile,tile],from:fromPidx});
+  // カン元の最後の捨て牌に_claimedフラグをつける（薄く表示用）
+  const fpm=G.players[fromPidx]; if(fpm&&fpm.discards.length>0) fpm.discards[fpm.discards.length-1]._claimed=true;
   p.kanCount=(p.kanCount||0)+1;
   addLog(`${p.name} が明槓！ ${emj(tile)}`,'log-dora');
   G.players.forEach(pl=>{pl.ippatsu=false;}); // 鳴きが入ったら一発を消す
@@ -11992,6 +12109,11 @@ function nextRound(){
   const ms=document.getElementById('mScore');if(ms)ms.style.color='';
   // ゲストはstartRoundを実行しない（ホストからのstateUpdateを待つ）
   if(NET.online && !amIHost()){
+    // ★バグ修正: 次局開始時にゲスト側の闇状態をリセット（yamiTileIdxが残ると次局でも闇マーク牌が表示され続けるバグの対策）
+    G.yamiSelectMode = false;
+    if(G.players && NET.myIdx != null && G.players[NET.myIdx]){
+      G.players[NET.myIdx].yamiTileIdx = -1;
+    }
     // ★バグ修正: ゲスト側でも次局へ進むタイミングですべてのペン描画バッファをリセットする
     window._activePenOC = null;
     window._activeDoraOC = null;
@@ -12039,10 +12161,10 @@ function advanceRound(dealerWon){
   if(!G_TONPUU_MODE && G.roundWind==='南'&&G.roundNum>numPlayers){showFinalResult();return;}
   startRound();
 }
-// 飛びチェック: -1000点以下のプレイヤーがいれば即終了
+// 飛びチェック: -500点以下のプレイヤーがいれば即終了
 function checkTobi(){
   if(!G_TOBI_MODE) return false;
-  const tobiPlayer = G.players.find(p => p.score <= -1000);
+  const tobiPlayer = G.players.find(p => p.score <= -500);
   if(!tobiPlayer) return false;
   addLog(`💀 ${tobiPlayer.name} が飛び！試合終了`, 'log-win');
   showFinalResult();
@@ -12139,7 +12261,7 @@ function _soloShowFinalResult(cleared){
 
 function showFinalResult(){
   clearRejoinSession(); // 対局正常終了 → 復帰セッション不要
-  const sorted=[...G.players].sort((a,b)=>b.score-a.score);
+  const sorted=[...G.players].sort((a,b)=>b.score-a.score||G.players.indexOf(a)-G.players.indexOf(b));
   document.getElementById('resultTable').innerHTML=sorted.map((p,i)=>
     `<tr class="${i===0?'result-winner':''}"><td>${i+1}位 ${p.name}</td><td>${p.wind}</td><td>${p.score.toLocaleString()}点</td></tr>`
   ).join('');
@@ -12463,7 +12585,7 @@ function startTenbiBattle(){
   cpuSelectedAbilities[0] = 'tenbi'; // CPU南 = 手にビ
   bgmToGame();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,
-     kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},
+     kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},
      stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},
      penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*2),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
@@ -13207,9 +13329,10 @@ function renderDiscardZoom(){
       }
       const isStealTarget2 = G.stealMode && pidx!==NET.myIdx && !t._yami;
       const isHakuDiscardZoom = G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx) && !t._isHaku && !t._yami;
+      const isClaimedZoom = !!t._claimed;
       const clickAttr = isStealTarget2 ? `onclick="humanSteal(${pidx},${di});closeDiscardZoom()"` : isHakuDiscardZoom ? `onclick="humanHakuSelectDiscard(${pidx},${di})"` : '';
       const stealStyle = isStealTarget2 ? 'cursor:pointer;border-color:#88ff88;box-shadow:0 0 8px #44ff4466;' : isHakuDiscardZoom ? 'cursor:pointer;border-color:#aaaaff;box-shadow:0 0 8px #aaaaff66;' : '';
-      return `<div class="tile ${tc(t)}" style="width:${TW}px;height:${TH}px;font-size:${TF}rem;position:relative;${isLast?'border-color:#ff6644;':''}${isRiichi?'border-color:#ffaa00;':''}${isDora?'box-shadow:0 0 20px #ffcc0099;border-color:#f0c030;background:linear-gradient(160deg,#fffbe8,#f5e87a);':''}${isYami?'opacity:.6;border-color:#553377;':''}${stealStyle}" ${clickAttr}>${isYami?`<span style="font-size:.4em;position:absolute;top:2px;left:2px;">🌑</span>`:''}${emj(t)}</div>`;
+      return `<div class="tile ${tc(t)}" style="width:${TW}px;height:${TH}px;font-size:${TF}rem;position:relative;${isClaimedZoom?'opacity:.3;':''}${isLast?'border-color:#ff6644;':''}${isRiichi?'border-color:#ffaa00;':''}${isDora?'box-shadow:0 0 20px #ffcc0099;border-color:#f0c030;background:linear-gradient(160deg,#fffbe8,#f5e87a);':''}${isYami?'opacity:.6;border-color:#553377;':''}${stealStyle}" ${clickAttr}>${isYami?`<span style="font-size:.4em;position:absolute;top:2px;left:2px;">🌑</span>`:''}${emj(t)}</div>`;
     }).join('');
     return `<div style="margin-bottom:18px;">
       <div style="font-size:.75rem;color:#5a8a7a;margin-bottom:8px;letter-spacing:.05em;">${name}（${p.discards.length}枚）</div>
@@ -14836,10 +14959,11 @@ function renderTable(){
       const isHakuDiscard = G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx) && !t._isHaku && !t._yami;
       const isDoraDiscard = getDoras().some(d=>teq(d,t));
       const isAkaDiscard = !!t._isAka;
+      const isClaimedDiscard = !!t._claimed;
       const discardClick = isStealTarget?`onclick="humanSteal(${pidx},${di})"`:isHakuDiscard?`onclick="humanHakuSelectDiscard(${pidx},${di})"`:'' ;
       const discardBorder = isHakuDiscard?'border-color:#aaaaff;cursor:pointer;box-shadow:0 0 6px #aaaaff66;':'';
       const crackOv = t._cracked ? _crackOverlayHtml() : '';
-      return`<div class="tile ${tc(t)}${isLast?' last-discard':''}${isLastAnim?' last-discard-animate':''}${isRiichiTile?' riichi-discard':''}${isStealTarget?' steal-target':''}${isDoraDiscard?' tile-dora-glow':''}${isAkaDiscard?' tile-aka-glow':''}" data-suit="${t.suit}" data-num="${t.num}" ${discardClick} style="position:relative;overflow:hidden;${discardBorder}">${emj(t)}${crackOv}</div>`;
+      return`<div class="tile ${tc(t)}${isLast?' last-discard':''}${isLastAnim?' last-discard-animate':''}${isRiichiTile?' riichi-discard':''}${isStealTarget?' steal-target':''}${isDoraDiscard?' tile-dora-glow':''}${isAkaDiscard?' tile-aka-glow':''}" data-suit="${t.suit}" data-num="${t.num}" ${discardClick} style="position:relative;overflow:hidden;${isClaimedDiscard?'opacity:.3;':''}${discardBorder}">${emj(t)}${crackOv}</div>`;
     }).join('');
     dw.appendChild(dg);
     // ドラ山は doraPileFixed に固定表示（seat-innerには追加しない）
@@ -15177,7 +15301,8 @@ function renderActions(){
     if(p.riichi){
       const drn=p.hand[p.hand.length-1];
       const pinzuNoTsumo=G_ABILITY_MODE&&PROFILE.ability==="pinzu"&&p.isDealer;
-      const canTsumo=canWinNow&&!pinzuNoTsumo;
+      const isHakuTurn=G_ABILITY_MODE&&PROFILE.ability==='haku'&&p.hakuUsedTurn===p.turnCount;
+      const canTsumo=canWinNow&&!pinzuNoTsumo&&!isHakuTurn;
       const canKita=hasKita && p.drawnTile && p.drawnTile.suit==='honor' && p.drawnTile.num==='北' && !noMeldEnabled;
       const canAnkanNow=canAnkan(NET.myIdx).length>0;
       // 北抜きは常に一番左
@@ -15198,11 +15323,12 @@ function renderActions(){
       html+=`<button class="btn btn-danger" onclick="humanCancelRiichi()">キャンセル</button>`;
     }else{
       const pinzuNoTsumo=G_ABILITY_MODE&&PROFILE.ability==="pinzu"&&p.isDealer;
+      const isHakuTurnNormal=G_ABILITY_MODE&&PROFILE.ability==='haku'&&p.hakuUsedTurn===p.turnCount;
       const _hakuSelecting = G_ABILITY_MODE&&PROFILE.ability==='haku'&&G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx);
       if(!G.yamiSelectMode&&!_hakuSelecting){
         // 北抜きは常に一番左
         if(hasKita)html+=`<button class="btn btn-kita" onclick="humanKita()">北抜き [北]</button>`;
-if(canWinNow&&!pinzuNoTsumo)html+=`<button class="btn btn-tsumo" onclick="humanTsumo()">ツモ上がり！</button>`;
+if(canWinNow&&!pinzuNoTsumo&&!isHakuTurnNormal)html+=`<button class="btn btn-tsumo" onclick="humanTsumo()">ツモ上がり！</button>`;
         if(canRiichi){
           const dbl=canDoubleRiichi();
           html+=`<button class="btn btn-riichi" onclick="humanDeclareRiichi('riichi')">${dbl?'ダブルリーチ':'リーチ'}</button>`;
@@ -16958,7 +17084,7 @@ const INITIAL_ABILITY_KEYS = ['pen'];
 const ALL_ABILITY_DATA = [
   {key:'',       icon:'🚫', name:'能力なし',    desc:'特殊能力なし',       tag:'',     initial:true},
   {key:'mine',   icon:'💣', name:'地雷',        desc:'１局に１回、山牌に３つ爆弾をしかけられる。爆弾牌を引くと、爆発して捨て牌に。', tag:'妨害系', initial:true},
-  {key:'light',  icon:'☀️', name:'光',          desc:'１局に１回、裏向きの牌を表に出来る。',   tag:'索敵系', initial:true},
+  {key:'light',  icon:'☀️', name:'光',          desc:'自分のターン開始時、毎回山牌を1枚ランダムで表にする。さらに１局に１回、好きな牌を表にできる。',   tag:'索敵系', initial:true},
   {key:'haku',   icon:'🀆', name:'白',          desc:'１局に１回、手牌を１枚"白"に変化させられる。',   tag:'変換系', initial:true},
   {key:'pen',    icon:'🖊️', name:'ペン',        desc:'山牌に絵を描く。',       tag:'落書き系',initial:true},
   {key:'yami',   icon:'🌑', name:'闇',          desc:'１局に１回、自分の手牌の１枚を闇に染める事が出来る。', tag:'撹乱系', initial:false},
@@ -17008,7 +17134,7 @@ function pickAbility(ability){
   const ABILITY_DATA={
     '':['🚫','能力なし','特殊能力なし'],
     'mine':['💣','地雷','１局に１回、山牌に３つ爆弾をしかけられる。爆弾牌を引くと、爆発して捨て牌に。'],
-    'light':['☀️','光','１局に１回、裏向きの牌を表に出来る。'],
+    'light':['☀️','光','自分のターン開始時、毎回山牌を1枚ランダムで表にする。さらに１局に１回、好きな牌を表にできる。'],
     'yami':['🌑','闇','１局に１回、自分の手牌の１枚を闇に染める事が出来る。'],
     'haku':['🀆','白','１局に１回、手牌を１枚"白"に変化させられる。'],
     'sanctuary':['🏛️','聖域','親番中は失点しない。'],

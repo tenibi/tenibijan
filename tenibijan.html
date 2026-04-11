@@ -11398,6 +11398,7 @@ function humanSelect(idx){
       t._hakuOriginal={suit:t.suit,num:t.num};
       t.suit='honor';t.num='白';t._isHaku=true;
       p.hakuTileId=t._id;
+      p.hakuUsedTurn=p.turnCount;
       p.abilityUsed=true;
       G.hakuSelectPlayers=(G.hakuSelectPlayers||[]).filter(i=>i!==NET.myIdx);
       SFX.haku();

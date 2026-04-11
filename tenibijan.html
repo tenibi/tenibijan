@@ -11605,6 +11605,9 @@ function _docEndDrag(clientX, clientY){
         const tmp = p.hand[savedIdx];
         p.hand[savedIdx] = p.hand[savedSwapTarget];
         p.hand[savedSwapTarget] = tmp;
+        // 闇牌インデックスをスワップに追従して更新
+        if(p.yamiTileIdx === savedIdx) p.yamiTileIdx = savedSwapTarget;
+        else if(p.yamiTileIdx === savedSwapTarget) p.yamiTileIdx = savedIdx;
         selIdx = savedSwapTarget;
         SFX.draw();
         renderAll();
@@ -11614,11 +11617,14 @@ function _docEndDrag(clientX, clientY){
           insertTarget = savedCalcInsertIdx(clientX, savedHandEls, tileEl);
         }
         if(insertTarget >= 0 && savedIdx < p.hand.length && insertTarget <= p.hand.length && insertTarget !== savedIdx){
+          const yamiTileObj = (p.yamiTileIdx >= 0 && p.yamiTileIdx < p.hand.length) ? p.hand[p.yamiTileIdx] : null;
           const tile = p.hand.splice(savedIdx, 1)[0];
           let insertPos = insertTarget;
           if(savedIdx < insertTarget) insertPos--;
           if(insertPos > p.hand.length) insertPos = p.hand.length;
           p.hand.splice(insertPos, 0, tile);
+          // 闇牌インデックスを挿入移動後のオブジェクト参照から再計算
+          p.yamiTileIdx = yamiTileObj ? p.hand.findIndex(t => t === yamiTileObj) : -1;
           selIdx = insertPos;
           SFX.draw();
           renderAll();
@@ -11718,6 +11724,10 @@ function humanDiscard(){
   if(NET.online&&!amIHost()){
     if(G.pendingRiichi){netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,isYami:isYamiDiscard});}
     else{netSend({type:'discard',pidx:NET.myIdx,tidx:idx,isYami:isYamiDiscard});}
+    // ★ 闇バグ修正: ゲストはdiscardActionを呼ばないためここでyamiTileIdxをリセット
+    // これをしないと、次のホストstate受信時に_guestYamiSelected=trueのまま残り
+    // 捨てた後も永遠に同じ位置が闇牌扱いになる
+    if(isYamiDiscard) p.yamiTileIdx = -1;
     return;
   }
   if(G.pendingRiichi) commitRiichi(p);

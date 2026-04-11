@@ -3111,6 +3111,9 @@ body{
     </div>
     <div class="ll-spacer"></div>
     <div id="llTopRightBtns">
+      <button class="ll-trb" id="llFullscreenBtn" onclick="toggleFullscreen()" title="全画面" style="display:none;">
+        <span id="llFullscreenIcon">⛶</span><span class="ll-label" id="llFullscreenLabel">全画面</span>
+      </button>
       <button class="ll-trb" onclick="toggleTitleSettings()" title="設定">
         <span>⚙️</span><span class="ll-label">設定</span>
       </button>
@@ -8263,7 +8266,10 @@ function applyHostState(msg){
       if(NET.peer?.id) G.players[NET.myIdx].peerId = NET.peer.id;
       // ★ ゲスト自身の自動理牌設定に従って手牌をソート
       // （ホストはゲストの手牌をソートしないため、ゲスト側で自分でソートする）
-      if(autoSortEnabled && G.players[NET.myIdx].hand){
+      // ★ 修正: drawnTileが存在する（ツモ直後）場合のみソートする。
+      // broadcastStateは誰かが牌を切るたびに送られてくるため、毎回ソートすると
+      // 手牌が勝手に並び替えられるバグの原因になる。
+      if(autoSortEnabled && G.players[NET.myIdx].hand && G.players[NET.myIdx].drawnTile){
         G.players[NET.myIdx].hand = sortTiles(G.players[NET.myIdx].hand);
       }
     }
@@ -10744,10 +10750,15 @@ function humanPickWall(slotIdx, _fromAuto){
   if(canWin(p.hand)){addLog(`${emj(tile)} ツモ！上がれます`,'log-tsumo');renderAll();broadcastState();_triggerAutoAction(myIdx,200);return;}
   const drawnIsKita=tile.suit==='honor'&&tile.num==='北';
   if(p.riichi&&!drawnIsKita){
-    addLog(`${emj(tile)} ツモ切り（リーチ中）`,'log-riichi');
-    renderAll();broadcastState();
-    scheduleForPlayer(myIdx,550,()=>{if(G.phase==='discard'&&G.players[myIdx]?.riichi){discardAction(myIdx,G.players[myIdx].hand.length-1);broadcastState();}});
-    return;
+    // 暗槓可能な場合は自動ツモ切りをスキップし、プレイヤーに選択させる
+    const _ankanAvail=canAnkan(myIdx).length>0;
+    if(!_ankanAvail){
+      addLog(`${emj(tile)} ツモ切り（リーチ中）`,'log-riichi');
+      renderAll();broadcastState();
+      scheduleForPlayer(myIdx,550,()=>{if(G.phase==='discard'&&G.players[myIdx]?.riichi){discardAction(myIdx,G.players[myIdx].hand.length-1);broadcastState();}});
+      return;
+    }
+    // 暗槓できる場合はrenderAllで右下クイックボタンを表示して待つ
   }
   // リーチ中に北を引いた + 鳴き無しON（自動北抜きOFFの時のみ）→ 北を無視してツモ切り
   if(p.riichi && drawnIsKita && noMeldEnabled && !autoKitaEnabled){
@@ -11076,13 +11087,31 @@ function cpuAction(){
   if(G.phase==='draw'){
     G._mineHit=null;
     // スチール: 山から引く前にチェック（引く代わりに捨て牌から盗む）
-    if(p.ability==='steal'&&!p.abilityUsed&&!p.tenpai&&Math.random()<0.3){
-      const targets=[];
-      G.players.forEach((op,oi)=>{if(oi!==idx&&op.discards.length>0)targets.push({oi,di:op.discards.length-1});});
-      if(targets.length>0){
-        const t=targets[Math.floor(Math.random()*targets.length)];
-        _doSteal(idx,t.oi,t.di);
-        return;
+    // イーシャンテン(shanten===1)の時のみ発動。聴牌できる捨て牌があれば優先して使う。
+    if(p.ability==='steal'&&!p.abilityUsed&&!p.tenpai){
+      const currentShanten = calcShanten(p.hand);
+      if(currentShanten === 1){
+        // 全プレイヤーの全捨て牌から「盗めば聴牌できる牌」を探す
+        const tenpaiTargets=[];
+        const anyTargets=[];
+        G.players.forEach((op,oi)=>{
+          if(oi===idx) return;
+          op.discards.forEach((dt,di)=>{
+            if(dt._yami) return; // 闇牌は盗めない
+            // その牌を手牌に加えた場合のシャンテン数を計算
+            const testHand=[...p.hand, dt];
+            const sh=calcShanten(testHand);
+            if(sh===0) tenpaiTargets.push({oi,di,tile:dt}); // 聴牌できる
+            anyTargets.push({oi,di});
+          });
+        });
+        if(tenpaiTargets.length>0){
+          // 聴牌できる捨て牌があればランダムに1枚選んで盗む
+          const t=tenpaiTargets[Math.floor(Math.random()*tenpaiTargets.length)];
+          _doSteal(idx,t.oi,t.di);
+          return;
+        }
+        // 聴牌できる牌がない場合は使わない
       }
     }
     // ピンズー教CPU（親）: 聴牌前→筒子を優先して引く / 聴牌後→筒子を避けて引く
@@ -12316,13 +12345,18 @@ function showFinalResult(){
         if(d.earned>0) rewardEl.innerHTML=`<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;"> +${d.earned} 手にビコイン獲得！（合計 ${PROFILE.coins} 枚）<br><span style="font-size:.65rem;color:#5a7a6a;">${rankLabel}報酬：+${d.earned}枚</span>`;
         else rewardEl.innerHTML=`<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;"> +0 手にビコイン<br><span style="font-size:.65rem;color:#5a7a6a;">参加報酬：+0枚</span>`;
       }
-      // デイリーミッション: ルームマッチ1位 / ランクマッチ参加
-      if(NET.online && NET.isRankMatch) _triggerDailyMission('rank_play');
-      else if(myRank===1 && NET.online) _triggerDailyMission('room_win');
     } else {
       if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">コイン付与エラー: ${d.error||'不明'}</span>`;
     }
-  }).catch(e=>{ if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">通信エラー: ${e.message}</span>`; });
+    // デイリーミッション: ルームマッチ1位 / ランクマッチ参加（d.okに関わらず発火）
+    if(NET.online && NET.isRankMatch) _triggerDailyMission('rank_play');
+    else if(myRank===1 && NET.online) _triggerDailyMission('room_win');
+  }).catch(e=>{
+    if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">通信エラー: ${e.message}</span>`;
+    // デイリーミッション: 通信エラー時もフォールバック発火
+    if(NET.online && NET.isRankMatch) _triggerDailyMission('rank_play');
+    else if(myRank===1 && NET.online) _triggerDailyMission('room_win');
+  });
   saveProfileSilent();
 
   // ソロ対戦: 解放チェーン進捗を更新（能力ありルールのみカウント）
@@ -12498,10 +12532,15 @@ function showFinalResultData(sorted){
         else rewardEl.innerHTML=`<img src="https://github.com/tenibi/tenibijan/blob/main/coin/tenibi.png?raw=true" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;"> +0 手にビコイン<br><span style="font-size:.65rem;color:#5a7a6a;">参加報酬：+0枚</span>`;
       }
     }
-      // デイリーミッション: ランクマッチ参加 / ルームマッチ1位
-      if(NET.isRankMatch) _triggerDailyMission('rank_play');
-      else if(myRankG===1) _triggerDailyMission('room_win');
-  }).catch(e=>{ if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">通信エラー: ${e.message}</span>`; });
+    // デイリーミッション: ランクマッチ参加 / ルームマッチ1位（d.okに関わらず発火）
+    if(NET.isRankMatch) _triggerDailyMission('rank_play');
+    else if(myRankG===1) _triggerDailyMission('room_win');
+  }).catch(e=>{
+    if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">通信エラー: ${e.message}</span>`;
+    // デイリーミッション: 通信エラー時もフォールバック発火
+    if(NET.isRankMatch) _triggerDailyMission('rank_play');
+    else if(myRankG===1) _triggerDailyMission('room_win');
+  });
   saveProfileSilent();
 
   // ランクマッチ: レート変動をサーバーから取得（ホストのPOSTが完了するまで少し待つ）
@@ -21645,5 +21684,90 @@ function _showNcpToast(iconId) {
     </button>
   </div>
 </div>
+
+<script>
+// ── 全画面ボタン (スマホ・iPhone向け) ──────────────────────────────
+(function(){
+  const btn = document.getElementById('llFullscreenBtn');
+  const icon = document.getElementById('llFullscreenIcon');
+  const label = document.getElementById('llFullscreenLabel');
+
+  // スマホ・タブレット判定
+  function isMobile(){
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 1024;
+  }
+
+  // ボタン表示/非表示
+  function updateBtnVisibility(){
+    if(btn) btn.style.display = isMobile() ? '' : 'none';
+  }
+  updateBtnVisibility();
+  window.addEventListener('resize', updateBtnVisibility);
+
+  // 全画面状態のアイコン更新
+  function updateIcon(){
+    const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    if(icon) icon.textContent = isFull ? '✕' : '⛶';
+    if(label) label.textContent = isFull ? '解除' : '全画面';
+  }
+  document.addEventListener('fullscreenchange', updateIcon);
+  document.addEventListener('webkitfullscreenchange', updateIcon);
+  document.addEventListener('mozfullscreenchange', updateIcon);
+
+  // iOS Safari: スクロールバー消し＋横向き固定の擬似全画面
+  let iosFullActive = false;
+  let iosPrevStyle = '';
+
+  function enterIosFullscreen(){
+    iosPrevStyle = document.body.style.cssText;
+    document.documentElement.style.cssText += ';overflow:hidden !important;';
+    document.body.style.cssText += ';overflow:hidden !important;position:fixed;inset:0;width:100%;height:100%;';
+    // スクロールしてアドレスバーを隠す
+    window.scrollTo(0, 1);
+    iosFullActive = true;
+    if(icon) icon.textContent = '✕';
+    if(label) label.textContent = '解除';
+    // orientationはiOSでは変更不可なのでリサイズだけ
+    setTimeout(()=>{ if(typeof scaleTable==='function') scaleTable(); }, 300);
+  }
+
+  function exitIosFullscreen(){
+    document.documentElement.style.overflow = '';
+    document.body.style.cssText = iosPrevStyle;
+    iosFullActive = false;
+    if(icon) icon.textContent = '⛶';
+    if(label) label.textContent = '全画面';
+    setTimeout(()=>{ if(typeof scaleTable==='function') scaleTable(); }, 300);
+  }
+
+  window.toggleFullscreen = function(){
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if(isIOS){
+      // iOS: Fullscreen APIが使えないので擬似全画面
+      if(iosFullActive){ exitIosFullscreen(); }
+      else { enterIosFullscreen(); }
+      return;
+    }
+
+    // Android・その他: 標準Fullscreen API
+    const el = document.documentElement;
+    const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    if(isFull){
+      const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
+      if(exit) exit.call(document);
+    } else {
+      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+      if(req){
+        req.call(el, { navigationUI: 'hide' }).catch(()=>{});
+        // 横向きにロック (対応ブラウザのみ)
+        if(screen.orientation && screen.orientation.lock){
+          screen.orientation.lock('landscape').catch(()=>{});
+        }
+      }
+    }
+  };
+})();
+</script>
 </body>
 </html>

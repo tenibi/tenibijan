@@ -8112,7 +8112,7 @@ function handleGuestAction(msg, senderIdx){
       }
       break;
     case 'kita':      remoteKita(msg.pidx); break;
-    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false); break;
+    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false, msg.yamiTileIdx??-1); break;
     case 'nextRound': nextRound(); break;
     case 'backToRoom': backToRoom(); break; // ホストから部屋戻り通知
     case 'requestMyName':
@@ -8259,9 +8259,10 @@ function applyHostState(msg){
     // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みなら、自分のyamiTileIdxをホストstateで上書きされる前に保存
     const _savedYamiTileIdx = (_guestYamiSelecting||_guestYamiSelected) ? _localYamiTileIdx : -1;
     // ★ 手牌並び順保持: ゲスト自身の手牌をホストstateで上書きされる前にローカル並び順を保存
-    // autoSortOFF かつ drawnTileなし（ツモ前）のときのみ保持（ツモ直後は配牌が変わるので不要）
+    // autoSortOFF のときは drawnTile の有無に関わらず常に保存する
+    // （ツモ直後も保存しないと、ホストのbroadcastStateで並び順が上書きされるバグが発生する）
     const _myIdx = NET.myIdx;
-    const _localHand = (_myIdx != null && !autoSortEnabled && G.players[_myIdx] && !G.players[_myIdx].drawnTile)
+    const _localHand = (_myIdx != null && !autoSortEnabled && G.players[_myIdx])
       ? G.players[_myIdx].hand.slice()
       : null;
     G.players=s.players;
@@ -8272,14 +8273,18 @@ function applyHostState(msg){
     // ★ 手牌並び順保持: ホストstateで上書きされた手牌をローカル並び順に戻す
     // 保存時とホスト側の手牌の「内容（牌のキー集合）」が一致する場合のみ復元。
     // 内容が変わっている（鳴き・ツモなど）場合は復元しない。
-    if(_localHand && _myIdx!=null && G.players[_myIdx] && !G.players[_myIdx].drawnTile){
+    // drawnTileはホスト側のオブジェクト参照を保持してから並び順だけ復元する。
+    if(_localHand && _myIdx!=null && G.players[_myIdx]){
       const _hostHand = G.players[_myIdx].hand;
-      const _tk = t => t.suit+t.num+(t.red?'r':'');
+      const _tk = t => t.suit+t.num+(t._isAka?'r':'');
       const _localKeys = _localHand.map(_tk).sort().join(',');
       const _hostKeys  = _hostHand.map(_tk).sort().join(',');
       if(_localKeys === _hostKeys){
         // 内容が同じ → ローカルの並び順を復元
+        // drawnTileオブジェクトはホスト側の参照を保持（整合性維持）
+        const _savedDrawnTile = G.players[_myIdx].drawnTile;
         G.players[_myIdx].hand = _localHand;
+        G.players[_myIdx].drawnTile = _savedDrawnTile;
       }
     }
     numPlayers=s.numPlayers;
@@ -8296,10 +8301,13 @@ function applyHostState(msg){
       if(NET.peer?.id) G.players[NET.myIdx].peerId = NET.peer.id;
       // ★ ゲスト自身の自動理牌設定に従って手牌をソート
       // （ホストはゲストの手牌をソートしないため、ゲスト側で自分でソートする）
-      // ★ 修正: drawnTileが存在する（ツモ直後）場合のみソートする。
+      // ★ 修正: drawnTileが存在する（ツモ直後）かつ、自分の捨て番（phase=discard かつ current===myIdx）の場合のみソート。
       // broadcastStateは誰かが牌を切るたびに送られてくるため、毎回ソートすると
       // 手牌が勝手に並び替えられるバグの原因になる。
-      if(autoSortEnabled && G.players[NET.myIdx].hand && G.players[NET.myIdx].drawnTile){
+      // ★ 修正2: phase=discard かつ current===myIdx のときのみソート対象とすることで、
+      // 他プレイヤーのアクション通知時にゲストの手牌順序が変わるバグを修正。
+      const _isMyDiscardTurn = G.phase === 'discard' && G.current === NET.myIdx;
+      if(autoSortEnabled && G.players[NET.myIdx].hand && G.players[NET.myIdx].drawnTile && _isMyDiscardTurn){
         G.players[NET.myIdx].hand = sortTiles(G.players[NET.myIdx].hand);
       }
     }
@@ -8623,9 +8631,13 @@ function remoteHaku(pidx,tidx){
   broadcastState();
   renderAll();
 }
-function remoteRiichi(pidx,mode,tidx,isYami=false){
+function remoteRiichi(pidx,mode,tidx,isYami=false,yamiTileIdx=-1){
   G.pendingRiichi=mode;
   G.riichiValidIdx=getRiichiDiscards(G.players[pidx].hand);
+  // オープンリーチ時: ゲストのyamiTileIdxをホスト側でセット（闇手牌が他プレイヤーに正しく表示されるよう）
+  if((mode==='open'||mode==='double-open') && yamiTileIdx>=0){
+    G.players[pidx].yamiTileIdx=yamiTileIdx;
+  }
   commitRiichi(G.players[pidx]);
   discardAction(pidx,tidx,isYami);
   broadcastState();
@@ -11782,7 +11794,7 @@ function humanDiscard(){
   if(isYamiDiscard) p.abilityUsed=true;
   selIdx=-1;
   if(NET.online&&!amIHost()){
-    if(G.pendingRiichi){netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,isYami:isYamiDiscard});}
+    if(G.pendingRiichi){netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,isYami:isYamiDiscard,yamiTileIdx:p.yamiTileIdx??-1});}
     else{netSend({type:'discard',pidx:NET.myIdx,tidx:idx,isYami:isYamiDiscard});}
     // ★ 闇バグ修正: ゲストはdiscardActionを呼ばないためここでyamiTileIdxをリセット
     // これをしないと、次のホストstate受信時に_guestYamiSelected=trueのまま残り

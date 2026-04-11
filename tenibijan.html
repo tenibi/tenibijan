@@ -148,8 +148,25 @@ window.addEventListener('resize', scaleTable);
 // keepalive:true でページが閉じられた後もリクエストを送り続ける
 function _sendRankDisconnectNotify(){
   try{
-    if(typeof NET!=='undefined' && NET.isRankMatch && typeof RANK!=='undefined' && RANK.matchId){
-      const token = localStorage.getItem('jwt_token') || '';
+    if(typeof NET==='undefined' || !NET.isRankMatch || typeof RANK==='undefined') return;
+    // 二重送信防止（正常終了後やすでに送信済みの場合はスキップ）
+    if(RANK._disconnectNotifySent) return;
+    RANK._disconnectNotifySent = true;
+
+    const token = localStorage.getItem('jwt_token') || '';
+
+    if(RANK._isCpuFill){
+      // ── CPU戦: matchIdがないのでcpu-resultで最下位送信（ペナルティ相当） ──
+      // _forceStartRankCPUGame()でRANK.matchId=nullにリセットされるため
+      // disconnect-notifyは使えない。cpu-resultで最下位(rank=3/numPlayers=3)を送ることで
+      // 通常のランク低下計算が走りペナルティ代わりになる。
+      fetch(BACKEND+'/rank/cpu-result',{
+        method:'POST', keepalive:true,
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({rank:3, score:-9999, numPlayers:3})
+      }).catch(()=>{});
+    } else if(RANK.matchId){
+      // ── 通常マッチ: matchIdがある場合のみdisconnect-notifyを送信 ──
       fetch(BACKEND+'/rank/disconnect-notify',{
         method:'POST', keepalive:true,
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
@@ -6111,6 +6128,7 @@ function _rankReset(){
   RANK._gameStartFired=false;
   RANK._isCpuFill=false;
   RANK._forceTried=false;
+  RANK._disconnectNotifySent=false;
   RANK.buttonCooldown=false;
   RANK.buttonClickCount=0;
   const wp=document.getElementById('rankWaitPanel');
@@ -10753,11 +10771,12 @@ function resolveYamiChallenge(pidx, action){
     // スキップ: 次のプレイヤーへ、全員スキップなら通常フロー
     G.yamiChallenge.answered.push(pidx);
     if(G.yamiChallenge.answered.length >= numPlayers-1){
-      // 全員スキップ → 通常のロン/ポンチェックへ
-      G.phase='discard'; // 一時的に戻す
+      // 全員スキップ → 次のターンへ
+      // ★ 修正: _startRonQueue を再呼び出しするとスキップ済みのプレイヤーに再度ロン権が
+      //   渡り handleRon 内で winner.hand.push(tile) が実行されて手牌が1枚増えるバグがあった。
+      //   闇チャレンジをスキップした時点でロン権は放棄済みなので、再チェックは行わない。
+      G.phase='discard';
       G.yamiChallenge=null;
-      // 通常のロン/ポンチェック
-      if(_startRonQueue(from, tile, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op))) return;
       if(!checkPon(from,tile)) nextTurn((from+1)%numPlayers);
       broadcastState();
     } else {
@@ -12904,7 +12923,7 @@ function backToLobby(){
   if(NET.peer){try{NET.peer.destroy();}catch(e){} NET.peer=null;NET.conn=null;NET.conns=[];NET.online=false;}
   NET.roomCode=null; NET.isHost=false; NET.isRankMatch=false; NET.roomTimeMode=false; NET.roomTobiMode=true;
   NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestVcIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[]; NET.peerRegistry=[]; NET._lastActionId=0; stopSyncBroadcast();
-  RANK.matchId=null; RANK.connectedGuests=0; RANK._isCpuFill=false;
+  RANK.matchId=null; RANK.connectedGuests=0; RANK._isCpuFill=false; RANK._disconnectNotifySent=false;
   setOnlineStatus('');
   document.getElementById('roomCodeBox').style.display='none';
   document.getElementById('waitingDots').style.display='';

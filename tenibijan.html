@@ -5070,7 +5070,10 @@ function updateTenpai(p){
   }else if(len===2){
     p.tenpai=canWin(p.hand);
     p.waits=p.tenpai?[]:[];
-  }else{p.tenpai=false;p.waits=[];}
+  }else{
+    // リーチ中（手牌が6枚など）はwaitsを保持する（暗槓の待ち変化チェックに必要）
+    if(!p.riichi){p.tenpai=false;p.waits=[];}
+  }
   // SFX.tenpai(); (要件外)
 }
 
@@ -11224,10 +11227,10 @@ function calcShanten(hand){
   // 4枚手牌(1副露済み等)と5枚手牌に対応
   const n=tiles.length;
   let best=8-n; // 最悪ケース
-  // 各牌を1枚取り除いてcanWinならテンパイ
+  // 各牌を1枚取り除いてテンパイ判定（getWaitsは4枚・1枚に対応）
   for(let i=0;i<n;i++){
     const test=tiles.filter((_,j)=>j!==i);
-    if(canWin(test)) return 0; // テンパイ
+    if(getWaits(test).length>0) return 0; // テンパイ
   }
   // ウェイト数でシャンテン近似
   const waits=getWaits(tiles);

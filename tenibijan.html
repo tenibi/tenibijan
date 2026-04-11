@@ -9220,9 +9220,11 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
     });
   }
 
-  for(const p of G.players){
+  for(let _si=0;_si<G.players.length;_si++){
+    const p=G.players[_si];
     for(let i=0;i<4;i++)p.hand.push(G.deck.pop());
-    if(!p.isCpu) p.hand=sortTiles(p.hand);
+    if(_si===NET.myIdx && autoSortEnabled) p.hand=sortTiles(p.hand);
+    else if(!NET.online && !p.isCpu) p.hand=sortTiles(p.hand); // オフライン時のみ自分以外もソート
     updateTenpai(p);
   }
 
@@ -9478,9 +9480,9 @@ function discardAction(pidx,tidx,isYami=false){ if(pidx===NET.myIdx){ _timerSave
   // 闇指定牌を捨てた場合はyamiTileIdxをリセット、そうでなければソート後に再計算
   if(isYami || tile===yamiTileObj){
     p.yamiTileIdx=-1;
-    if(((pidx!==NET.myIdx&&!p.isCpu)&&!(NET.online&&isOnlineGuestIdx(pidx)))||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);
+    if(pidx===NET.myIdx&&autoSortEnabled) p.hand=sortTiles(p.hand);
   } else {
-    if(((pidx!==NET.myIdx&&!p.isCpu)&&!(NET.online&&isOnlineGuestIdx(pidx)))||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);
+    if(pidx===NET.myIdx&&autoSortEnabled) p.hand=sortTiles(p.hand);
     p.yamiTileIdx = yamiTileObj ? p.hand.findIndex(t=>t===yamiTileObj) : -1;
   }
   updateTenpai(p);
@@ -9546,7 +9548,7 @@ function handleKakan(pidx, handIdx){
   }
   // 槍槓チェック: 他プレイヤーがこの牌でロンできるか
   if(_startRonQueue(pidx, tile, (op)=>(op.hand.length===4||op.hand.length===1)&&op.tenpai&&op.waits.some(w=>teq(w,tile))&&!isFuriten(op), true)) return;
-  if(((pidx!==NET.myIdx&&!p.isCpu)&&!(NET.online&&isOnlineGuestIdx(pidx)))||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);updateTenpai(p);
+  if(pidx===NET.myIdx&&autoSortEnabled) p.hand=sortTiles(p.hand);updateTenpai(p);
   G.phase='discard';
   // 嶺上牌を選択状態にする（自分の番のみ）
   if(pidx===NET.myIdx){ const rIdx=p.hand.findIndex(t=>t===rep); selIdx=rIdx>=0?rIdx:p.hand.length-1; }
@@ -9620,7 +9622,7 @@ function handleAnkan(pidx, tileKey){
     scheduleForPlayer(pidx,900,()=>{if(!checkPon(pidx,rep))nextTurn((pidx+1)%numPlayers);broadcastState();});
     return;
   }
-  if(((pidx!==NET.myIdx&&!p.isCpu)&&!(NET.online&&isOnlineGuestIdx(pidx)))||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);updateTenpai(p);
+  if(pidx===NET.myIdx&&autoSortEnabled) p.hand=sortTiles(p.hand);updateTenpai(p);
   G.phase='discard';
   // 嶺上牌を選択状態にする（自分の番のみ）
   if(pidx===NET.myIdx){ const rIdx=p.hand.findIndex(t=>t===rep); selIdx=rIdx>=0?rIdx:p.hand.length-1; }
@@ -9671,7 +9673,7 @@ function handlePon(pidx,tile,fromPidx){
   // ポン元の最後の捨て牌に_claimedフラグをつける（薄く表示用）
   const fp=G.players[fromPidx]; if(fp&&fp.discards.length>0) fp.discards[fp.discards.length-1]._claimed=true;
   const yamiTileP = (p.yamiTileIdx>=0&&p.yamiTileIdx<p.hand.length)?p.hand[p.yamiTileIdx]:null;
-  if(((pidx!==NET.myIdx&&!p.isCpu)&&!(NET.online&&isOnlineGuestIdx(pidx)))||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);
+  if(pidx===NET.myIdx&&autoSortEnabled) p.hand=sortTiles(p.hand);
   p.yamiTileIdx = yamiTileP ? p.hand.findIndex(t=>t===yamiTileP) : -1;
   updateTenpai(p);
   addLog(`${p.name} がポン！ ${emj(tile)}`,'log-new');
@@ -11931,7 +11933,7 @@ function handleMinkan(pidx,tile,fromPidx){
     scheduleForPlayer(pidx,900,()=>{if(!checkPon(pidx,rep))nextTurn((pidx+1)%numPlayers);broadcastState();});
     return;
   }
-  if(((pidx!==NET.myIdx&&!p.isCpu)&&!(NET.online&&isOnlineGuestIdx(pidx)))||(pidx===NET.myIdx&&autoSortEnabled)) p.hand=sortTiles(p.hand);updateTenpai(p);
+  if(pidx===NET.myIdx&&autoSortEnabled) p.hand=sortTiles(p.hand);updateTenpai(p);
   G.phase='discard';G.current=pidx;
   if(canWin(p.hand)){
     p.isRinshanKaihou=true;

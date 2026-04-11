@@ -11098,32 +11098,25 @@ function cpuAction(){
   if(G.phase==='draw'){
     G._mineHit=null;
     // スチール: 山から引く前にチェック（引く代わりに捨て牌から盗む）
-    // イーシャンテン(shanten===1)の時のみ発動。聴牌できる捨て牌があれば優先して使う。
+    // テンパイできる捨て牌があれば必ず能力を発動して聴牌にする
     if(p.ability==='steal'&&!p.abilityUsed&&!p.tenpai){
-      // 手牌4枚でイーシャンテン判定: getWaitsで受け入れ牌があればイーシャンテン
-      const isIishanten = getWaits(p.hand).length > 0;
-      if(isIishanten){
-        // 全プレイヤーの全捨て牌から「盗めば聴牌できる牌」を探す
-        const tenpaiTargets=[];
-        const anyTargets=[];
-        G.players.forEach((op,oi)=>{
-          if(oi===idx) return;
-          op.discards.forEach((dt,di)=>{
-            if(dt._yami) return; // 闇牌は盗めない
-            // 盗んだ牌を加えた5枚から1枚ずつ除いて聴牌形になるか確認
-            const testHand=[...p.hand, dt];
-            const canTenpai=testHand.some((_,k)=>getWaits(testHand.filter((_,j)=>j!==k)).length>0);
-            if(canTenpai) tenpaiTargets.push({oi,di,tile:dt}); // 聴牌できる
-            anyTargets.push({oi,di});
-          });
+      // 全プレイヤーの全捨て牌から「盗めば聴牌できる牌」を探す
+      const tenpaiTargets=[];
+      G.players.forEach((op,oi)=>{
+        if(oi===idx) return;
+        op.discards.forEach((dt,di)=>{
+          if(dt._yami) return; // 闇牌は盗めない
+          // 盗んだ牌を加えた5枚から1枚ずつ除いて聴牌形になるか確認
+          const testHand=[...p.hand, dt];
+          const canTenpai=testHand.some((_,k)=>getWaits(testHand.filter((_,j)=>j!==k)).length>0);
+          if(canTenpai) tenpaiTargets.push({oi,di,tile:dt}); // 聴牌できる
         });
-        if(tenpaiTargets.length>0){
-          // 聴牌できる捨て牌があればランダムに1枚選んで盗む
-          const t=tenpaiTargets[Math.floor(Math.random()*tenpaiTargets.length)];
-          _doSteal(idx,t.oi,t.di);
-          return;
-        }
-        // 聴牌できる牌がない場合は使わない
+      });
+      if(tenpaiTargets.length>0){
+        // 聴牌できる捨て牌があればランダムに1枚選んで盗む
+        const t=tenpaiTargets[Math.floor(Math.random()*tenpaiTargets.length)];
+        _doSteal(idx,t.oi,t.di);
+        return;
       }
     }
     // ピンズー教CPU（親）: 聴牌前→筒子を優先して引く / 聴牌後→筒子を避けて引く

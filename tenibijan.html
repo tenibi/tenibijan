@@ -8258,10 +8258,29 @@ function applyHostState(msg){
     G._mineHit=s._mineHit??null;
     // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みなら、自分のyamiTileIdxをホストstateで上書きされる前に保存
     const _savedYamiTileIdx = (_guestYamiSelecting||_guestYamiSelected) ? _localYamiTileIdx : -1;
+    // ★ 手牌並び順保持: ゲスト自身の手牌をホストstateで上書きされる前にローカル並び順を保存
+    // autoSortOFF かつ drawnTileなし（ツモ前）のときのみ保持（ツモ直後は配牌が変わるので不要）
+    const _myIdx = NET.myIdx;
+    const _localHand = (_myIdx != null && !autoSortEnabled && G.players[_myIdx] && !G.players[_myIdx].drawnTile)
+      ? G.players[_myIdx].hand.slice()
+      : null;
     G.players=s.players;
     // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みだった場合、自分のyamiTileIdxをローカルの値で復元
-    if((_guestYamiSelecting||_guestYamiSelected) && NET.myIdx!=null && G.players[NET.myIdx] && _savedYamiTileIdx>=0){
-      G.players[NET.myIdx].yamiTileIdx=_savedYamiTileIdx;
+    if((_guestYamiSelecting||_guestYamiSelected) && _myIdx!=null && G.players[_myIdx] && _savedYamiTileIdx>=0){
+      G.players[_myIdx].yamiTileIdx=_savedYamiTileIdx;
+    }
+    // ★ 手牌並び順保持: ホストstateで上書きされた手牌をローカル並び順に戻す
+    // 保存時とホスト側の手牌の「内容（牌のキー集合）」が一致する場合のみ復元。
+    // 内容が変わっている（鳴き・ツモなど）場合は復元しない。
+    if(_localHand && _myIdx!=null && G.players[_myIdx] && !G.players[_myIdx].drawnTile){
+      const _hostHand = G.players[_myIdx].hand;
+      const _tk = t => t.suit+t.num+(t.red?'r':'');
+      const _localKeys = _localHand.map(_tk).sort().join(',');
+      const _hostKeys  = _hostHand.map(_tk).sort().join(',');
+      if(_localKeys === _hostKeys){
+        // 内容が同じ → ローカルの並び順を復元
+        G.players[_myIdx].hand = _localHand;
+      }
     }
     numPlayers=s.numPlayers;
     pendingAction=s.pendingAction;

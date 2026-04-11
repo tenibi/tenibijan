@@ -16081,6 +16081,7 @@ function _renderRingBookGrid(){
   const cur = PROFILE.ring || '';
   const curR = _RING_CATALOG.find(r=>r.key===cur);
   if(equippedEl) equippedEl.textContent = curR ? curR.name : 'なし';
+  _updateRingNoneBtnStyle();
   grid.innerHTML = _RING_CATALOG.map(r=>{
     const cnt = (PROFILE.rings && PROFILE.rings[r.key]) || 0;
     const owned = cnt > 0;
@@ -16104,6 +16105,19 @@ function selectRing(key){
   saveProfileSilent();
   _updateRingUI();
   _renderRingBookGrid();
+}
+function selectRingNone(){
+  PROFILE.ring = '';
+  saveProfileSilent();
+  _updateRingUI();
+  _renderRingBookGrid();
+}
+function _updateRingNoneBtnStyle(){
+  const btn = document.getElementById('ringBookNoneBtn');
+  if(!btn) return;
+  const isNone = !PROFILE.ring;
+  btn.style.borderColor = isNone ? '#ffd700' : '#3a2a5a';
+  btn.style.color = isNone ? '#ffd700' : '#7a5a9a';
 }
 
 let _skinPreviewKey = null;
@@ -18840,12 +18854,15 @@ function refreshGiftBadge(){
 let _giftTarget = {id:'', name:''};
 let _giftTab    = 'tbb';
 const GIFT_SKIN_CATALOG = [
-  {key:'tattoo01',     icon:'🖊️', name:'刺青01',     desc:'牌を切る手に刺青が入る'},
-  {key:'hyou',         icon:'🐆', name:'豹',          desc:'豹の手で牌を切る'},
-  {key:'nekonote',     icon:'🐱', name:'猫の手',      desc:'猫の手で牌を切る'},
-  {key:'siroinekonote', icon:'🤍', name:'白猫の手',    desc:'白猫の手で牌を切る'},
-  {key:'tenibinote',   icon:'🫱', name:'手にビの手',  desc:'手にビの手で牌を切る'},
-  {key:'tora',         icon:'🐯', name:'虎の手',      desc:'虎の手で牌を切る'},
+  {key:'irezumi01ao',    icon:'🌸', name:'花 青',      desc:'青い花の刺青が入る'},
+  {key:'irezumi01kiiro', icon:'🌼', name:'花 黄色',    desc:'黄色い花の刺青が入る'},
+  {key:'irezumi01kuro',  icon:'🖤', name:'花 黒',      desc:'黒い花の刺青が入る'},
+  {key:'irezumi01pink',  icon:'🌺', name:'花 ピンク',  desc:'ピンクの花の刺青が入る'},
+  {key:'hyou',           icon:'🐆', name:'豹',         desc:'豹の手で牌を切る'},
+  {key:'nekonote',       icon:'🐱', name:'猫の手',     desc:'猫の手で牌を切る'},
+  {key:'siroinekonote',  icon:'🤍', name:'白猫の手',   desc:'白猫の手で牌を切る'},
+  {key:'tenibinote',     icon:'🫱', name:'手にビの手', desc:'手にビの手で牌を切る'},
+  {key:'tora',           icon:'🐯', name:'虎の手',     desc:'虎の手で牌を切る'},
 ];
 
 function openGiftModal(friendId, friendName){
@@ -21385,6 +21402,20 @@ function _showNcpToast(iconId) {
       <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.08em;">装備中</div>
       <div id="ringBookEquipped" style="font-size:.78rem;font-weight:700;color:#cc99ff;">なし</div>
     </div>
+  </div>
+
+  <div style="width:100%;max-width:480px;margin-bottom:12px;">
+    <button id="ringBookNoneBtn" onclick="selectRingNone()" style="
+      width:100%;padding:10px 16px;border-radius:10px;cursor:pointer;
+      background:#040c12;border:2px solid #3a2a5a;
+      color:#7a5a9a;font-size:.72rem;font-weight:700;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      transition:border-color .15s, color .15s;
+    "
+    onmouseover="this.style.borderColor='#7a4acc';this.style.color='#cc99ff';"
+    onmouseout="_updateRingNoneBtnStyle();">
+      <span style="font-size:1rem;">🚫</span> 指輪なし
+    </button>
   </div>
 
   <div id="ringBookGrid" style="width:100%;max-width:480px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>

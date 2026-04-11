@@ -3261,6 +3261,14 @@ body{
         <div class="lpc-coins" id="lpcTbbCoins"><img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:2px;">---</div>
       </div>
     </div>
+    <button id="portraitFullscreenBtn" onclick="toggleFullscreen()" style="
+      background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
+      color:#5a8a6a;font-size:.65rem;padding:6px 10px;cursor:pointer;
+      transition:all .15s;align-self:stretch;
+      display:none;flex-direction:column;align-items:center;gap:1px;line-height:1.2;" title="全画面">
+      <span id="portraitFullscreenIcon" style="font-size:1rem;">⛶</span>
+      <span id="portraitFullscreenLabel">全画面</span>
+    </button>
     <button onclick="toggleTitleSettings()" style="
       background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
       color:#5a8a6a;font-size:1rem;padding:6px 10px;cursor:pointer;
@@ -11092,8 +11100,9 @@ function cpuAction(){
     // スチール: 山から引く前にチェック（引く代わりに捨て牌から盗む）
     // イーシャンテン(shanten===1)の時のみ発動。聴牌できる捨て牌があれば優先して使う。
     if(p.ability==='steal'&&!p.abilityUsed&&!p.tenpai){
-      const currentShanten = calcShanten(p.hand);
-      if(currentShanten === 1){
+      // 手牌4枚でイーシャンテン判定: getWaitsで受け入れ牌があればイーシャンテン
+      const isIishanten = getWaits(p.hand).length > 0;
+      if(isIishanten){
         // 全プレイヤーの全捨て牌から「盗めば聴牌できる牌」を探す
         const tenpaiTargets=[];
         const anyTargets=[];
@@ -11101,10 +11110,10 @@ function cpuAction(){
           if(oi===idx) return;
           op.discards.forEach((dt,di)=>{
             if(dt._yami) return; // 闇牌は盗めない
-            // その牌を手牌に加えた場合のシャンテン数を計算
+            // 盗んだ牌を加えた5枚から1枚ずつ除いて聴牌形になるか確認
             const testHand=[...p.hand, dt];
-            const sh=calcShanten(testHand);
-            if(sh===0) tenpaiTargets.push({oi,di,tile:dt}); // 聴牌できる
+            const canTenpai=testHand.some((_,k)=>getWaits(testHand.filter((_,j)=>j!==k)).length>0);
+            if(canTenpai) tenpaiTargets.push({oi,di,tile:dt}); // 聴牌できる
             anyTargets.push({oi,di});
           });
         });
@@ -11227,10 +11236,10 @@ function calcShanten(hand){
   // 4枚手牌(1副露済み等)と5枚手牌に対応
   const n=tiles.length;
   let best=8-n; // 最悪ケース
-  // 各牌を1枚取り除いてテンパイ判定（getWaitsは4枚・1枚に対応）
+  // 各牌を1枚取り除いてcanWinならテンパイ
   for(let i=0;i<n;i++){
     const test=tiles.filter((_,j)=>j!==i);
-    if(getWaits(test).length>0) return 0; // テンパイ
+    if(canWin(test)) return 0; // テンパイ
   }
   // ウェイト数でシャンテン近似
   const waits=getWaits(tiles);
@@ -21694,15 +21703,29 @@ function _showNcpToast(iconId) {
   const btn = document.getElementById('llFullscreenBtn');
   const icon = document.getElementById('llFullscreenIcon');
   const label = document.getElementById('llFullscreenLabel');
+  const portraitBtn = document.getElementById('portraitFullscreenBtn');
+  const portraitIcon = document.getElementById('portraitFullscreenIcon');
+  const portraitLabel = document.getElementById('portraitFullscreenLabel');
 
   // スマホ・タブレット判定
   function isMobile(){
     return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 1024;
   }
 
+  // 縦画面判定
+  function isPortraitMode(){
+    return window.innerWidth < window.innerHeight;
+  }
+
   // ボタン表示/非表示
   function updateBtnVisibility(){
-    if(btn) btn.style.display = isMobile() ? '' : 'none';
+    // 横画面用ボタン（lobbyLandscape内）: スマホ横画面の時のみ表示
+    if(btn) btn.style.display = (isMobile() && !isPortraitMode()) ? '' : 'none';
+    // 縦画面用ボタン（lobbyInner内）: スマホ縦画面の時のみ表示
+    if(portraitBtn) {
+      const show = isMobile() && isPortraitMode();
+      portraitBtn.style.display = show ? 'flex' : 'none';
+    }
   }
   updateBtnVisibility();
   window.addEventListener('resize', updateBtnVisibility);
@@ -21712,6 +21735,8 @@ function _showNcpToast(iconId) {
     const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
     if(icon) icon.textContent = isFull ? '✕' : '⛶';
     if(label) label.textContent = isFull ? '解除' : '全画面';
+    if(portraitIcon) portraitIcon.textContent = isFull ? '✕' : '⛶';
+    if(portraitLabel) portraitLabel.textContent = isFull ? '解除' : '全画面';
   }
   document.addEventListener('fullscreenchange', updateIcon);
   document.addEventListener('webkitfullscreenchange', updateIcon);
@@ -21730,6 +21755,8 @@ function _showNcpToast(iconId) {
     iosFullActive = true;
     if(icon) icon.textContent = '✕';
     if(label) label.textContent = '解除';
+    if(portraitIcon) portraitIcon.textContent = '✕';
+    if(portraitLabel) portraitLabel.textContent = '解除';
     // orientationはiOSでは変更不可なのでリサイズだけ
     setTimeout(()=>{ if(typeof scaleTable==='function') scaleTable(); }, 300);
   }
@@ -21740,6 +21767,8 @@ function _showNcpToast(iconId) {
     iosFullActive = false;
     if(icon) icon.textContent = '⛶';
     if(label) label.textContent = '全画面';
+    if(portraitIcon) portraitIcon.textContent = '⛶';
+    if(portraitLabel) portraitLabel.textContent = '全画面';
     setTimeout(()=>{ if(typeof scaleTable==='function') scaleTable(); }, 300);
   }
 

@@ -6012,7 +6012,10 @@ function _getRankCpuConfig(){
     : defaultIcon;
 
   // 称号: プレイヤーが解禁している称号からランダム、なければなし
-  const ownedTitles = PROFILE.yakumanTitles||[];
+  // ★修正: 辞書に存在しないキー（旧バージョンの称号名等）を除外し🏆絵文字バグを防ぐ
+  const ownedTitles = (PROFILE.yakumanTitles||[]).filter(k =>
+    YAKUMAN_TITLES[k] || ANIMAL_SCORE_TITLES[k] || SPECIAL_TITLES[k]
+  );
   const title = ownedTitles.length>0
     ? ownedTitles[Math.floor(Math.random()*ownedTitles.length)]
     : '';
@@ -6685,7 +6688,7 @@ function _reconnectToNewHost(newHostPeerId, retryCount=0){
     NET._promotingToHost = false;
     if(conn.peer) peerRegistryAdd(conn.peer, newHostIdx, conn);
     conn.send({type:'reconnect', originalIdx: myOriginalIdx, peerId: NET.peer?.id||''});
-    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
     addLog('✅ 新ホストに再接続しました','log-new');
     hideReconnectOverlay();
   });
@@ -7329,7 +7332,7 @@ function leaveRoomLobby(){
   if(NET.peer){ try{NET.peer.destroy();}catch(e){} NET.peer=null; }
   hideRoomLobby();
   NET.conns=[]; NET.conn=null; NET.roomCode=null; NET.isHost=false;
-  NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[]; NET.peerRegistry=[]; NET._lastActionId=0; stopSyncBroadcast();
+  NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestVcIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[]; NET.peerRegistry=[]; NET._lastActionId=0; stopSyncBroadcast();
   setOnlineStatus('');
   document.getElementById('lobby').style.display='block';
   document.getElementById('roomCodeBox').style.display='none';
@@ -7628,7 +7631,7 @@ function onNetData(msg, senderIdx){
         G_ABILITY_MODE=msg.abilityMode;
       }
       // 自分のプロフィール名・アイコン・PeerIDをホストに送信
-      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
       if(isReconnecting){
         // 再接続完了：ゲーム状態は次の stateUpdate で同期される
         addLog('🔄 新ホストと同期中…','log-new');
@@ -7742,7 +7745,7 @@ function onNetData(msg, senderIdx){
       setTimeout(saveRejoinSession, 600);
       // ゲスト: ホストに自分のアイコン情報とPeerIDを送信（makePlayer後に反映させるため）
       setTimeout(()=>{
-        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
       }, 400);
       // ★修正: ゲスト側でbroadcastStateが届かなかった場合の保険
       // G が未初期化の場合に applyHostState がクラッシュしないよう最低限初期化しておく
@@ -8030,6 +8033,7 @@ function handleGuestAction(msg, senderIdx){
           name:PROFILE.name||'プレイヤー',
           ability:PROFILE.ability||'',
           iconId:_getProfileDisplayIconId(),
+          vcIconId:_getProfileVcIconId(),
           equippedTitle:PROFILE.equippedTitle||'',
           emote:PROFILE.emote||'',
           emotes:PROFILE.emotes||['','','',''],
@@ -8048,6 +8052,7 @@ function handleGuestAction(msg, senderIdx){
       NET.guestNames[senderIdx-1]=msg.name||'プレイヤー';
       NET.guestAbilities[senderIdx-1]=msg.ability??'';
       NET.guestIconIds[senderIdx-1]=msg.iconId||'';
+      NET.guestVcIconIds = NET.guestVcIconIds||[]; NET.guestVcIconIds[senderIdx-1]=msg.vcIconId||msg.iconId||'';
       NET.guestEquippedTitles = NET.guestEquippedTitles||[]; NET.guestEquippedTitles[senderIdx-1]=msg.equippedTitle||'';
       NET.guestHandSkins = NET.guestHandSkins||[]; NET.guestHandSkins[senderIdx-1]=msg.handSkin||'';
       NET.guestRings = NET.guestRings||[]; NET.guestRings[senderIdx-1]=msg.ring||'';
@@ -9403,9 +9408,12 @@ function discardAction(pidx,tidx,isYami=false){ if(pidx===NET.myIdx){ _timerSave
     G.yamiChallenge={from:pidx, tile, answered:[], totalAnswers:0};
     renderAll();broadcastState();
     // CPU/オフラインプレイヤーは常にスキップ
-    if(!NET.online){
-      for(let i=0;i<numPlayers;i++){
-        if(i===pidx)continue;
+    // ★ 修正: オンライン中もCPUスロットは自動スキップ（しないとpending_yami_challengeで止まる）
+    for(let i=0;i<numPlayers;i++){
+      if(i===pidx) continue;
+      const isCpuSlot = NET.online && G.players[i] && G.players[i].isCpu;
+      const isOffline = !NET.online;
+      if(isOffline || isCpuSlot){
         resolveYamiChallenge(i,'skip');
       }
     }
@@ -9776,7 +9784,8 @@ function _updateAFKBtn(){
   const btn=document.getElementById('afkBtn');
   if(!btn) return;
   // ランクマッチ中はCPU代打ボタンを非表示
-  if(NET.isRankMatch){
+  // ただし時間切れ等でCPU代打が既にONになっている場合は解除できるよう表示する
+  if(NET.isRankMatch && !playerAFK){
     btn.style.display='none';
     return;
   }
@@ -12511,7 +12520,7 @@ async function backToRoom(){
     NET.online=true;
     netBroadcastAll({type:'backToRoom'});
     // UI状態をリセットしてルームロビーを再表示
-    NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[];
+    NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestVcIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[];
     // 全ゲスト接続を閉じて再接続を促す（部屋は維持、ゲストは自動で再接続）
     const _oldConns = [...NET.conns];
     NET.conns = [];
@@ -12772,7 +12781,7 @@ function backToLobby(){
   const wasRankMatch = NET.isRankMatch;
   if(NET.peer){try{NET.peer.destroy();}catch(e){} NET.peer=null;NET.conn=null;NET.conns=[];NET.online=false;}
   NET.roomCode=null; NET.isHost=false; NET.isRankMatch=false; NET.roomTimeMode=false; NET.roomTobiMode=true;
-  NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[]; NET.peerRegistry=[]; NET._lastActionId=0; stopSyncBroadcast();
+  NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestVcIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[]; NET.peerRegistry=[]; NET._lastActionId=0; stopSyncBroadcast();
   RANK.matchId=null; RANK.connectedGuests=0; RANK._isCpuFill=false;
   setOnlineStatus('');
   document.getElementById('roomCodeBox').style.display='none';
@@ -17214,7 +17223,8 @@ function _playIconSe(iconId, action, fallback) {
 function _getPlayerIconId(pidx) {
   // 自分自身はPROFILEから確実に取得（VCアイコン優先）
   if (pidx === NET.myIdx) return _getProfileVcIconId();
-  // 他プレイヤー: G.playersを優先、空ならNET.guestIconIds[pidx-1]で補完
+  // 他プレイヤー: VCアイコンIDを優先、なければ見た目アイコン
+  if (NET.guestVcIconIds && NET.guestVcIconIds[pidx - 1]) return NET.guestVcIconIds[pidx - 1];
   const fromG = (G && G.players && G.players[pidx]) ? (G.players[pidx].iconId || '') : '';
   if (fromG) return fromG;
   // NET.guestIconIds は [idx1のID, idx2のID, idx3のID]（0始まりでpidx-1）

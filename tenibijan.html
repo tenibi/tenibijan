@@ -14,6 +14,7 @@
 <meta name="twitter:title" content="手にビじゃん">
 <meta name="twitter:description" content="5枚だから簡単！だけど奥が深い！みんなでわいわい『手にビじゃん』">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/tenibi/tenibijan/main/fabi.png">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -3352,6 +3353,19 @@ body{
           </select>
         </div>
       </div>
+      <!-- OP動画 ON/OFF -->
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+        <span style="font-size:.65rem;color:#5a7a6a;width:60px;">🎬 OP動画</span>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
+          <div id="opToggle" onclick="toggleOpSetting()" style="
+            width:40px;height:22px;border-radius:11px;position:relative;flex-shrink:0;
+            background:var(--gold);transition:background .2s;cursor:pointer;">
+            <div id="opToggleThumb" style="position:absolute;top:3px;left:calc(100% - 19px);width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;"></div>
+          </div>
+          <span id="opToggleLabel" style="font-size:.62rem;color:var(--gold);">ON（次回ログイン時に再生）</span>
+        </label>
+      </div>
+
       <!-- レジェンドボイス個別音量 -->
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a3a2a;">
         <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('span').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼';" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;margin-bottom:4px;">
@@ -4454,6 +4468,7 @@ function saveSettings(){
       gachaSeVol: _gachaSeVol,
       oneClickDiscard: oneClickDiscard,
       discardAnimEnabled: discardAnimEnabled,
+      opEnabled: _opEnabled,
       iconVoiceScale: Object.assign({}, iconVoiceScale),
       seScale: Object.fromEntries(
         ['draw','discard','ron','tsumo','riichi','pon','kan','kita','yakuman','light','yami','haku','steal','mine','myTurn','countdown','voice']
@@ -4562,6 +4577,11 @@ function loadSettings(){
       discardAnimEnabled = !!data.discardAnimEnabled;
       _applyDiscardAnimUI();
     }
+    // OP動画設定
+    if(data.opEnabled != null){
+      _opEnabled = !!data.opEnabled;
+      _applyOpToggleUI();
+    }
     // レジェンドアイコン個別ボイス音量
     if(data.iconVoiceScale){
       Object.keys(data.iconVoiceScale).forEach(id=>{
@@ -4570,6 +4590,21 @@ function loadSettings(){
       _applyIconVoiceSliders();
     }
   }catch(e){}
+}
+
+function toggleOpSetting(){
+  _opEnabled = !_opEnabled;
+  _applyOpToggleUI();
+  saveSettings();
+}
+function _applyOpToggleUI(){
+  const toggle = document.getElementById('opToggle');
+  const thumb  = document.getElementById('opToggleThumb');
+  const label  = document.getElementById('opToggleLabel');
+  if(toggle) toggle.style.background = _opEnabled ? 'var(--gold)' : '#1a3a2a';
+  if(thumb)  thumb.style.left = _opEnabled ? 'calc(100% - 19px)' : '3px';
+  if(label)  label.style.color = _opEnabled ? 'var(--gold)' : '#4a6a5a';
+  if(label)  label.textContent = _opEnabled ? 'ON（次回ログイン時に再生）' : 'OFF';
 }
 
 // タイトル画面とゲームヘッダーのスライダーを相互同期する
@@ -4796,7 +4831,7 @@ async function attemptRejoin(){
 
 // ── ロビーBGM自動再生 ───────────────────────────────────────
 // ブラウザの自動再生ポリシーにより、ユーザー操作前は Audio.play() がブロックされる。
-// 最初のクリック/タッチを検知してBGMを開始し、以降は解除しない（一度だけ発火）。
+// 最初のクリック/タッチを検知してOP動画を開始し、OP終了後にBGMを開始する。
 (function(){
   let _unlocked = false;
   function _unlock(){
@@ -4804,9 +4839,14 @@ async function attemptRejoin(){
     _unlocked = true;
     document.removeEventListener('click', _unlock, true);
     document.removeEventListener('touchstart', _unlock, true);
-    // ゲーム画面が出ていない＝ロビー表示中のみBGMを開始
+    // ゲーム画面が出ていない＝ロビー表示中のみ
     if(!document.getElementById('gameScreen')?.classList.contains('active')){
-      BGM.fadeIn(_titleBgmKey);
+      // OP動画がONでまだ再生していなければOP→BGM、それ以外はBGM直接
+      if(_opEnabled && !_opPlayed){
+        showOpOverlay();
+      } else {
+        BGM.fadeIn(_titleBgmKey);
+      }
     }
   }
   document.addEventListener('click', _unlock, true);
@@ -13754,6 +13794,9 @@ function _initWallExpandEvents(ec){
   ec.addEventListener('click',      epClick);
   ec.addEventListener('contextmenu',(e)=>{
     if(!(numPlayers===1 && G && G._soloStage)) return;
+    // ec も _wallExpandInited リセットにより重複登録される恐れがあるためガード
+    if(e._bombEcHandled) return;
+    e._bombEcHandled = true;
     e.preventDefault();
     e.stopPropagation();
     const p=getPos(e);
@@ -14207,6 +14250,11 @@ function _initWallCanvasEvents(wc){
   wc.addEventListener('click',      (e)=>{ if(_lastTouchHandled){ _lastTouchHandled=false; return; } wallClick(e); });
   wc.addEventListener('contextmenu',(e)=>{
     if(!(numPlayers===1 && G && G._soloStage)) return;
+    // ラウンドごとに _initWallCanvasEvents が再呼び出しされハンドラーが重複登録される。
+    // 同一イベントで複数ハンドラーが発火すると _bombRightClickSlot が複数回呼ばれ
+    // 🚩→？→なし のサイクルが打ち消し合うバグを防ぐ。
+    if(e._bombWcHandled) return;
+    e._bombWcHandled = true;
     e.preventDefault();
     const p=getPos(e);
     const si=_wallSlotAt(p.x,p.y);
@@ -21749,6 +21797,101 @@ function _showNcpToast(iconId) {
     </button>
   </div>
 </div>
+
+<!-- ===== OP動画オーバーレイ ===== -->
+<div id="opOverlay" style="
+  display:none;
+  position:fixed;inset:0;z-index:99999;
+  background:#000;
+  flex-direction:column;
+  align-items:center;justify-content:center;
+  cursor:pointer;
+  user-select:none;
+">
+  <!-- YouTube iframe コンテナ -->
+  <div id="opVideoWrap" style="
+    position:relative;
+    width:100%;height:100%;
+    pointer-events:none;
+  ">
+    <iframe
+      id="opYtIframe"
+      src=""
+      style="position:absolute;inset:0;width:100%;height:100%;border:none;"
+      allow="autoplay; encrypted-media"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen>
+    </iframe>
+  </div>
+  <!-- スキップ案内 -->
+  <div id="opSkipHint" style="
+    position:absolute;bottom:36px;right:36px;
+    background:rgba(0,0,0,0.55);
+    color:#c9a84c;font-size:.75rem;
+    padding:8px 18px;border-radius:20px;
+    border:1px solid #c9a84c55;
+    pointer-events:none;
+    letter-spacing:.08em;
+    transition:opacity .4s;
+  ">タップ / クリックでスキップ ▶</div>
+</div>
+
+<style>
+#opOverlay.op-active { display:flex !important; }
+</style>
+
+<script>
+// ── OP動画 ──────────────────────────────────────────────────────────
+let _opEnabled = true; // デフォルトON（saveSettings/loadSettingsで管理）
+let _opPlayed  = false; // セッション中すでに再生済みか
+
+const _OP_VIDEO_ID = 'pf_b4auR84U';
+
+function _buildOpSrc(){
+  // autoplay=1, mute=0(音あり), controls=0, rel=0, modestbranding=1
+  return 'https://www.youtube-nocookie.com/embed/' + _OP_VIDEO_ID
+    + '?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1'
+    + '&enablejsapi=1&playsinline=1&iv_load_policy=3';
+}
+
+function showOpOverlay(){
+  if(!_opEnabled) { _onOpEnd(); return; }
+  const overlay = document.getElementById('opOverlay');
+  const iframe  = document.getElementById('opYtIframe');
+  if(!overlay || !iframe) return;
+  iframe.src = _buildOpSrc();
+  overlay.classList.add('op-active');
+  // クリック/タップでスキップ
+  overlay.addEventListener('click', skipOp, { once: true });
+  // フォールバック: 動画が読めない場合などに30秒後に自動スキップ
+  window._opAutoSkipTimer = setTimeout(skipOp, 30000);
+}
+
+function skipOp(){
+  clearTimeout(window._opAutoSkipTimer);
+  const overlay = document.getElementById('opOverlay');
+  const iframe  = document.getElementById('opYtIframe');
+  if(overlay){
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity .4s';
+    setTimeout(()=>{
+      overlay.classList.remove('op-active');
+      overlay.style.opacity = '';
+      overlay.style.transition = '';
+      if(iframe) iframe.src = '';
+    }, 400);
+  }
+  _onOpEnd();
+}
+
+function _onOpEnd(){
+  _opPlayed = true;
+  // ロビーBGMを開始
+  if(typeof BGM !== 'undefined' && typeof _titleBgmKey !== 'undefined'){
+    BGM.fadeIn(_titleBgmKey);
+  }
+}
+</script>
 
 <script>
 // ── 全画面ボタン (スマホ・iPhone向け) ──────────────────────────────

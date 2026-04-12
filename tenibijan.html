@@ -8265,6 +8265,10 @@ function applyHostState(msg){
     const _localHand = (_myIdx != null && !autoSortEnabled && G.players[_myIdx])
       ? G.players[_myIdx].hand.slice()
       : null;
+    // ★ drawnTileも保存しておく（キー比較で使うため）
+    const _localDrawnTile = (_myIdx != null && G.players[_myIdx])
+      ? G.players[_myIdx].drawnTile
+      : null;
     G.players=s.players;
     // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みだった場合、自分のyamiTileIdxをローカルの値で復元
     if((_guestYamiSelecting||_guestYamiSelected) && _myIdx!=null && G.players[_myIdx] && _savedYamiTileIdx>=0){
@@ -8273,18 +8277,23 @@ function applyHostState(msg){
     // ★ 手牌並び順保持: ホストstateで上書きされた手牌をローカル並び順に戻す
     // 保存時とホスト側の手牌の「内容（牌のキー集合）」が一致する場合のみ復元。
     // 内容が変わっている（鳴き・ツモなど）場合は復元しない。
-    // drawnTileはホスト側のオブジェクト参照を保持してから並び順だけ復元する。
+    // ★ 修正: drawnTileをhand比較に含めて、ローカルとホストの「全牌セット」で一致判定する。
+    //   これにより drawnTile の有無の非対称によるキー不一致（並び順が捨てられるバグ）を防ぐ。
     if(_localHand && _myIdx!=null && G.players[_myIdx]){
       const _hostHand = G.players[_myIdx].hand;
+      const _hostDrawnTile = G.players[_myIdx].drawnTile;
       const _tk = t => t.suit+t.num+(t._isAka?'r':'');
-      const _localKeys = _localHand.map(_tk).sort().join(',');
-      const _hostKeys  = _hostHand.map(_tk).sort().join(',');
+      // ローカル側: hand + drawnTile（存在する場合）の全牌キーセット
+      const _localAllTiles = _localDrawnTile ? [..._localHand, _localDrawnTile] : [..._localHand];
+      // ホスト側: hand + drawnTile（存在する場合）の全牌キーセット
+      const _hostAllTiles  = _hostDrawnTile  ? [..._hostHand,  _hostDrawnTile]  : [..._hostHand];
+      const _localKeys = _localAllTiles.map(_tk).sort().join(',');
+      const _hostKeys  = _hostAllTiles.map(_tk).sort().join(',');
       if(_localKeys === _hostKeys){
-        // 内容が同じ → ローカルの並び順を復元
+        // 内容が同じ → ゲストのローカル並び順を復元
         // drawnTileオブジェクトはホスト側の参照を保持（整合性維持）
-        const _savedDrawnTile = G.players[_myIdx].drawnTile;
         G.players[_myIdx].hand = _localHand;
-        G.players[_myIdx].drawnTile = _savedDrawnTile;
+        G.players[_myIdx].drawnTile = _hostDrawnTile;
       }
     }
     numPlayers=s.numPlayers;
@@ -9876,6 +9885,13 @@ function _timerAutoAct(){
   if(G.current!==myIdx) return;
   _timerAutoActFired=true;
   _timerDebt=999; // 時間切れ: 以降ターンは最低1秒
+  // ★修正: ランクマッチの時間切れ時はp.isCpuもtrueにセット
+  // これにより toggleCpuMode() のガード(isRankMatch && !p.isCpu)を通過でき
+  // CPU代打ボタンが正常に押せるようになる
+  if(NET.isRankMatch && G && G.players && G.players[myIdx]){
+    G.players[myIdx].isCpu = true;
+    if(NET.online && typeof amIHost==='function' && amIHost()) broadcastState();
+  }
   setAFK(true); // 時間切れ→離席ON
 }
 
@@ -13016,7 +13032,17 @@ function backToLobby(){
   if(NET.peer){try{NET.peer.destroy();}catch(e){} NET.peer=null;NET.conn=null;NET.conns=[];NET.online=false;}
   NET.roomCode=null; NET.isHost=false; NET.isRankMatch=false; NET.roomTimeMode=false; NET.roomTobiMode=true;
   NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestVcIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[]; NET.peerRegistry=[]; NET._lastActionId=0; stopSyncBroadcast();
-  RANK.matchId=null; RANK.connectedGuests=0; RANK._isCpuFill=false; RANK._disconnectNotifySent=false;
+  // ★修正: RANK を完全リセット（_gameStartFired など残存フラグをクリア）
+  // 旧コード: matchId/connectedGuests/_isCpuFill/_disconnectNotifySent のみリセット
+  // → _gameStartFired=true が残ったまま次のマッチングに進むと
+  //   _pollRankStatus/_onRankMatched の if(RANK._gameStartFired)return ガードに
+  //   引っかかり、マッチング成立後もゲームが開始されないバグの原因だった
+  if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
+  if(RANK._cpuFillTimer){clearTimeout(RANK._cpuFillTimer);RANK._cpuFillTimer=null;}
+  RANK.searchStartAt=null; RANK.peerId=null; RANK.matchId=null; RANK.myRating=null;
+  RANK.opponents=[]; RANK.connectedGuests=0; RANK._gameStartFired=false;
+  RANK._isCpuFill=false; RANK._forceTried=false; RANK._disconnectNotifySent=false;
+  RANK.buttonCooldown=false; RANK.buttonClickCount=0;
   setOnlineStatus('');
   document.getElementById('roomCodeBox').style.display='none';
   document.getElementById('waitingDots').style.display='';

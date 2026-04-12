@@ -8262,12 +8262,15 @@ function applyHostState(msg){
     // autoSortOFF のときは drawnTile の有無に関わらず常に保存する
     // （ツモ直後も保存しないと、ホストのbroadcastStateで並び順が上書きされるバグが発生する）
     const _myIdx = NET.myIdx;
-    const _localHand = (_myIdx != null && !autoSortEnabled && G.players[_myIdx])
-      ? G.players[_myIdx].hand.slice()
-      : null;
-    // ★ drawnTileも保存しておく（キー比較で使うため）
-    const _localDrawnTile = (_myIdx != null && G.players[_myIdx])
-      ? G.players[_myIdx].drawnTile
+    const _localPlayer = (_myIdx != null && G.players[_myIdx]) ? G.players[_myIdx] : null;
+    // drawnTile は hand の末尾と同一オブジェクト（hand.push(t); drawnTile=t;）。
+    // キー比較時にドローを除いた4枚(or2枚)の hand 部分だけで比較するため、
+    // drawnTile がある場合は末尾1枚を除いて保存する。
+    const _localDrawnTile = _localPlayer ? _localPlayer.drawnTile : null;
+    const _localHand = (!autoSortEnabled && _localPlayer)
+      ? (_localDrawnTile
+          ? _localPlayer.hand.slice(0, _localPlayer.hand.length - 1)  // drawnTile(末尾)を除いた部分だけ保存
+          : _localPlayer.hand.slice())
       : null;
     G.players=s.players;
     // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みだった場合、自分のyamiTileIdxをローカルの値で復元
@@ -8275,24 +8278,24 @@ function applyHostState(msg){
       G.players[_myIdx].yamiTileIdx=_savedYamiTileIdx;
     }
     // ★ 手牌並び順保持: ホストstateで上書きされた手牌をローカル並び順に戻す
-    // 保存時とホスト側の手牌の「内容（牌のキー集合）」が一致する場合のみ復元。
-    // 内容が変わっている（鳴き・ツモなど）場合は復元しない。
-    // ★ 修正: drawnTileをhand比較に含めて、ローカルとホストの「全牌セット」で一致判定する。
-    //   これにより drawnTile の有無の非対称によるキー不一致（並び順が捨てられるバグ）を防ぐ。
+    // 「drawnTile を除いた hand の内容（牌のキー集合）」で一致判定することで、
+    // ツモ前後・drawnTile有無の非対称によるキー不一致を防ぐ。
+    // 内容が変わっている（鳴き後など枚数変化）場合は復元しない。
     if(_localHand && _myIdx!=null && G.players[_myIdx]){
-      const _hostHand = G.players[_myIdx].hand;
       const _hostDrawnTile = G.players[_myIdx].drawnTile;
+      // ホスト側も drawnTile(末尾)を除いた部分で比較
+      const _hostHandBase = _hostDrawnTile
+        ? G.players[_myIdx].hand.slice(0, G.players[_myIdx].hand.length - 1)
+        : G.players[_myIdx].hand.slice();
       const _tk = t => t.suit+t.num+(t._isAka?'r':'');
-      // ローカル側: hand + drawnTile（存在する場合）の全牌キーセット
-      const _localAllTiles = _localDrawnTile ? [..._localHand, _localDrawnTile] : [..._localHand];
-      // ホスト側: hand + drawnTile（存在する場合）の全牌キーセット
-      const _hostAllTiles  = _hostDrawnTile  ? [..._hostHand,  _hostDrawnTile]  : [..._hostHand];
-      const _localKeys = _localAllTiles.map(_tk).sort().join(',');
-      const _hostKeys  = _hostAllTiles.map(_tk).sort().join(',');
+      const _localKeys = _localHand.map(_tk).sort().join(',');
+      const _hostKeys  = _hostHandBase.map(_tk).sort().join(',');
       if(_localKeys === _hostKeys){
-        // 内容が同じ → ゲストのローカル並び順を復元
-        // drawnTileオブジェクトはホスト側の参照を保持（整合性維持）
-        G.players[_myIdx].hand = _localHand;
+        // 内容が同じ → ゲストのローカル並び順を復元し、末尾にdrawnTileを付け直す
+        const _restoredHand = _hostDrawnTile
+          ? [..._localHand, _hostDrawnTile]
+          : _localHand.slice();
+        G.players[_myIdx].hand = _restoredHand;
         G.players[_myIdx].drawnTile = _hostDrawnTile;
       }
     }

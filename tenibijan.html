@@ -4837,6 +4837,15 @@ async function attemptRejoin(){
   // ONなら タップしてスタート → (OP再生) → タイトル
   // OFFなら即タイトル表示
   window.addEventListener('DOMContentLoaded', ()=>{
+    // ★ LocalStorageの設定を先に読み込んでから判定する（競合状態の修正）
+    try {
+      const _s = localStorage.getItem(SETTINGS_KEY);
+      if(_s){
+        const _d = JSON.parse(_s);
+        if(_d.opEnabled != null) _opEnabled = !!_d.opEnabled;
+      }
+    } catch(e){}
+
     if(_opEnabled){
       const overlay = document.getElementById('tapStartOverlay');
       if(overlay){
@@ -21929,8 +21938,8 @@ function showOpOverlay(){
     } catch(err){}
   }
   window.addEventListener('message', _ytMsgHandler);
-  // フォールバック: 動画が読めない場合などに30秒後に自動スキップ
-  window._opAutoSkipTimer = setTimeout(skipOp, 30000);
+  // フォールバック: 動画が読めない場合などに4分後に自動スキップ
+  window._opAutoSkipTimer = setTimeout(skipOp, 240000);
 }
 
 function skipOp(){

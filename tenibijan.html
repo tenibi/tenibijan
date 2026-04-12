@@ -3353,9 +3353,9 @@ body{
           </select>
         </div>
       </div>
-      <!-- OP動画 ON/OFF -->
+      <!-- OP動画 / タップしてスタート ON/OFF (統合) -->
       <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
-        <span style="font-size:.65rem;color:#5a7a6a;width:60px;">🎬 OP動画</span>
+        <span style="font-size:.65rem;color:#5a7a6a;width:60px;">🎬 OP・スタート</span>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
           <div id="opToggle" onclick="toggleOpSetting()" style="
             width:40px;height:22px;border-radius:11px;position:relative;flex-shrink:0;
@@ -4604,7 +4604,7 @@ function _applyOpToggleUI(){
   if(toggle) toggle.style.background = _opEnabled ? 'var(--gold)' : '#1a3a2a';
   if(thumb)  thumb.style.left = _opEnabled ? 'calc(100% - 19px)' : '3px';
   if(label)  label.style.color = _opEnabled ? 'var(--gold)' : '#4a6a5a';
-  if(label)  label.textContent = _opEnabled ? 'ON（次回ログイン時に再生）' : 'OFF';
+  if(label)  label.textContent = _opEnabled ? 'ON（次回から表示）' : 'OFF';
 }
 
 // タイトル画面とゲームヘッダーのスライダーを相互同期する
@@ -4833,25 +4833,51 @@ async function attemptRejoin(){
 // ブラウザの自動再生ポリシーにより、ユーザー操作前は Audio.play() がブロックされる。
 // 最初のクリック/タッチを検知してOP動画を開始し、OP終了後にBGMを開始する。
 (function(){
+  // タップしてスタート画面を表示（_opEnabledで統合管理）
+  // ONなら タップしてスタート → (OP再生) → タイトル
+  // OFFなら即タイトル表示
+  window.addEventListener('DOMContentLoaded', ()=>{
+    if(_opEnabled){
+      const overlay = document.getElementById('tapStartOverlay');
+      if(overlay){
+        overlay.classList.add('ts-active');
+        overlay.addEventListener('click', _onTapStart, { once: true });
+        overlay.addEventListener('touchstart', _onTapStart, { once: true });
+      }
+    }
+    // OFF時はBGM直接開始のため既存の_unlockをそのまま使う
+  });
+
+  function _onTapStart(e){
+    e.preventDefault();
+    const overlay = document.getElementById('tapStartOverlay');
+    if(overlay){
+      overlay.style.opacity = '0';
+      overlay.style.transition = 'opacity .3s';
+      setTimeout(()=>{ overlay.classList.remove('ts-active'); overlay.style.opacity=''; overlay.style.transition=''; }, 300);
+    }
+    if(_opEnabled && !_opPlayed){
+      showOpOverlay();
+    } else {
+      BGM.fadeIn(_titleBgmKey);
+    }
+  }
+
+  // OP OFFの場合は従来通り最初のクリックでBGM開始
   let _unlocked = false;
   function _unlock(){
     if(_unlocked) return;
+    if(_opEnabled) return; // ON時はtapStartOverlayが制御するのでスキップ
     _unlocked = true;
     document.removeEventListener('click', _unlock, true);
     document.removeEventListener('touchstart', _unlock, true);
-    // ゲーム画面が出ていない＝ロビー表示中のみ
     if(!document.getElementById('gameScreen')?.classList.contains('active')){
-      // OP動画がONでまだ再生していなければOP→BGM、それ以外はBGM直接
-      if(_opEnabled && !_opPlayed){
-        showOpOverlay();
-      } else {
-        BGM.fadeIn(_titleBgmKey);
-      }
+      BGM.fadeIn(_titleBgmKey);
     }
   }
   document.addEventListener('click', _unlock, true);
   document.addEventListener('touchstart', _unlock, true);
-})();
+})()
 
 // ============================================================
 // TILE SYSTEM
@@ -21798,6 +21824,33 @@ function _showNcpToast(iconId) {
   </div>
 </div>
 
+<!-- ===== タップしてスタート オーバーレイ ===== -->
+<div id="tapStartOverlay" style="
+  display:none;
+  position:fixed;inset:0;z-index:99998;
+  background:#000;
+  flex-direction:column;
+  align-items:center;justify-content:center;
+  cursor:pointer;
+  user-select:none;
+">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:32px;pointer-events:none;">
+    <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/fabi.png" style="width:min(180px,40vw);height:auto;opacity:0.92;filter:drop-shadow(0 0 24px #c9a84c88);">
+    <div style="font-size:clamp(1.5rem,5vw,2.5rem);font-weight:900;color:#c9a84c;letter-spacing:.15em;text-shadow:0 0 24px #c9a84c99;">手にビじゃん</div>
+    <div id="tapStartPulse" style="
+      font-size:clamp(.85rem,3vw,1.1rem);color:#e8d08a;letter-spacing:.2em;
+      animation:tapPulse 1.6s ease-in-out infinite;
+    ">▶ TAP TO START ◀</div>
+  </div>
+</div>
+<style>
+#tapStartOverlay.ts-active { display:flex !important; }
+@keyframes tapPulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:.45; transform:scale(.97); }
+}
+</style>
+
 <!-- ===== OP動画オーバーレイ ===== -->
 <div id="opOverlay" style="
   display:none;
@@ -21845,6 +21898,7 @@ function _showNcpToast(iconId) {
 let _opEnabled = true; // デフォルトON（saveSettings/loadSettingsで管理）
 let _opPlayed  = false; // セッション中すでに再生済みか
 
+
 const _OP_VIDEO_ID = 'pf_b4auR84U';
 
 function _buildOpSrc(){
@@ -21863,6 +21917,18 @@ function showOpOverlay(){
   overlay.classList.add('op-active');
   // クリック/タップでスキップ
   overlay.addEventListener('click', skipOp, { once: true });
+  // YouTube IFrame API メッセージで動画終了を検知して自動スキップ
+  function _ytMsgHandler(e){
+    try {
+      const data = JSON.parse(e.data);
+      // playerState === 0 が動画終了
+      if(data.event === 'onStateChange' && data.info === 0){
+        window.removeEventListener('message', _ytMsgHandler);
+        skipOp();
+      }
+    } catch(err){}
+  }
+  window.addEventListener('message', _ytMsgHandler);
   // フォールバック: 動画が読めない場合などに30秒後に自動スキップ
   window._opAutoSkipTimer = setTimeout(skipOp, 30000);
 }

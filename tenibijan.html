@@ -2358,6 +2358,26 @@ body{
             <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
             <div style="font-size:.48rem;color:#ffd700;">L12</div>
           </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L13</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L14</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L15</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L16</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L17</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2786,6 +2806,10 @@ body{
         <div style="font-size:1rem;">💍</div>
         <div>指輪</div>
       </div>
+      <div class="gift-type-btn" id="giftTabBgm" onclick="switchGiftTab('bgm')">
+        <div style="font-size:1rem;">🎵</div>
+        <div>リーチBGM</div>
+      </div>
     </div>
 
     <!-- TBBコインパネル -->
@@ -2834,6 +2858,11 @@ body{
     <!-- 指輪パネル -->
     <div id="giftPanelRing" style="display:none;">
       <div id="giftRingList"></div>
+    </div>
+
+    <!-- リーチBGMパネル -->
+    <div id="giftPanelBgm" style="display:none;">
+      <div id="giftBgmList"></div>
     </div>
 
     <div id="giftModalMsg" style="font-size:.6rem;color:#7a3a3a;text-align:center;min-height:1.2em;margin-bottom:6px;"></div>
@@ -3038,8 +3067,16 @@ body{
     <!-- リーチBGM -->
     <div style="margin-top:14px;">
       <h3 style="margin-bottom:6px;">🎵 リーチBGM</h3>
-      <div style="font-size:.55rem;color:#4a6a5a;margin-bottom:8px;">リーチ宣言時に全体BGMがミュートされ、選択したBGMが再生されます。</div>
-      <div id="riichiBgmGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
+      <div id="riichiBgmBookDisplay" onclick="openRiichiBgmBook()" style="
+        cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+        border-radius:10px;padding:10px 12px;
+        display:flex;align-items:center;gap:10px;transition:border-color .15s;
+      " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#cc4466'"
+         onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'"
+         data-equipped="0">
+        <span style="font-size:1.2rem;">🎵</span>
+        <div id="riichiBgmBookDisplayText" style="font-size:.68rem;color:#4a6a5a;">なし<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で変更</span></div>
+      </div>
     </div>
 
     <!-- 上がり演出 -->
@@ -3398,6 +3435,11 @@ body{
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L10 老拳師 チャン</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L10',+this.value)"></div>
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L11 工事現場 れいや</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L11',+this.value)"></div>
           <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L12 手にビの中の人 JAN</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L12',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L13 ダーニャ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L13',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L14 アリス</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L14',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L15 フレア</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L15',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L16 リリス</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L16',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L17 エリシア</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L17',+this.value)"></div>
         </div>
       </div>
     </div>
@@ -7626,10 +7668,11 @@ function hostStartGame(){
   if(!allReady) return;
   const totalPlayers = 1 + NET.conns.length; // ホスト + ゲスト（NET.connsにCPUスロットも含む）
   const membersInfo = [
-    {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), ability: PROFILE.ability||'', isCpu:false},
+    {name: PROFILE.name||'あなた', iconId: _getProfileDisplayIconId(), vcIconId: _getProfileVcIconId(), ability: PROFILE.ability||'', isCpu:false},
     ...NET.conns.map((c,i)=>({
       name: NET.guestNames[i]||`ゲスト${i+1}`,
       iconId: NET.guestIconIds[i]||'',
+      vcIconId: (NET.guestVcIconIds&&NET.guestVcIconIds[i]) ? NET.guestVcIconIds[i] : (NET.guestIconIds[i]||''),
       ability: NET.guestAbilities[i]||'',
       isCpu: !!NET.guestIsCpu[i]
     })),
@@ -7989,15 +8032,17 @@ function onNetData(msg, senderIdx){
           // ゲスト側: 全メンバーの情報を保持
           // ★修正: guestSlotをi-1ベースに統一（makePlayer/startRoundの参照と一致させる）
           // 旧コード: guestSlot=0から詰めていたため myIdx=1以外で参照ズレが発生し牌未表示バグの原因になっていた
+          NET.guestVcIconIds = NET.guestVcIconIds || [];
           for(let i = 0; i < msg.membersInfo.length; i++){
             if(i === NET.myIdx) continue; // 自分は skip
             const guestSlot = i < NET.myIdx ? i : i - 1; // id-1ベースに統一
             NET.guestIconIds[guestSlot]   = msg.membersInfo[i]?.iconId || '';
+            NET.guestVcIconIds[guestSlot] = msg.membersInfo[i]?.vcIconId || msg.membersInfo[i]?.iconId || '';
             NET.guestNames[guestSlot]     = msg.membersInfo[i]?.name || '';
             NET.guestAbilities[guestSlot] = msg.membersInfo[i]?.ability || '';
             NET.guestIsCpu[guestSlot]     = !!(msg.membersInfo[i]?.isCpu); // CPUフラグをゲスト側にも復元
           }
-          console.log('ゲスト側メンバー情報を設定:', {myIdx: NET.myIdx, guestIconIds: NET.guestIconIds, guestNames: NET.guestNames, guestIsCpu: NET.guestIsCpu});
+          console.log('ゲスト側メンバー情報を設定:', {myIdx: NET.myIdx, guestIconIds: NET.guestIconIds, guestVcIconIds: NET.guestVcIconIds, guestNames: NET.guestNames, guestIsCpu: NET.guestIsCpu});
         }
       }
       
@@ -8055,6 +8100,16 @@ function onNetData(msg, senderIdx){
           else if(msg.action==='riichi') SFX.riichi();
         };
         _playIconSe(msg.iconId||'', msg.action, _se);
+      }
+    } else if(msg.type==='riichiBgmEvent'){
+      // ホストから配信されたリーチBGMをゲスト側で再生
+      if(typeof RIICHI_BGM!=='undefined' && msg.bgmKey){
+        RIICHI_BGM.play(msg.bgmKey);
+      }
+    } else if(msg.type==='riichiBgmStop'){
+      // ホストからリーチBGM停止指示
+      if(typeof RIICHI_BGM!=='undefined'){
+        RIICHI_BGM.stop();
       }
     } else {
       applyHostState(msg);
@@ -8290,7 +8345,7 @@ function handleGuestAction(msg, senderIdx){
       }
       break;
     case 'kita':      remoteKita(msg.pidx); break;
-    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false, msg.yamiTileIdx??-1); break;
+    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false, msg.yamiTileIdx??-1, msg.tile??null); break;
     case 'nextRound': nextRound(); break;
     case 'backToRoom': backToRoom(); break; // ホストから部屋戻り通知
     case 'requestMyName':
@@ -8835,12 +8890,21 @@ function remoteHaku(pidx,tidx){
   broadcastState();
   renderAll();
 }
-function remoteRiichi(pidx,mode,tidx,isYami=false,yamiTileIdx=-1){
+function remoteRiichi(pidx,mode,tidx,isYami=false,yamiTileIdx=-1,tileRef=null){
   G.pendingRiichi=mode;
   G.riichiValidIdx=getRiichiDiscards(G.players[pidx].hand);
   // オープンリーチ時: ゲストのyamiTileIdxをホスト側でセット（闇手牌が他プレイヤーに正しく表示されるよう）
   if((mode==='open'||mode==='double-open') && yamiTileIdx>=0){
     G.players[pidx].yamiTileIdx=yamiTileIdx;
+  }
+  // ゲストが手牌を並び替えた場合、tidxがホスト側の順序とズレるので
+  // tileRef（牌の実体）でホスト側handを検索してインデックスを補正する（remoteDiscardと同様）
+  if(tileRef){
+    const p = G.players[pidx];
+    const foundIdx = p.hand.findIndex(
+      t => t.suit===tileRef.suit && t.num===tileRef.num && !!t._isAka===!!tileRef._isAka
+    );
+    if(foundIdx >= 0) tidx = foundIdx;
   }
   commitRiichi(G.players[pidx]);
   discardAction(pidx,tidx,isYami);
@@ -10177,7 +10241,7 @@ function _updateAFKBtn(){
 function _applyIconVoiceSliders(){
   const container = document.getElementById('legendVoiceSliders');
   if(!container) return;
-  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09','L10','L11','L12'];
+  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09','L10','L11','L12','L13','L14','L15','L16','L17'];
   const sliders = container.querySelectorAll('input[type=range]');
   sliders.forEach((sl, i) => {
     const id = ids[i];
@@ -11125,7 +11189,12 @@ function humanYamiChallenge(action){
 
 function handleExhausted(){
   // リーチBGMを停止
-  if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive) RIICHI_BGM.stop();
+  if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive){
+    RIICHI_BGM.stop();
+    if(typeof NET!=='undefined' && NET.online && typeof amIHost==='function' && amIHost()){
+      netBroadcastAll({type:'riichiBgmStop'});
+    }
+  }
   if(numPlayers===1){
     // ソロ: 爆弾以外を全て引ききった → ステージクリア
     const _exStage = G._soloStage||1;
@@ -11158,7 +11227,12 @@ function handleExhausted(){
 function handleWin(widx,winTile,isTsumo,losidx){
   G.phase='win';
   // ── リーチBGMを停止して通常BGMを再開 ──────────────────────
-  if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive) RIICHI_BGM.stop();
+  if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive){
+    RIICHI_BGM.stop();
+    if(typeof NET!=='undefined' && NET.online && typeof amIHost==='function' && amIHost()){
+      netBroadcastAll({type:'riichiBgmStop'});
+    }
+  }
   // 役満チェックは後でするのでとりあえず上がり音、役満は showWinModal で再生
   setTimeout(()=>{
     const isYM = G.players[widx] && G.players[widx].hand &&
@@ -12009,7 +12083,7 @@ function humanDiscard(){
   if(isYamiDiscard) p.abilityUsed=true;
   selIdx=-1;
   if(NET.online&&!amIHost()){
-    if(G.pendingRiichi){netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,isYami:isYamiDiscard,yamiTileIdx:p.yamiTileIdx??-1});}
+    if(G.pendingRiichi){const _rt=p.hand[idx];netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,tile:_rt?{suit:_rt.suit,num:_rt.num,_isAka:!!_rt._isAka}:null,isYami:isYamiDiscard,yamiTileIdx:p.yamiTileIdx??-1});}
     else{const _dt=p.hand[idx];netSend({type:'discard',pidx:NET.myIdx,tidx:idx,tile:_dt?{suit:_dt.suit,num:_dt.num,_isAka:!!_dt._isAka}:null,isYami:isYamiDiscard});}
     // ★ 闇バグ修正: ゲストはdiscardActionを呼ばないためここでyamiTileIdxをリセット
     // これをしないと、次のホストstate受信時に_guestYamiSelected=trueのまま残り
@@ -12328,7 +12402,13 @@ function commitRiichi(p){
   // ── リーチBGM再生 ─────────────────────────────────────────
   if(typeof RIICHI_BGM!=='undefined'){
     const _rbKey = RIICHI_BGM.getBgmForPlayer(_rPidx);
-    if(_rbKey) RIICHI_BGM.play(_rbKey);
+    if(_rbKey){
+      RIICHI_BGM.play(_rbKey);
+      // ホストがオンライン中は全ゲストにも配信
+      if(typeof NET!=='undefined' && NET.online && typeof amIHost==='function' && amIHost()){
+        netBroadcastAll({type:'riichiBgmEvent', bgmKey:_rbKey});
+      }
+    }
   }
   G.pendingRiichi=null;G.riichiValidIdx=null;
 }
@@ -15864,7 +15944,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:''};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}};
 // vcIconId: VCアイコン（音声SE用）、未設定時はiconIdを使用
 // displayIconId: 見た目アイコン（画面表示用）、未設定時はiconIdを使用
 function _getProfileDisplayIconId(){ return PROFILE.displayIconId || PROFILE.iconId || ''; }
@@ -16343,6 +16423,15 @@ const _TBB_POOL = [
   { type:'ring', key:'ring04b',  weight:15, rarity:'epic', name:'指輪 クローバー Blue',  iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring04b.png',  videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ring/yubiwa04b.webm', desc:'手に青い指輪をつける' },
   { type:'ring', key:'ring04g',  weight:15, rarity:'epic', name:'指輪 クローバー Green', iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring04g.png',  videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ring/yubiwa04g.webm', desc:'手に緑の指輪をつける' },
   { type:'ring', key:'ring04p',  weight:15, rarity:'epic', name:'指輪 クローバー Pink',  iconUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring04p.png',  videoUrl:'https://raw.githubusercontent.com/tenibi/tenibijan/main/ring/yubiwa04p.webm', desc:'手にピンクの指輪をつける' },
+  { type:'bgm', key:'ritibgm02', weight:15, rarity:'epic', name:'ポケットの温もり',  icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm03', weight:15, rarity:'epic', name:'星屑',              icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm04', weight:15, rarity:'epic', name:'猶予',              icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm05', weight:15, rarity:'epic', name:'終焉のカウントダウン', icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm06', weight:15, rarity:'epic', name:'それぞれの道へ',    icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm07', weight:15, rarity:'epic', name:'ラストスパート',    icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm08', weight:15, rarity:'epic', name:'優雅な一撃',        icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm09', weight:15, rarity:'epic', name:'コーヒーブレイク',  icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm10', weight:15, rarity:'epic', name:'迷いながらも',      icon:'🎵', desc:'リーチBGM' },
 ];
 function _tbbRoll(){
   const total = _TBB_POOL.reduce((s,e)=>s+e.weight,0);
@@ -16683,6 +16772,7 @@ function loadProfile(){
         rings:         data.rings         ?? PROFILE.rings         ?? {},
         agariVideo:    data.agariVideo    ?? PROFILE.agariVideo    ?? 'agari01',
         agariVideos:   data.agariVideos   ?? PROFILE.agariVideos   ?? {},
+        riichiBgms:    data.riichiBgms    ?? PROFILE.riichiBgms    ?? {},
         emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
         uid:           data.uid           || PROFILE.uid           || '',
         newCharPresentDone: data.newCharPresentDone ?? PROFILE.newCharPresentDone ?? false,
@@ -17549,7 +17639,7 @@ const GACHA_ICONS = [
   {id:'C07',rarity:'normal',label:'コモン07'},
   ...Array.from({length:2},(_,i)=>{const n=String(i+8).padStart(2,'0');return{id:`C${n}`,rarity:'normal',label:`コモン${n}`};}),
   ...Array.from({length:15},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`R${n}`,rarity:'rare',label:`レア${n}`};}),
-  ...Array.from({length:13},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`E${n}`,rarity:'epic',label:`エピック${n}`};}),
+  ...Array.from({length:24},(_,i)=>{const n=String(i+1).padStart(2,'0');return{id:`E${n}`,rarity:'epic',label:`エピック${n}`};}),
   {id:'L01',rarity:'legend',label:'おはよう 手にビ'},
   {id:'L02',rarity:'legend',label:'添い寝 手にビ'},
   {id:'L03',rarity:'legend',label:'一緒にお風呂 手にビ'},
@@ -17562,6 +17652,11 @@ const GACHA_ICONS = [
   {id:'L10',rarity:'legend',label:'老拳師 チャン'},
   {id:'L11',rarity:'legend',label:'工事現場 れいや'},
   {id:'L12',rarity:'legend',label:'手にビの中の人 JAN'},
+  {id:'L13',rarity:'legend',label:'ダーニャ'},
+  {id:'L14',rarity:'legend',label:'アリス'},
+  {id:'L15',rarity:'legend',label:'フレア'},
+  {id:'L16',rarity:'legend',label:'リリス'},
+  {id:'L17',rarity:'legend',label:'エリシア'},
 ];
 // ローカル管理アイコン（ガチャ排出なし・常時所持）
 const LOCAL_ICONS = [
@@ -17679,12 +17774,48 @@ const ICON_SE_MAP = {
     ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron10.mp3',
     tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo10.mp3',
   },
+  'L13': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan11.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon11.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti11.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron11.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo11.mp3',
+  },
+  'L14': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan12.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon12.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti12.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron12.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo12.mp3',
+  },
+  'L15': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan13.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon13.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti13.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron13.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo13.mp3',
+  },
+  'L16': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan14.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon14.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti14.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron14.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo14.mp3',
+  },
+  'L17': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan15.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon15.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti15.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron15.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo15.mp3',
+  },
 };
 
 // レジェンドアイコンごとの個別ボイス音量スケール (0〜1, デフォルト1)
 const iconVoiceScale = {
   'L01':1,'L02':1,'L03':1,'L04':1,'L05':1,
   'L06':1,'L07':1,'L08':1,'L09':1,'L10':1,'L11':1,'L12':1,
+  'L13':1,'L14':1,'L15':1,'L16':1,'L17':1,
 };
 function setIconVoiceScale(iconId, val){
   iconVoiceScale[iconId] = Math.min(1, Math.max(0, val));
@@ -17755,6 +17886,8 @@ function pullOnce(){
     legendPool.push({type:'skin', data:{key:'siroinekonote', name:'白猫の手', icon:'🐱'}});
     // レジェンドアイコン (9種)
     GACHA_ICONS.filter(i=>i.rarity==='legend').forEach(ic => legendPool.push({type:'icon', data:ic}));
+    // リーチBGM (1種)
+    legendPool.push({type:'bgm', data:{key:'ritibgm01', name:'どこまでも続く道', icon:'🎵'}});
     const pick = legendPool[Math.floor(Math.random()*legendPool.length)];
     if(pick.type === 'agari'){
       const ag = pick.data;
@@ -17773,6 +17906,12 @@ function pullOnce(){
       result.iconIsNew = !PROFILE.gachaIcons.includes(pick.data.id);
       result.isNew = result.iconIsNew;
       if(result.iconIsNew) PROFILE.gachaIcons.push(pick.data.id);
+    } else if(pick.type === 'bgm'){
+      const bgm = pick.data;
+      if(!PROFILE.riichiBgms) PROFILE.riichiBgms={};
+      result.bgm = bgm;
+      result.isNew = !(PROFILE.riichiBgms[bgm.key]);
+      PROFILE.riichiBgms[bgm.key] = (PROFILE.riichiBgms[bgm.key]||0)+1;
     } else {
       const ab = pick.data;
       const alreadyHas = PROFILE.abilities.includes(ab.key);
@@ -17826,6 +17965,12 @@ function _convertSvrResult(r) {
       res.icon      = info || { id: r.iconId, label: r.iconId };
       res.iconIsNew = r.iconIsNew;
       res.isNew     = r.iconIsNew;
+    } else if (r.bgmKey) {
+      // リーチBGM当選
+      res.bgm   = { key: r.bgmKey, name: _RIICHI_BGM_LABELS[r.bgmKey] || r.bgmKey, icon: '🎵' };
+      res.isNew = r.isNewBgm;
+      if(!PROFILE.riichiBgms) PROFILE.riichiBgms={};
+      PROFILE.riichiBgms[r.bgmKey] = (PROFILE.riichiBgms[r.bgmKey]||0)+1;
     }
   } else {
     res.label = r.label || rd.label;
@@ -17907,6 +18052,7 @@ function doPull10(){
     PROFILE.gachaIcons = d.gachaIcons;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
     if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
+    if(d.riichiBgms) { PROFILE.riichiBgms = d.riichiBgms; }
     const results = d.results.map(_convertSvrResult);
     saveProfileSilent();
     renderGachaCollection();
@@ -17937,6 +18083,7 @@ function doPull100(){
     PROFILE.gachaIcons = d.gachaIcons;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
     if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
+    if(d.riichiBgms) { PROFILE.riichiBgms = d.riichiBgms; }
     const results = (d.results||[]).map(_convertSvrResult);
     saveProfileSilent();
     renderGachaCollection();
@@ -17963,6 +18110,7 @@ function doPull1(){
     PROFILE.gachaIcons = d.gachaIcons;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
     if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
+    if(d.riichiBgms) { PROFILE.riichiBgms = d.riichiBgms; }
     const res = _convertSvrResult(d.results[0]);
     saveProfileSilent();
     showGachaAnim1(res);
@@ -18026,6 +18174,17 @@ function showGachaAnim1(res){
             ${res.iconIsNew?'<div class="gacha-card-new">NEW!</div>':'<div style="font-size:.55rem;color:#888;">ダブり</div>'}
           </div>
         </div>`;
+    } else if(res.bgm){
+      cardHtml = `
+        <div class="rarity-legend" style="text-align:center;">
+          <div class="gacha-result-card">
+            <div class="gacha-rarity-label" style="color:#ffd700;">LEGEND</div>
+            <div class="gacha-card-icon">${res.bgm.icon}</div>
+            <div class="gacha-card-name">${res.bgm.name}</div>
+            <div class="gacha-card-desc">リーチBGM</div>
+            ${res.isNew?'<div class="gacha-card-new">NEW!</div>':'<div style="font-size:.55rem;color:#888;">ダブり</div>'}
+          </div>
+        </div>`;
     }
   } else {
     cardHtml = `
@@ -18085,6 +18244,7 @@ function showGachaAnim10(results){
       else if(res.agari)  inner_html=`<div class="g-icon" ${iconStyle}>${res.agari.icon}</div><div class="g-name" ${nameStyle}>${res.agari.name}</div>${res.isNew?'<div class="g-new">NEW</div>':''}`;
       else if(res.ability) inner_html=`<div class="g-icon" ${iconStyle}>${res.ability.icon}</div><div class="g-name" ${nameStyle}>${res.ability.name}</div>${res.isNew?'<div class="g-new">NEW</div>':''}`;
       else if(res.icon)   inner_html=`<img src="${gachaIconUrl(res.icon.id)}" ${imgStyle} alt="${res.icon.id}"><div class="g-name" ${nameStyle}>${res.icon.label}</div>${res.iconIsNew?'<div class="g-new">NEW</div>':''}`;
+      else if(res.bgm)    inner_html=`<div class="g-icon" ${iconStyle}>${res.bgm.icon}</div><div class="g-name" ${nameStyle}>${res.bgm.name}</div>${res.isNew?'<div class="g-new">NEW</div>':''}`;
       else inner_html=`<div class="g-name" ${nameStyle}>LEGEND</div>`;
     } else {
       inner_html=`${res.icon?`<img src="${gachaIconUrl(res.icon.id)}" ${imgStyle} alt="${res.icon.id}">`:`<div class="g-icon" ${iconStyle} style="opacity:.5;">·</div>`}<div class="g-name" ${nameStyle}>${res.icon?res.icon.label:(res.label||res.rd.label)}</div>${res.iconIsNew?'<div class="g-new">NEW</div>':''}`;
@@ -18161,12 +18321,12 @@ function showGachaAnim10(results){
 
     card.className = 'rarity-' + res.rarity;
     rlbl.textContent = res.rarity.toUpperCase();
-    nm.textContent = res.skin?.name || res.agari?.name || res.ability?.name || res.icon?.label || '';
-    ds.textContent = res.skin ? '手のスキン' : res.agari ? '上がり演出' : res.ability ? (res.ability.tag||'能力') : 'キャラ';
+    nm.textContent = res.skin?.name || res.agari?.name || res.ability?.name || res.icon?.label || res.bgm?.name || '';
+    ds.textContent = res.skin ? '手のスキン' : res.agari ? '上がり演出' : res.ability ? (res.ability.tag||'能力') : res.bgm ? 'リーチBGM' : 'キャラ';
     if(res.icon){
       iwrp.innerHTML = `<img id="gnsImg" src="${gachaIconUrl(res.icon.id)}" alt="${res.icon.id}" style="width:100px;height:140px;object-fit:contain;border-radius:8px;">`;
     } else {
-      const iconChar = res.skin?.icon || res.agari?.icon || res.ability?.icon || '✨';
+      const iconChar = res.skin?.icon || res.agari?.icon || res.ability?.icon || res.bgm?.icon || '✨';
       iwrp.innerHTML = `<div id="gnsIcon" style="font-size:4.2rem;line-height:1;">${iconChar}</div>`;
     }
     ctr.textContent = newList.length > 1 ? `NEW ${idx+1} / ${newList.length}` : '';
@@ -18440,11 +18600,14 @@ function updateTbbGachaStat(){
   const el=document.getElementById('tbbGachaStat');
   if(!el) return;
   const hs = PROFILE.handSkins || {};
+  const rb = PROFILE.riichiBgms || {};
   const ownedSkins = _SKIN_CATALOG.filter(s=>s.key && (hs[s.key]||0)>0).map(s=>`${s.icon}${s.name} ×${hs[s.key]}`);
   const ownedRings = _RING_CATALOG.filter(r=>PROFILE.rings&&PROFILE.rings[r.key]).map(r=>r.name);
+  const ownedBgms  = Object.keys(_RIICHI_BGM_LABELS).filter(k=>k!=='ritibgm01'&&(rb[k]||0)>0).map(k=>_RIICHI_BGM_LABELS[k]);
   const parts = [];
   if(ownedSkins.length) parts.push(ownedSkins.join(' / '));
   if(ownedRings.length) parts.push('💍 ' + ownedRings.join(' / '));
+  if(ownedBgms.length)  parts.push('🎵 ' + ownedBgms.join(' / '));
   if(parts.length){
     el.textContent = '✓ ' + parts.join('　');
     el.style.color = '#8844cc';
@@ -18538,6 +18701,8 @@ function doPullTbb(){
     let wonItem;
     if(d.ring){
       wonItem = _TBB_POOL.find(e=>e.key===d.ring) || _TBB_POOL.find(e=>e.type==='ring');
+    } else if(d.bgmKey){
+      wonItem = _TBB_POOL.find(e=>e.key===d.bgmKey) || _TBB_POOL.find(e=>e.type==='bgm');
     } else if(d.handSkins){
       // サーバーが返したhandSkinsのkeyからwonItemを特定
       const newKey = Object.keys(d.handSkins).find(k => (d.handSkins[k]||0) > ((PROFILE.handSkins||{})[k]||0));
@@ -18554,6 +18719,11 @@ function doPullTbb(){
       if(d.rings) PROFILE.rings = d.rings; // サーバー返却があれば上書き
       _updateRingUI();
       _renderRingBookGrid && _renderRingBookGrid();
+    } else if(wonItem.type === 'bgm'){
+      if(!PROFILE.riichiBgms) PROFILE.riichiBgms = {};
+      isNew = !PROFILE.riichiBgms[wonItem.key];
+      PROFILE.riichiBgms[wonItem.key] = (PROFILE.riichiBgms[wonItem.key] || 0) + 1;
+      if(d.riichiBgms) PROFILE.riichiBgms = d.riichiBgms; // サーバー返却があれば上書き
     } else {
       if(d.handSkins){
         isNew = !((PROFILE.handSkins||{})[wonItem.key] > 0);
@@ -19206,13 +19376,16 @@ function switchGiftTab(tab){
   document.getElementById('giftTabCoins').classList.toggle('active', tab==='coins');
   document.getElementById('giftTabSkin').classList.toggle('active', tab==='skin');
   document.getElementById('giftTabRing').classList.toggle('active', tab==='ring');
+  document.getElementById('giftTabBgm').classList.toggle('active', tab==='bgm');
   document.getElementById('giftPanelTbb').style.display   = tab==='tbb'   ? '' : 'none';
   document.getElementById('giftPanelCoins').style.display = tab==='coins' ? '' : 'none';
   document.getElementById('giftPanelSkin').style.display  = tab==='skin'  ? '' : 'none';
   document.getElementById('giftPanelRing').style.display  = tab==='ring'  ? '' : 'none';
+  document.getElementById('giftPanelBgm').style.display   = tab==='bgm'   ? '' : 'none';
   document.getElementById('giftModalMsg').textContent = '';
   if(tab==='skin') renderGiftSkinList();
   if(tab==='ring') renderGiftRingList();
+  if(tab==='bgm')  renderGiftBgmList();
 }
 
 function renderGiftSkinList(){
@@ -19290,6 +19463,40 @@ function selectGiftSkin(key){
   });
 }
 
+let _selectedBgmKey = '';
+function renderGiftBgmList(){
+  const el = document.getElementById('giftBgmList');
+  if(!el) return;
+  const rb = PROFILE.riichiBgms || {};
+  const owned = Object.keys(_RIICHI_BGM_LABELS).filter(k => (rb[k]||0) > 0);
+  if(owned.length === 0){
+    el.innerHTML = '<div style="font-size:.6rem;color:#4a5a6a;text-align:center;padding:12px;">送れるリーチBGMがありません</div>';
+    _selectedBgmKey = '';
+    return;
+  }
+  el.innerHTML = owned.map(k=>{
+    const cnt = rb[k]||0;
+    const name = _RIICHI_BGM_LABELS[k] || k;
+    return `<div class="gift-skin-item" id="giftBgmItem_${k}" onclick="selectGiftBgm('${k}')">
+      <span style="font-size:1.6rem;flex-shrink:0;">🎵</span>
+      <div style="flex:1;">
+        <div style="font-size:.68rem;font-weight:700;color:#cc4444;">${name}</div>
+        <div style="font-size:.52rem;color:#7a4a4a;">リーチBGM</div>
+      </div>
+      <div style="font-size:.62rem;color:#cc4444;font-weight:700;">×${cnt}</div>
+    </div>`;
+  }).join('');
+  selectGiftBgm(owned[0]);
+}
+function selectGiftBgm(key){
+  _selectedBgmKey = key;
+  const allKeys = Object.keys(_RIICHI_BGM_LABELS);
+  allKeys.forEach(k=>{
+    const el = document.getElementById('giftBgmItem_'+k);
+    if(el) el.classList.toggle('selected', k===key);
+  });
+}
+
 function setGiftTbb(n){
   const v = Math.max(0, Math.min(n, PROFILE.tbbCoins||0));
   document.getElementById('giftTbbAmount').value = v > 0 ? v : '';
@@ -19323,6 +19530,11 @@ async function doSendGift(){
     const cnt = (PROFILE.rings&&PROFILE.rings[_selectedRingKey])||0;
     if(cnt < 1){ msg.textContent='その指輪の所持数が足りません'; btn.disabled=false; return; }
     body = {receiverId:_giftTarget.id, type:'ring', ringKey:_selectedRingKey};
+  } else if(_giftTab === 'bgm'){
+    if(!_selectedBgmKey){ msg.textContent='BGMを選択してください'; btn.disabled=false; return; }
+    const cnt = (PROFILE.riichiBgms&&PROFILE.riichiBgms[_selectedBgmKey])||0;
+    if(cnt < 1){ msg.textContent='そのリーチBGMの所持数が足りません'; btn.disabled=false; return; }
+    body = {receiverId:_giftTarget.id, type:'bgm', bgmKey:_selectedBgmKey};
   } else {
     if(!_selectedSkinKey){ msg.textContent='スキンを選択してください'; btn.disabled=false; return; }
     const cnt = (PROFILE.handSkins&&PROFILE.handSkins[_selectedSkinKey])||0;
@@ -19351,6 +19563,12 @@ async function doSendGift(){
       }
       saveProfileSilent();
       if(typeof _renderRingBookGrid==='function') _renderRingBookGrid();
+    } else if(_giftTab==='bgm'){
+      if(d.riichiBgms) PROFILE.riichiBgms = d.riichiBgms;
+      else {
+        PROFILE.riichiBgms = PROFILE.riichiBgms||{};
+        PROFILE.riichiBgms[_selectedBgmKey] = Math.max(0,(PROFILE.riichiBgms[_selectedBgmKey]||0)-1);
+      }
     } else {
       if(d.handSkins) PROFILE.handSkins = d.handSkins;
       else {
@@ -19398,7 +19616,8 @@ function renderGiftInbox(gifts){
     const isTenibi   = g.type==='coins';
     const isRing     = g.type==='ring';
     const isSkin     = g.type==='skin';
-    // 指輪: 画像アイコン / スキン: 動画 / コイン: 絵文字
+    const isBgm      = g.type==='bgm';
+    // 指輪: 画像アイコン / スキン: 動画 / BGM: 音符 / コイン: 絵文字
     let mediaHtml;
     if(isCoins){
       mediaHtml = '<span style="font-size:1.4rem;">🪙</span>';
@@ -19409,6 +19628,8 @@ function renderGiftInbox(gifts){
       mediaHtml = rd
         ? `<img src="${rd.icon}" style="width:38px;height:38px;object-fit:contain;border-radius:6px;flex-shrink:0;">`
         : '<span style="font-size:1.4rem;">💍</span>';
+    } else if(isBgm){
+      mediaHtml = '<span style="font-size:1.4rem;">🎵</span>';
     } else {
       const sk = _SKIN_CATALOG.find(s=>s.key===g.skin_key);
       mediaHtml = sk && sk.videoUrl
@@ -19421,7 +19642,9 @@ function renderGiftInbox(gifts){
         ? `手にビコイン ×${g.amount}`
         : isRing
           ? (_RING_CATALOG.find(r=>r.key===g.skin_key)?.name || g.skin_key)
-          : (GIFT_SKIN_CATALOG.find(s=>s.key===g.skin_key)?.name || g.skin_key);
+          : isBgm
+            ? `🎵 ${(_RIICHI_BGM_LABELS&&_RIICHI_BGM_LABELS[g.skin_key]) || g.skin_key}`
+            : (GIFT_SKIN_CATALOG.find(s=>s.key===g.skin_key)?.name || g.skin_key);
     return `<div class="gift-inbox-item" id="giftInboxItem_${g.id}">
       <div class="gift-inbox-icon" style="display:flex;align-items:center;">${mediaHtml}</div>
       <div class="gift-inbox-info">
@@ -19456,6 +19679,9 @@ async function claimGift(giftId, btn){
       else { PROFILE.rings=PROFILE.rings||{}; PROFILE.rings[d.ringKey]=(PROFILE.rings[d.ringKey]||0)+1; }
       saveProfileSilent();
       if(typeof _renderRingBookGrid==='function') _renderRingBookGrid();
+    } else if(d.type==='bgm'){
+      if(d.riichiBgms) PROFILE.riichiBgms = d.riichiBgms;
+      else { PROFILE.riichiBgms=PROFILE.riichiBgms||{}; PROFILE.riichiBgms[d.bgmKey]=(PROFILE.riichiBgms[d.bgmKey]||0)+1; }
     }
     updateProfileBadge();
     // 受取済み行を消す
@@ -19850,8 +20076,8 @@ function openProfile(){
   _updateMatPreview();
   // エモート選択UIを生成
   renderEmoteSelect();
-  // リーチBGM選択UIを生成
-  _renderRiichiBgmGrid();
+  // リーチBGM表示を更新
+  _updateRiichiBgmBookDisplay();
 }
 // ============================================================
 // MAT BOOK（マット図鑑）
@@ -21741,6 +21967,49 @@ function _showNcpToast(iconId) {
   <div id="ringBookGrid" style="width:100%;max-width:480px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
 </div>
 
+<!-- ===== リーチBGM図鑑 ===== -->
+<div id="riichiBgmBookScreen" style="
+  position:fixed;inset:0;z-index:15;
+  display:none;flex-direction:column;align-items:center;
+  background:#0b1520;overflow-y:auto;padding:50px 20px 80px;
+">
+  <button onclick="closeRiichiBgmBook()" style="
+    position:fixed;top:14px;left:14px;z-index:20;
+    background:#030a10;border:1px solid #2a4a3a;border-radius:8px;
+    color:#5a9a7a;font-size:.72rem;padding:7px 13px;cursor:pointer;">◀ 戻る</button>
+
+  <div style="margin-top:10px;text-align:center;margin-bottom:20px;">
+    <div style="font-size:clamp(1.2rem,4vw,1.8rem);font-weight:900;color:#ff7799;letter-spacing:.15em;">🎵 リーチBGM図鑑</div>
+    <div style="font-size:.58rem;color:#7a3a5a;margin-top:4px;">タップして装備・解除。リーチ宣言時に再生されます</div>
+  </div>
+
+  <div style="width:100%;max-width:480px;margin-bottom:16px;
+    background:#15050d;border:1.5px solid #8a2244;border-radius:12px;padding:12px 16px;
+    display:flex;align-items:center;gap:10px;">
+    <span style="font-size:1.2rem;">🎵</span>
+    <div>
+      <div style="font-size:.6rem;color:#7a3a5a;letter-spacing:.08em;">装備中</div>
+      <div id="riichiBgmBookEquipped" style="font-size:.78rem;font-weight:700;color:#ff7799;">なし</div>
+    </div>
+  </div>
+
+  <div style="width:100%;max-width:480px;margin-bottom:12px;">
+    <button id="riichiBgmBookNoneBtn" onclick="selectRiichiBgm('')" style="
+      width:100%;padding:10px 16px;border-radius:10px;cursor:pointer;
+      background:#040c12;border:2px solid #3a1a2a;
+      color:#7a3a5a;font-size:.72rem;font-weight:700;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      transition:border-color .15s, color .15s;
+    "
+    onmouseover="this.style.borderColor='#cc4466';this.style.color='#ff7799';"
+    onmouseout="_updateRiichiBgmNoneBtnStyle();">
+      <span style="font-size:1rem;">🔇</span> BGMなし
+    </button>
+  </div>
+
+  <div id="riichiBgmBookGrid" style="width:100%;max-width:480px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;"></div>
+</div>
+
 <!-- ===== スキン図鑑 ===== -->
 <!-- 上がり演出図鑑 -->
 <div id="agariBookScreen" style="
@@ -22037,74 +22306,132 @@ function _showNcpToast(iconId) {
 
 
 <script>
-// ── リーチBGM選択UI ─────────────────────────────────────────
+// ── リーチBGM図鑑 ────────────────────────────────────────────
 const _RIICHI_BGM_LABELS = {
   ritibgm01:'どこまでも続く道',ritibgm02:'ポケットの温もり',ritibgm03:'星屑',
   ritibgm04:'猶予',ritibgm05:'終焉のカウントダウン',ritibgm06:'それぞれの道へ',
   ritibgm07:'ラストスパート',ritibgm08:'優雅な一撃',ritibgm09:'コーヒーブレイク',
   ritibgm10:'迷いながらも',
 };
+const _RIICHI_BGM_BASE = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/ritibgm/';
 let _riichiBgmPreviewAudio = null;
 
-function _renderRiichiBgmGrid(){
-  const grid = document.getElementById('riichiBgmGrid');
+function openRiichiBgmBook(){
+  document.getElementById('profileScreen').classList.remove('active');
+  document.getElementById('riichiBgmBookScreen').style.display='flex';
+  _renderRiichiBgmBookGrid();
+}
+function closeRiichiBgmBook(){
+  _stopRiichiBgmPreview();
+  document.getElementById('riichiBgmBookScreen').style.display='none';
+  document.getElementById('profileScreen').classList.add('active');
+  _updateRiichiBgmBookDisplay();
+}
+
+function _updateRiichiBgmBookDisplay(){
+  const el = document.getElementById('riichiBgmBookDisplayText');
+  const wrap = document.getElementById('riichiBgmBookDisplay');
+  const cur = PROFILE.riichiBgm || '';
+  const label = cur ? (_RIICHI_BGM_LABELS[cur] || cur) : 'なし';
+  const hasBgm = !!cur;
+  if(el) el.innerHTML = `${label}<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で変更</span>`;
+  if(wrap){
+    wrap.dataset.equipped = hasBgm ? '1' : '0';
+    wrap.style.borderColor = hasBgm ? '#ffd700' : '#2a5a3a';
+  }
+}
+
+function _updateRiichiBgmNoneBtnStyle(){
+  const btn = document.getElementById('riichiBgmBookNoneBtn');
+  if(!btn) return;
+  const isNone = !PROFILE.riichiBgm;
+  btn.style.borderColor = isNone ? '#ffd700' : '#3a1a2a';
+  btn.style.color = isNone ? '#ffd700' : '#7a3a5a';
+}
+
+function _renderRiichiBgmBookGrid(){
+  const grid = document.getElementById('riichiBgmBookGrid');
+  const equippedEl = document.getElementById('riichiBgmBookEquipped');
   if(!grid) return;
-  const current = PROFILE.riichiBgm || '';
-  // 「なし」＋ritibgm01〜10
-  const items = [
-    {key:'', label:'なし', emoji:'🔇'},
-    ...Object.keys(_RIICHI_BGM_LABELS).map(k=>({key:k, label:_RIICHI_BGM_LABELS[k], emoji:'🎵'}))
-  ];
-  grid.innerHTML = items.map(item=>{
-    const sel = item.key === current;
-    return `<div onclick="_selectRiichiBgm('${item.key}')" style="
-      cursor:pointer;background:#040c12;border:2px solid ${sel?'#ffd700':'#2a5a3a'};
-      border-radius:8px;padding:7px 4px;text-align:center;
-      transition:border-color .15s,background .15s;
-      ${sel?'background:#1a0e00;':''}
-    " onmouseover="this.style.borderColor='${sel?'#ffd700':'#4a8a6a'}'"
-       onmouseout="this.style.borderColor='${sel?'#ffd700':'#2a5a3a'}'">
-      <div style="font-size:1.1rem;">${item.emoji}</div>
-      <div style="font-size:.52rem;color:${sel?'#ffd700':'#5a8a7a'};margin-top:3px;line-height:1.3;">${item.label}</div>
-      ${item.key?`<div onclick="event.stopPropagation();_previewRiichiBgm('${item.key}',this)" style="
-        margin-top:4px;font-size:.46rem;color:#3a6a5a;border:1px solid #2a4a3a;
-        border-radius:4px;padding:1px 4px;display:inline-block;cursor:pointer;
-      ">▶ 試聴</div>`:''}
-      ${sel?'<div style="font-size:.46rem;color:#ffd700;margin-top:3px;">✓ 使用中</div>':''}
+  const cur = PROFILE.riichiBgm || '';
+  const rb  = PROFILE.riichiBgms || {};
+  if(equippedEl) equippedEl.textContent = cur ? (_RIICHI_BGM_LABELS[cur] || cur) : 'なし';
+  _updateRiichiBgmNoneBtnStyle();
+
+  grid.innerHTML = Object.keys(_RIICHI_BGM_LABELS).map(key=>{
+    const label = _RIICHI_BGM_LABELS[key];
+    const sel = key === cur;
+    const isPlaying = _riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key === key;
+    const unlocked = (rb[key]||0) > 0;
+    const borderCol = sel ? '#ffd700' : unlocked ? '#4a1a2a' : '#2a2a2a';
+    const srcLabel  = key === 'ritibgm01' ? '常設ガチャ LEGEND' : 'TBBガチャ';
+    if(!unlocked){
+      return `<div style="
+        background:#0a0a0a;border:2px solid #2a2a2a;opacity:.5;
+        border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;
+        align-items:center;gap:8px;
+      ">
+        <div style="font-size:1.6rem;">🔒</div>
+        <div style="font-size:.68rem;font-weight:700;color:#555;text-align:center;line-height:1.4;">${label}</div>
+        <div style="font-size:.48rem;color:#444;">${srcLabel}で入手</div>
+      </div>`;
+    }
+    return `<div style="
+      background:#0d0515;border:2px solid ${borderCol};
+      border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;
+      align-items:center;gap:8px;transition:border-color .15s;
+    "
+    onmouseover="this.style.borderColor='${sel?'#ffd700':'#cc4466'}'"
+    onmouseout="this.style.borderColor='${borderCol}'">
+      <div style="font-size:1.6rem;">🎵</div>
+      <div style="font-size:.68rem;font-weight:700;color:${sel?'#ffd700':'#ff7799'};text-align:center;line-height:1.4;">${label}</div>
+      ${sel?'<span style="font-size:.5rem;background:#2a0a14;border:1px solid #ffd700;border-radius:4px;padding:2px 8px;color:#ffd700;">✓ 装備中</span>':''}
+      <div style="display:flex;gap:6px;width:100%;">
+        <button onclick="selectRiichiBgm('${key}')" style="
+          flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;
+          background:${sel?'#2a0a14':'#1a0510'};
+          border:1.5px solid ${sel?'#ffd700':'#8a2244'};
+          color:${sel?'#ffd700':'#ff7799'};transition:background .1s;
+        ">${sel?'解除':'装備'}</button>
+        <button onclick="_previewRiichiBgm('${key}',this)" data-previewkey="${key}" style="
+          flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;
+          background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;
+        ">${isPlaying?'■ 停止':'▶ 試聴'}</button>
+      </div>
     </div>`;
   }).join('');
 }
 
-function _selectRiichiBgm(key){
-  PROFILE.riichiBgm = key;
-  // ローカル保存
-  try{
-    const {coins:_c,abilities:_ab,ability:_abl,tbbCoins:_tbb,...p}=PROFILE;
-    localStorage.setItem('mjProfile',JSON.stringify(p));
-  }catch(e){}
+function selectRiichiBgm(key){
+  // 未解放の場合は装備不可
+  if(!((PROFILE.riichiBgms||{})[key])) return;
+  // 同じキーなら解除、違うキーなら装備
+  PROFILE.riichiBgm = (PROFILE.riichiBgm === key) ? '' : key;
+  saveProfileSilent();
   _stopRiichiBgmPreview();
-  _renderRiichiBgmGrid();
+  _renderRiichiBgmBookGrid();
+  _updateRiichiBgmBookDisplay();
 }
 
 function _previewRiichiBgm(key, btn){
-  // 試聴中なら停止
+  // 試聴中の同曲ならトグル停止
   if(_riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key===key){
     _stopRiichiBgmPreview();
-    if(btn) btn.textContent='▶ 試聴';
+    _renderRiichiBgmBookGrid();
     return;
   }
   _stopRiichiBgmPreview();
-  const BASE='https://raw.githubusercontent.com/tenibi/tenibijan/main/ritibgm/';
-  _riichiBgmPreviewAudio = new Audio(BASE+key+'.mp3');
+  _riichiBgmPreviewAudio = new Audio(_RIICHI_BGM_BASE+key+'.mp3');
   _riichiBgmPreviewAudio._key = key;
   _riichiBgmPreviewAudio.volume = Math.min(1, (typeof RIICHI_BGM!=='undefined' ? RIICHI_BGM.getVol() : 0.14));
-  // 試聴は10秒で自動停止
   _riichiBgmPreviewAudio.play().catch(()=>{});
-  if(btn) btn.textContent='■ 停止';
+  // 試聴は15秒で自動停止
   _riichiBgmPreviewAudio._stopTimer = setTimeout(()=>{
     _stopRiichiBgmPreview();
-    _renderRiichiBgmGrid();
-  }, 10000);
+    _renderRiichiBgmBookGrid();
+  }, 15000);
+  // ボタン表示を即時更新
+  _renderRiichiBgmBookGrid();
 }
 
 function _stopRiichiBgmPreview(){

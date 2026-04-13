@@ -2721,6 +2721,11 @@ body{
       <div id="twitchLinkStatus" style="font-size:.65rem;color:#9a7acc;"></div>
       <div id="twitchSubAction"></div>
     </div>
+
+    <!-- 手にビPremium -->
+    <div class="shop-section-title" style="margin-top:18px;">👑 手にビPremium</div>
+    <div style="font-size:.56rem;color:#4a6a5a;margin-bottom:10px;">Premiumを所持すると各種コイン獲得量が2倍になります。</div>
+    <div id="premiumShopPanel" style="background:#100820;border:1.5px solid #7a30aa;border-radius:10px;padding:14px 16px;"></div>
   </div>
 </div>
 
@@ -3227,6 +3232,7 @@ body{
     <div id="llPlayerIconBig" onclick="openProfile()" title="プロフィールを編集">
       <div id="llIconInner" class="ll-icon-empty">アイコン<br>未設定</div>
     </div>
+    <div id="llPremiumBadge" style="display:none;position:absolute;top:4px;right:4px;background:linear-gradient(135deg,#8833aa,#cc66ff);border:1.5px solid #ff99ff;border-radius:50%;width:28px;height:28px;display:none;align-items:center;justify-content:center;font-size:.75rem;font-weight:900;color:#fff;box-shadow:0 0 10px #cc66ff99;letter-spacing:-.02em;z-index:10;pointer-events:none;">P</div>
   </div>
 
   <!-- 中央右: メインモード 2×2グリッド -->
@@ -3343,6 +3349,7 @@ body{
       <div class="lpc-icon">
         <div id="lpcIconInner" class="lpc-icon-empty">アイコン<br>未設定</div>
       </div>
+      <div id="lpcPremiumBadge" style="display:none;position:absolute;top:4px;left:4px;background:linear-gradient(135deg,#8833aa,#cc66ff);border:1.5px solid #ff99ff;border-radius:50%;width:20px;height:20px;align-items:center;justify-content:center;font-size:.6rem;font-weight:900;color:#fff;box-shadow:0 0 8px #cc66ff99;z-index:10;pointer-events:none;">P</div>
       <div class="lpc-info">
         <div class="lpc-name" id="lpcName">プレイヤー</div>
         <div class="lpc-ability" id="lpcAbility">⚡ 能力なし</div>
@@ -8544,6 +8551,10 @@ function applyHostState(msg){
     // （ツモ直後も保存しないと、ホストのbroadcastStateで並び順が上書きされるバグが発生する）
     const _myIdx = NET.myIdx;
     const _localPlayer = (_myIdx != null && G.players[_myIdx]) ? G.players[_myIdx] : null;
+    // ★ 闇バグ修正3: 手牌並び替え後のyamiTileIdxズレ防止のため、闇牌のオブジェクト参照も保存する
+    // インデックスではなくオブジェクト参照で保存しておくことで、手牌復元後にfindIndexで正しい位置を再計算できる
+    const _savedYamiTileObj = (_savedYamiTileIdx >= 0 && _localPlayer && _localPlayer.hand[_savedYamiTileIdx])
+      ? _localPlayer.hand[_savedYamiTileIdx] : null;
     // drawnTile は hand の末尾と同一オブジェクト（hand.push(t); drawnTile=t;）。
     // キー比較時にドローを除いた4枚(or2枚)の hand 部分だけで比較するため、
     // drawnTile がある場合は末尾1枚を除いて保存する。
@@ -8578,6 +8589,13 @@ function applyHostState(msg){
           : _localHand.slice();
         G.players[_myIdx].hand = _restoredHand;
         G.players[_myIdx].drawnTile = _hostDrawnTile;
+        // ★ 闇バグ修正3: 手牌をローカル並び順に復元した後、
+        // 保存しておいた闇牌オブジェクト参照でfindIndexし直してyamiTileIdxを再計算する。
+        // これにより手牌並び替え後もyamiTileIdxが正しい位置を指すようになる。
+        if((_guestYamiSelecting||_guestYamiSelected) && _savedYamiTileObj && G.players[_myIdx]){
+          const _reIdx = G.players[_myIdx].hand.findIndex(t => t === _savedYamiTileObj);
+          if(_reIdx >= 0) G.players[_myIdx].yamiTileIdx = _reIdx;
+        }
       }
     }
     numPlayers=s.numPlayers;
@@ -9621,7 +9639,7 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
 
   // ── 1人モード: 爆弾をランダム配置（ステージごとに+1）──────────────
   if(numPlayers===1){
-    const bombCount = Math.min(9 + (G._soloStage||1), 20); // 最大20個
+    const bombCount = 19 + (G._soloStage||1); // ステージ1=20個、1ステージごとに+1
     const avail=G.deckSlots.map((_,i)=>i).filter(i=>G.deckSlots[i]!=null);
     for(let i=avail.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[avail[i],avail[j]]=[avail[j],avail[i]];}
     const bombSlots=avail.slice(0,bombCount);
@@ -12700,7 +12718,7 @@ function checkEnd(){
 }
 // 💣 BOMBモード: 結果をDBに送信する共通ヘルパー
 function _bombSendResult(stage, score){
-  const bombEarned = stage >= 5 ? 20 + (stage - 5) * 7 : 0;
+  const bombEarned = stage >= 5 ? 20 + (stage - 5) * 3 : 0;
   authFetch('/api/bomb/result',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({stage, score})}, true) // noRedirect: ゲーム中に強制リダイレクトしない
   .then(r=>r.json()).then(d=>{
@@ -12732,7 +12750,7 @@ function _bombSendResult(stage, score){
 function _soloShowFinalResult(cleared){
   clearRejoinSession();
   const stage = G._soloStage||1;
-  const bombCount = Math.min(9+stage, 20);
+  const bombCount = 19 + stage; // ステージ1=20個、1ステージごとに+1
   const score = (G.players&&G.players[0]) ? G.players[0].score : 0;
   document.getElementById('resultTable').innerHTML=
     `<tr class="result-winner"><td colspan="3" style="text-align:center;font-size:1.1rem;padding:10px 0;">
@@ -12745,8 +12763,8 @@ function _soloShowFinalResult(cleared){
       <span style="font-size:.65rem;color:#5a7a6a;letter-spacing:.1em;">持ち点</span><br>
       <span style="font-size:1.3rem;font-weight:700;color:${score>=0?'var(--gold2)':'#ff7777'};">${score.toLocaleString()} 点</span>
     </td></tr>`;
-  // 💣 BOMBモード: ステージ5到達で20コイン、以降1ステージごとに+7コイン
-  const bombEarned = stage >= 5 ? 20 + (stage - 5) * 7 : 0;
+  // 💣 BOMBモード: ステージ5到達で10コイン、以降1ステージごとに+3コイン
+  const bombEarned = stage >= 5 ? 10 + (stage - 5) * 3 : 0;
   const rewardEl=document.getElementById('resultCoinReward');
   if(rewardEl) rewardEl.innerHTML=`🎯 スコア：ステージ ${stage} 到達 / ${score.toLocaleString()} 点`;
   // DB送信（共通ヘルパー）
@@ -16047,7 +16065,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}, premium:false};
 // vcIconId: VCアイコン（音声SE用）、未設定時はiconIdを使用
 // displayIconId: 見た目アイコン（画面表示用）、未設定時はiconIdを使用
 function _getProfileDisplayIconId(){ return PROFILE.displayIconId || PROFILE.iconId || ''; }
@@ -16879,6 +16897,7 @@ function loadProfile(){
         emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
         uid:           data.uid           || PROFILE.uid           || '',
         newCharPresentDone: data.newCharPresentDone ?? PROFILE.newCharPresentDone ?? false,
+        premium:       !!(data.premium),
         cpuUnlocks: Array.from(new Set([
           ...(Array.isArray(data.cpuUnlocks)      ? data.cpuUnlocks      : []),
           ...(Array.isArray(PROFILE.cpuUnlocks)   ? PROFILE.cpuUnlocks   : []),
@@ -19878,6 +19897,8 @@ function updateProfileBadge(){
       }
     }
   })();
+  // Premiumバッジ更新
+  updatePremiumBadge();
 }
 
 function selectAbility(el,ability){
@@ -20907,6 +20928,16 @@ function updateShopCoinDisplay(){
   const tbb=document.getElementById('shopTbbDisplay');
   if(tbb) tbb.textContent=(PROFILE.tbbCoins||0).toLocaleString();
 }
+
+function updatePremiumBadge(){
+  const show = !!(PROFILE.premium);
+  // 横画面バッジ
+  const ll = document.getElementById('llPremiumBadge');
+  if(ll) ll.style.display = show ? 'flex' : 'none';
+  // 縦画面バッジ
+  const lpc = document.getElementById('lpcPremiumBadge');
+  if(lpc) lpc.style.display = show ? 'flex' : 'none';
+}
 // ショップで販売するエモートセット定義
 const SHOP_EMOTE_SETS = [
   // セット2はTwitchサブスク特典のため販売なし
@@ -20964,6 +20995,8 @@ function renderShop(){
   });
   // Twitchサブスクパネル描画
   renderTwitchSubPanel();
+  // Premiumショップパネル描画
+  renderPremiumShopPanel();
 }
 
 function renderTwitchSubPanel(){
@@ -21132,6 +21165,107 @@ function renderTwitchSubPanel(){
   actionEl.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">
     ${coinBtn}${tbbCoinBtn}${emoteBtn}${linkPrompt}
   </div>`;
+}
+
+function renderPremiumShopPanel(){
+  const el = document.getElementById('premiumShopPanel');
+  if(!el) return;
+  const hasPremium = !!(PROFILE.premium);
+  const PREMIUM_COST = 300;
+  const canAfford = (PROFILE.tbbCoins||0) >= PREMIUM_COST;
+
+  // 自分用セクション
+  let selfHtml;
+  if(hasPremium){
+    selfHtml = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.6rem;">👑</span>
+        <div>
+          <div style="font-size:.75rem;font-weight:700;color:#cc66ff;">手にビPremium 所持中</div>
+          <div style="font-size:.58rem;color:#7a50aa;margin-top:3px;">コイン獲得量が2倍になっています</div>
+        </div>
+        <span style="margin-left:auto;font-size:.65rem;color:#cc66ff;background:#2a0840;border:1px solid #7a30aa;border-radius:6px;padding:3px 10px;">✅ 有効</span>
+      </div>`;
+  } else {
+    selfHtml = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.6rem;">👑</span>
+        <div style="flex:1;">
+          <div style="font-size:.75rem;font-weight:700;color:#cc66ff;">手にビPremium</div>
+          <div style="font-size:.58rem;color:#7a50aa;margin-top:3px;">ルーム報酬・ログインボーナス・ミッション・手にボムのコイン獲得が2倍</div>
+        </div>
+        <div style="flex-shrink:0;text-align:right;">
+          <div style="font-size:.62rem;color:#88ddff;font-weight:700;margin-bottom:5px;"><img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:2px;">${PREMIUM_COST} TBB</div>
+          <button class="shop-buy-btn premium" style="font-size:.6rem;padding:5px 12px;"
+            ${!canAfford ? 'disabled' : ''}
+            onclick="buyPremium()">${canAfford ? '購入' : 'TBB不足'}</button>
+        </div>
+      </div>`;
+  }
+
+  // フレンドへのプレゼントセクション
+  const friends = (_friendData.friends||[]).filter(f => !f.premium);
+  let friendHtml;
+  if(friends.length === 0){
+    friendHtml = `<div style="font-size:.58rem;color:#5a4a7a;text-align:center;padding:8px 0;">Premiumを所持していないフレンドはいません</div>`;
+  } else {
+    const items = friends.map(f => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #2a1a3a;">
+        <span style="font-size:1.1rem;">👤</span>
+        <span style="flex:1;font-size:.68rem;color:#c0d0e0;">${_esc(f.name||'プレイヤー')}</span>
+        <button class="shop-buy-btn premium" style="font-size:.58rem;padding:4px 10px;"
+          ${!canAfford ? 'disabled' : ''}
+          onclick="buyPremiumForFriend('${f.id}','${_esc(f.name||'プレイヤー')}')"
+          id="premFriendBtn_${f.id}">${canAfford ? '贈る' : 'TBB不足'}</button>
+      </div>`).join('');
+    friendHtml = `<div style="margin-top:2px;">${items}</div>`;
+  }
+
+  el.innerHTML = `
+    ${selfHtml}
+    <div style="border-top:1px solid #3a1a5a;margin:10px 0 8px;"></div>
+    <div style="font-size:.62rem;color:#9a70cc;font-weight:700;margin-bottom:6px;">👑 フレンドにPremiumを贈る <span style="font-size:.55rem;color:#7a50aa;font-weight:400;">（300 TBB）</span></div>
+    ${friendHtml}`;
+}
+
+function buyPremium(){
+  const PREMIUM_COST = 300;
+  if((PROFILE.tbbCoins||0) < PREMIUM_COST){
+    _shopToast(`TBBコインが足りません（必要：${PREMIUM_COST} TBB）`); return;
+  }
+  if(PROFILE.premium){ _shopToast('すでにPremiumを所持しています'); return; }
+  authFetch('/api/shop/buy-premium',{method:'POST'})
+  .then(r=>r.json()).then(d=>{
+    if(!d.ok){ _shopToast(d.error||'購入に失敗しました'); return; }
+    PROFILE.tbbCoins = d.tbbCoins;
+    PROFILE.premium = true;
+    renderShop();
+    _shopToast('👑 手にビPremiumを入手しました！コイン獲得量が2倍になりました');
+  }).catch(()=>_shopToast('通信エラーが発生しました'));
+}
+
+function buyPremiumForFriend(friendId, friendName){
+  const PREMIUM_COST = 300;
+  if((PROFILE.tbbCoins||0) < PREMIUM_COST){
+    _shopToast(`TBBコインが足りません（必要：${PREMIUM_COST} TBB）`); return;
+  }
+  if(!confirm(`${friendName} に手にビPremiumを贈りますか？\n（${PREMIUM_COST} TBBコインが消費されます）`)) return;
+  const btn = document.getElementById(`premFriendBtn_${friendId}`);
+  if(btn){ btn.disabled = true; btn.textContent = '送信中…'; }
+  authFetch('/api/shop/buy-premium-for-friend',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({receiverId: friendId}),
+  })
+  .then(r=>r.json()).then(d=>{
+    if(!d.ok){ _shopToast(d.error||'贈り物に失敗しました'); if(btn){btn.disabled=false;btn.textContent='贈る';} return; }
+    PROFILE.tbbCoins = d.tbbCoins;
+    // フレンドデータのpremiumフラグを更新
+    const f = (_friendData.friends||[]).find(f=>f.id===friendId);
+    if(f) f.premium = true;
+    renderShop();
+    _shopToast(`👑 ${friendName} に手にビPremiumを贈りました！`);
+  }).catch(()=>{ _shopToast('通信エラーが発生しました'); if(btn){btn.disabled=false;btn.textContent='贈る';} });
 }
 
 function claimTwitchSubReward(){

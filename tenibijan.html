@@ -1867,15 +1867,16 @@ body{
 
 /* ===== PROFILE SCREEN ===== */
 #profileScreen{
-  position:relative;z-index:10;
+  position:fixed;inset:0;z-index:10;
   display:none;flex-direction:column;align-items:center;
-  min-height:100vh;gap:16px;padding:100px 20px 200px;
+  gap:16px;padding:100px 20px 60px;
   background-color:var(--bg);
   background-size:cover;
   background-position:center;
   background-repeat:no-repeat;
   overflow-y:auto;
   box-sizing:border-box;
+  width:100%;height:100%;
 }
 #profileScreen:not(.has-bg)::before{
   content:'';
@@ -2263,7 +2264,7 @@ body{
       <div style="margin-bottom:16px;background:#1a0e00;border:1px solid #ffd700;border-radius:12px;padding:12px 14px;">
         <div style="font-size:.6rem;color:#ffd700;letter-spacing:.12em;margin-bottom:10px;text-align:center;">&#x1F451; LEGEND ラインナップ</div>
         <!-- 能力 -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x26A1; 能力解放（各1/17・4種）</div>
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x26A1; 能力解放（各1/26・4種）</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
             <span style="font-size:.85rem;">&#x1F311;</span>
@@ -2283,7 +2284,7 @@ body{
           </div>
         </div>
         <!-- あがり動画 -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F3AC; あがり動画（各1/17・3種）</div>
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F3AC; あがり動画（各1/26・3種）</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:4px;background:#0a0800;border:1px solid #6a5010;border-radius:6px;padding:4px 8px;">
             <span style="font-size:.85rem;">&#x1F3B4;</span>
@@ -2299,7 +2300,7 @@ body{
           </div>
         </div>
         <!-- 手スキン -->
-        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F489; 手スキン（1/17）</div>
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin-bottom:6px;">&#x1F489; 手スキン（1/26）</div>
         <div style="display:flex;align-items:center;gap:8px;background:#0a0800;border:1px solid #6a5010;border-radius:8px;padding:6px 10px;margin-bottom:10px;">
           <span style="font-size:1.2rem;">&#x1F90D;</span>
           <div>
@@ -2379,6 +2380,15 @@ body{
             <div style="font-size:.48rem;color:#ffd700;">L17</div>
           </div>
         </div>
+        <!-- リーチBGM -->
+        <div style="font-size:.52rem;color:#aa9040;letter-spacing:.08em;margin:10px 0 6px;">&#x1F3B5; リーチBGM（1/26）</div>
+        <div style="display:flex;align-items:center;gap:8px;background:#0a0800;border:1px solid #6a5010;border-radius:8px;padding:6px 10px;">
+          <span style="font-size:1.2rem;">&#x1F3B5;</span>
+          <div>
+            <div style="font-size:.6rem;font-weight:700;color:#ffd700;">どこまでも続く道</div>
+            <div style="font-size:.48rem;color:#8a7040;">リーチ宣言時に流れるBGM</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2412,7 +2422,7 @@ body{
 
       <!-- 排出アイテム一覧 -->
       <div style="margin-top:16px;background:#0a0515;border:1px solid #3a1a5a;border-radius:10px;padding:12px 14px;">
-        <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:10px;">📋 排出アイテム（全19種）</div>
+        <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:10px;">📋 排出アイテム（全22種）</div>
         <div style="display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;
           background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
           <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenoicon/ao01.png" style="width:36px;height:36px;object-fit:contain;flex-shrink:0;border-radius:6px;" onerror="this.outerHTML='🌸'">
@@ -2551,6 +2561,46 @@ body{
           <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #5a2a4a;border-radius:8px;">
             <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/ringicon/ring04p.png" style="width:32px;height:32px;object-fit:contain;flex-shrink:0;" onerror="this.outerHTML='💍'">
             <div style="flex:1;font-size:.65rem;font-weight:700;color:#ffaacc;">指輪 クローバー Pink</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+        </div>
+        <!-- リーチBGM系 -->
+        <div style="font-size:.55rem;color:#5a3a7a;letter-spacing:.08em;margin:8px 0 4px;">── リーチBGM系 ──</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">ポケットの温もり</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">星屑</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">猶予</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">終焉のカウントダウン</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">それぞれの道へ</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">ラストスパート</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">優雅な一撃</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">コーヒーブレイク</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">迷いながらも</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
           </div>
         </div>
       </div>
@@ -2907,80 +2957,41 @@ body{
 </div>
 
 <div id="profileScreen">
-  <button onclick="document.getElementById('profileScreen').classList.remove('active');document.getElementById('lobby').style.display='';" style="
-    position:absolute;top:14px;left:14px;z-index:10;
-    background:#030a10;border:1px solid #2a4a3a;border-radius:8px;
-    color:#5a9a7a;font-size:.72rem;padding:7px 13px;cursor:pointer;
-    display:flex;align-items:center;gap:5px;letter-spacing:.04em;
-    transition:border-color .15s,color .15s;
-  " onmouseover="this.style.borderColor='#3a7a5a';this.style.color='#8acca0';" onmouseout="this.style.borderColor='#2a4a3a';this.style.color='#5a9a7a';">◀ ロビーへ戻る</button>
+
   <div class="lobby-title">
     <h1 style="font-size:clamp(1.4rem,4vw,2.2rem);">プロフィール</h1>
 
   </div>
   <div class="profile-card">
     <!-- 2列グリッド -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch;">
 
-      <!-- 左列: アイコン・名前・称号 -->
+      <!-- 左列: 名前・称号・能力・マット -->
       <div style="display:flex;flex-direction:column;gap:10px;">
-        <!-- アイコン -->
-        <div style="display:flex;flex-direction:column;align-items:center;">
-          <h3 style="margin-bottom:6px;text-align:center;">アイコン</h3>
-          <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px;">
-            <div style="text-align:center;">
-              <div style="font-size:.45rem;color:#88aaff;margin-bottom:3px;">🎤 VCアイコン</div>
-              <div id="iconDisplayVC" onclick="openIconCollectionSlot('vc')" style="
-                aspect-ratio:3/4;width:64px;
-                display:flex;align-items:center;justify-content:center;
-                border:2px solid #4466aa;border-radius:10px;cursor:pointer;
-                background:#040c12;transition:border-color .15s;
-                font-size:.45rem;color:#3a5a7a;overflow:hidden;
-              " title="VCアイコンを変更">未設定</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="font-size:.45rem;color:#ffaa44;margin-bottom:3px;">🖼 見た目アイコン</div>
-              <div id="iconDisplay" onclick="openIconCollectionSlot('disp')" style="
-                aspect-ratio:3/4;width:64px;
-                display:flex;align-items:center;justify-content:center;
-                border:2px solid #aa6622;border-radius:10px;cursor:pointer;
-                background:#040c12;transition:border-color .15s;
-                font-size:.45rem;color:#5a3a1a;overflow:hidden;
-              " title="見た目アイコンを変更">未設定</div>
-            </div>
-          </div>
-        </div>
         <!-- 名前 -->
-        <div>
-          <h3 style="margin-bottom:6px;">プレイヤー名</h3>
-          <input class="profile-input" id="profileName" type="text" maxlength="12" placeholder="名前を入力" style="width:100%;">
+        <div id="name-row" style="display:flex;align-items:center;">
+          <input class="profile-input" id="profileName" type="text" maxlength="12" placeholder="名前を入力" style="width:100%;margin-bottom:0;">
         </div>
         <!-- 称号 -->
         <div>
-          <h3 style="margin-bottom:6px;">🏅 称号</h3>
           <div id="equippedTitleDisplay" onclick="openTitleBook()" style="
             display:flex;flex-direction:column;align-items:center;gap:6px;
             background:#040c12;border:2px solid #2a5a3a;border-radius:10px;
             padding:8px;cursor:pointer;transition:border-color .15s;
-          " onmouseover="this.style.borderColor='#3a7a5a'" onmouseout="this.style.borderColor='#2a5a3a'">
+          " title="称号を変更"
+          onmouseover="this.style.borderColor='#3a7a5a'" onmouseout="this.style.borderColor='#2a5a3a'">
             <div id="equippedTitleEmoji" style="width:100%;aspect-ratio:400/120;overflow:hidden;display:flex;align-items:center;justify-content:center;">
               <span style="font-size:1.4rem;">🏆</span>
             </div>
-
           </div>
         </div>
-      </div>
-
-      <!-- 右列: 能力・マット・エモート -->
-      <div style="display:flex;flex-direction:column;gap:10px;">
         <!-- 能力 -->
         <div>
-          <h3 style="margin-bottom:6px;">能力</h3>
           <div id="abilityDisplay" onclick="openAbilityBook()" style="
             display:flex;align-items:center;gap:8px;
             background:#040c12;border:2px solid #2a5a3a;border-radius:10px;
             padding:8px 10px;cursor:pointer;transition:border-color .15s;
-          ">
+          " title="能力を変更">
             <span id="abilityDisplayIcon" style="font-size:1.6rem;flex-shrink:0;">🚫</span>
             <div style="min-width:0;">
               <div id="abilityDisplayName" style="font-size:.68rem;font-weight:700;color:#c0d8c0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">能力なし</div>
@@ -2991,44 +3002,53 @@ body{
         </div>
         <!-- マット -->
         <div>
-          <h3 style="margin-bottom:6px;">マット</h3>
           <div id="matSelectWrap" onclick="openMatBook()" style="
             display:flex;align-items:center;gap:8px;
             background:#040c12;border:2px solid #2a5a3a;border-radius:10px;
             padding:8px 10px;cursor:pointer;transition:border-color .15s;
-          ">
+          " title="マットを変更">
             <div id="matPreviewThumb" style="width:48px;height:32px;border-radius:5px;overflow:hidden;flex-shrink:0;"></div>
             <div style="min-width:0;">
               <div id="matPreviewLabel" style="font-size:.68rem;font-weight:700;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">緑（デフォルト）</div>
             </div>
           </div>
         </div>
-        <!-- レート・爆弾stats -->
-    <div id="fpm-stats" style="display:none;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
-      <div id="fpm-stat-rate" style="display:none;background:#0a1a10;border:1px solid #1a4a2a;border-radius:7px;padding:5px 10px;font-size:.62rem;color:#7acc88;">
-        <span style="color:#4a7a5a;font-size:.52rem;">⚔️ ランクレート</span><br>
-        <span id="fpm-stat-rate-val" style="font-size:.85rem;font-weight:700;color:#5adb9a;"></span>
       </div>
-      <div id="fpm-stat-stage" style="display:none;background:#0a1a10;border:1px solid #1a3a4a;border-radius:7px;padding:5px 10px;font-size:.62rem;color:#88aacc;">
-        <span style="color:#4a6a7a;font-size:.52rem;">💣 爆弾ステージ</span><br>
-        <span id="fpm-stat-stage-val" style="font-size:.85rem;font-weight:700;color:#88ccff;"></span>
-      </div>
-      <div id="fpm-stat-score" style="display:none;background:#0a1a10;border:1px solid #3a3a1a;border-radius:7px;padding:5px 10px;font-size:.62rem;color:#ccaa55;">
-        <span style="color:#6a5a2a;font-size:.52rem;">🏆 爆弾スコア</span><br>
-        <span id="fpm-stat-score-val" style="font-size:.85rem;font-weight:700;color:#f0c040;"></span>
-      </div>
-    </div>
 
-    <!-- エモート -->
-        <div>
-          <h3 style="margin-bottom:6px;">エモート</h3>
+      <!-- 右列: アイコン・エモート -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <!-- アイコン -->
+        <div id="icon-grid-block" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;">
+          <div style="text-align:center;">
+            <div style="font-size:.45rem;color:#88aaff;margin-bottom:3px;">🎤 VCアイコン</div>
+            <div id="iconDisplayVC" onclick="openIconCollectionSlot('vc')" style="
+              aspect-ratio:3/4;width:100%;
+              display:flex;align-items:center;justify-content:center;
+              border:2px solid #4466aa;border-radius:10px;cursor:pointer;
+              background:#040c12;transition:border-color .15s;
+              font-size:.45rem;color:#3a5a7a;overflow:hidden;
+            " title="VCアイコンを変更">未設定</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:.45rem;color:#ffaa44;margin-bottom:3px;">🖼 見た目アイコン</div>
+            <div id="iconDisplay" onclick="openIconCollectionSlot('disp')" style="
+              aspect-ratio:3/4;width:100%;
+              display:flex;align-items:center;justify-content:center;
+              border:2px solid #aa6622;border-radius:10px;cursor:pointer;
+              background:#040c12;transition:border-color .15s;
+              font-size:.45rem;color:#5a3a1a;overflow:hidden;
+            " title="見た目アイコンを変更">未設定</div>
+          </div>
+        </div>
+        <!-- エモート（残り高さをすべて埋める） -->
+        <div style="flex:1;display:flex;flex-direction:column;">
           <div id="emoteEquippedPreview" onclick="openEmoteCollection()" style="
-            display:flex;gap:6px;align-items:center;flex-wrap:wrap;cursor:pointer;
+            flex:1;display:flex;flex-direction:column;gap:6px;cursor:pointer;
             background:#030a10;border:1.5px solid #1a3a2a;border-radius:10px;
             padding:8px 10px;transition:border-color .15s;
           " onmouseover="this.style.borderColor='#3a7a5a'" onmouseout="this.style.borderColor='#1a3a2a'">
-            <div id="emoteEquippedSlots" style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;width:100%;"></div>
-            <div style="font-size:.48rem;color:#3a6a5a;">📖 図鑑</div>
+            <div id="emoteEquippedSlots" style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;width:100%;flex:1;"></div>
+            <div style="font-size:.48rem;color:#3a6a5a;text-align:right;">📖 図鑑</div>
           </div>
           <div id="emoteSelectWrap" style="display:none;"></div>
         </div>
@@ -3036,66 +3056,91 @@ body{
 
     </div><!-- /2列グリッド -->
 
-    <!-- 手のスキン（刺青） -->
-    <div style="margin-top:14px;">
-      <h3 style="margin-bottom:6px;">💉 手のスキン</h3>
-      <div id="handSkinDisplay" onclick="openSkinBook()" style="
-        cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
-        border-radius:10px;overflow:hidden;transition:border-color .15s;
-        max-width:160px;position:relative;
-      " onmouseover="this.style.borderColor='#6a3a9a'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'">
-        <video id="handSkinVideo" muted autoplay playsinline
-          style="width:100%;display:block;background:#000;pointer-events:none;aspect-ratio:1;object-fit:cover;position:relative;z-index:1;"></video>
-        <video id="handSkinRingVideo" muted autoplay playsinline
-          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;z-index:2;pointer-events:none;display:none;"></video>
+    <!-- stats 3列横並び -->
+    <div id="fpm-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;">
+      <div id="fpm-stat-rate" style="display:none;background:#0a1a10;border:1px solid #1a4a2a;border-radius:7px;padding:5px 10px;font-size:.62rem;text-align:center;">
+        <div style="color:#4a7a5a;font-size:.5rem;margin-bottom:3px;">⚔️ ランクレート</div>
+        <span id="fpm-stat-rate-val" style="font-size:.9rem;font-weight:700;color:#5adb9a;"></span>
+      </div>
+      <div id="fpm-stat-stage" style="display:none;background:#0a1a10;border:1px solid #1a3a4a;border-radius:7px;padding:5px 10px;font-size:.62rem;text-align:center;">
+        <div style="color:#4a6a7a;font-size:.5rem;margin-bottom:3px;">💣 爆弾ステージ</div>
+        <span id="fpm-stat-stage-val" style="font-size:.9rem;font-weight:700;color:#88ccff;"></span>
+      </div>
+      <div id="fpm-stat-score" style="display:none;background:#0a1a10;border:1px solid #3a3a1a;border-radius:7px;padding:5px 10px;font-size:.62rem;text-align:center;">
+        <div style="color:#6a5a2a;font-size:.5rem;margin-bottom:3px;">🏆 爆弾スコア</div>
+        <span id="fpm-stat-score-val" style="font-size:.9rem;font-weight:700;color:#f0c040;"></span>
       </div>
     </div>
 
-    <!-- 装飾：指輪 -->
+    <!-- 手のスキン & 指輪 横並び -->
     <div style="margin-top:14px;">
-      <h3 style="margin-bottom:6px;">💍 指輪（装飾図鑑）</h3>
-      <div id="ringDisplay" onclick="openRingBook()" style="
-        cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
-        border-radius:10px;padding:10px 12px;
-        display:flex;align-items:center;transition:border-color .15s;
-      " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#7a4acc'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'" data-equipped="0">
-        <span style="font-size:1.2rem;margin-right:8px;">💍</span>
-        <div style="font-size:.68rem;color:#4a6a5a;">指輪なし<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で装備</span></div>
+      <h3 style="margin-bottom:6px;">💉 手のスキン &amp; 💍 指輪</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <!-- 手のスキン -->
+        <div id="handSkinDisplay" onclick="openSkinBook()" style="
+          cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+          border-radius:10px;overflow:hidden;transition:border-color .15s;
+          position:relative;
+        " onmouseover="this.style.borderColor='#6a3a9a'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'">
+          <video id="handSkinVideo" muted autoplay playsinline
+            style="width:100%;display:block;background:#000;pointer-events:none;aspect-ratio:1;object-fit:cover;position:relative;z-index:1;"></video>
+          <video id="handSkinRingVideo" muted autoplay playsinline
+            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;z-index:2;pointer-events:none;display:none;"></video>
+        </div>
+        <!-- 指輪 -->
+        <div id="ringDisplay" onclick="openRingBook()" style="
+          cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+          border-radius:10px;padding:10px 12px;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:8px;transition:border-color .15s;height:100%;min-height:100px;
+        " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#7a4acc'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'" data-equipped="0">
+          <span style="font-size:1.8rem;">💍</span>
+          <div style="text-align:center;">
+            <div style="font-size:.68rem;color:#4a6a5a;">指輪なし</div>
+            <div style="font-size:.52rem;color:#3a5a4a;">図鑑で装備</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- リーチBGM -->
+    <!-- リーチBGM・上がり演出・タイトル背景 3列横並び -->
     <div style="margin-top:14px;">
-      <h3 style="margin-bottom:6px;">🎵 リーチBGM</h3>
-      <div id="riichiBgmBookDisplay" onclick="openRiichiBgmBook()" style="
-        cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
-        border-radius:10px;padding:10px 12px;
-        display:flex;align-items:center;gap:10px;transition:border-color .15s;
-      " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#cc4466'"
-         onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'"
-         data-equipped="0">
-        <span style="font-size:1.2rem;">🎵</span>
-        <div id="riichiBgmBookDisplayText" style="font-size:.68rem;color:#4a6a5a;">なし<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で変更</span></div>
+      <h3 style="margin-bottom:8px;">🎵 BGM・演出・背景</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;">
+        <!-- リーチBGM -->
+        <div id="riichiBgmBookDisplay" onclick="openRiichiBgmBook()" style="
+          cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+          border-radius:10px;padding:8px 6px;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:4px;transition:border-color .15s;text-align:center;
+        " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#cc4466'"
+           onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'"
+           data-equipped="0">
+          <span style="font-size:1.3rem;">🎵</span>
+          <div style="font-size:.6rem;color:#4a6a5a;line-height:1.3;">リーチBGM</div>
+          <div id="riichiBgmBookDisplayText" style="font-size:.48rem;color:#3a5a4a;">なし<br>図鑑で変更</div>
+        </div>
+        <!-- 上がり演出 -->
+        <div id="agariBookDisplay" onclick="openAgariBook()" style="
+          cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+          border-radius:10px;padding:8px 6px;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:4px;transition:border-color .15s;text-align:center;
+        " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#4466cc'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'" data-equipped="0">
+          <span style="font-size:1.3rem;">🎬</span>
+          <div style="font-size:.6rem;color:#4a6a5a;line-height:1.3;">上がり演出</div>
+          <div id="agariBookDisplayText" style="font-size:.48rem;color:#3a5a4a;">あがり！<br>図鑑で変更</div>
+        </div>
+        <!-- タイトル背景 -->
+        <div style="
+          cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
+          border-radius:10px;padding:8px 6px;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:4px;transition:border-color .15s;text-align:center;
+        " onmouseover="this.style.borderColor='#c9a84c'" onmouseout="this.style.borderColor='#2a5a3a'">
+          <div id="titleBgGrid"></div>
+        </div>
       </div>
-    </div>
-
-    <!-- 上がり演出 -->
-    <div style="margin-top:14px;">
-      <h3 style="margin-bottom:6px;">🎬 上がり演出</h3>
-      <div id="agariBookDisplay" onclick="openAgariBook()" style="
-        cursor:pointer;background:#040c12;border:2px solid #2a5a3a;
-        border-radius:10px;padding:10px 12px;
-        display:flex;align-items:center;gap:10px;transition:border-color .15s;
-      " onmouseover="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#4466cc'" onmouseout="this.style.borderColor=this.dataset.equipped==='1'?'#ffd700':'#2a5a3a'" data-equipped="0">
-        <span style="font-size:1.2rem;">🎬</span>
-        <div id="agariBookDisplayText" style="font-size:.68rem;color:#4a6a5a;">あがり！<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で変更</span></div>
-      </div>
-    </div>
-
-    <!-- タイトル背景 -->
-    <div style="margin-top:14px;">
-      <h3 style="margin-bottom:8px;">🖼️ タイトル背景</h3>
-      <div id="titleBgGrid"></div>
     </div>
 
     <button class="start-btn" style="margin-top:14px;" onclick="saveProfile()">保存してロビーへ →</button>
@@ -8345,7 +8390,7 @@ function handleGuestAction(msg, senderIdx){
       }
       break;
     case 'kita':      remoteKita(msg.pidx); break;
-    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false, msg.yamiTileIdx??-1, msg.tile??null); break;
+    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false, msg.yamiTileIdx??-1, msg.tile??null, msg.yamiTileRef??null); break;
     case 'nextRound': nextRound(); break;
     case 'backToRoom': backToRoom(); break; // ホストから部屋戻り通知
     case 'requestMyName':
@@ -8890,12 +8935,20 @@ function remoteHaku(pidx,tidx){
   broadcastState();
   renderAll();
 }
-function remoteRiichi(pidx,mode,tidx,isYami=false,yamiTileIdx=-1,tileRef=null){
+function remoteRiichi(pidx,mode,tidx,isYami=false,yamiTileIdx=-1,tileRef=null,yamiTileRef=null){
   G.pendingRiichi=mode;
   G.riichiValidIdx=getRiichiDiscards(G.players[pidx].hand);
   // オープンリーチ時: ゲストのyamiTileIdxをホスト側でセット（闇手牌が他プレイヤーに正しく表示されるよう）
+  // yamiTileRefがあれば牌の実体で検索して補正（ゲストとホストで手牌順序が異なる場合のズレに対応）
   if((mode==='open'||mode==='double-open') && yamiTileIdx>=0){
-    G.players[pidx].yamiTileIdx=yamiTileIdx;
+    if(yamiTileRef){
+      const _yamiFoundIdx = G.players[pidx].hand.findIndex(
+        t => t.suit===yamiTileRef.suit && t.num===yamiTileRef.num && !!t._isAka===!!yamiTileRef._isAka
+      );
+      G.players[pidx].yamiTileIdx = _yamiFoundIdx >= 0 ? _yamiFoundIdx : yamiTileIdx;
+    } else {
+      G.players[pidx].yamiTileIdx = yamiTileIdx;
+    }
   }
   // ゲストが手牌を並び替えた場合、tidxがホスト側の順序とズレるので
   // tileRef（牌の実体）でホスト側handを検索してインデックスを補正する（remoteDiscardと同様）
@@ -12083,7 +12136,7 @@ function humanDiscard(){
   if(isYamiDiscard) p.abilityUsed=true;
   selIdx=-1;
   if(NET.online&&!amIHost()){
-    if(G.pendingRiichi){const _rt=p.hand[idx];netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,tile:_rt?{suit:_rt.suit,num:_rt.num,_isAka:!!_rt._isAka}:null,isYami:isYamiDiscard,yamiTileIdx:p.yamiTileIdx??-1});}
+    if(G.pendingRiichi){const _rt=p.hand[idx];const _yt=(p.yamiTileIdx>=0&&p.yamiTileIdx<p.hand.length)?p.hand[p.yamiTileIdx]:null;netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,tile:_rt?{suit:_rt.suit,num:_rt.num,_isAka:!!_rt._isAka}:null,isYami:isYamiDiscard,yamiTileIdx:p.yamiTileIdx??-1,yamiTileRef:_yt?{suit:_yt.suit,num:_yt.num,_isAka:!!_yt._isAka}:null});}
     else{const _dt=p.hand[idx];netSend({type:'discard',pidx:NET.myIdx,tidx:idx,tile:_dt?{suit:_dt.suit,num:_dt.num,_isAka:!!_dt._isAka}:null,isYami:isYamiDiscard});}
     // ★ 闇バグ修正: ゲストはdiscardActionを呼ばないためここでyamiTileIdxをリセット
     // これをしないと、次のホストstate受信時に_guestYamiSelected=trueのまま残り
@@ -15999,12 +16052,12 @@ function _renderTitleBgGrid(){
   grid.innerHTML = '';
   const btn = document.createElement('div');
   btn.onclick = openTitleBgOverlay;
-  btn.style.cssText = 'display:flex;align-items:center;gap:10px;background:#040c12;border:2px solid #2a5a3a;border-radius:10px;padding:8px 10px;cursor:pointer;transition:border-color .15s;';
+  btn.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;background:#040c12;border:2px solid #2a5a3a;border-radius:10px;padding:8px 6px;cursor:pointer;transition:border-color .15s;text-align:center;width:100%;';
   btn.onmouseover = ()=>btn.style.borderColor='#c9a84c';
   btn.onmouseout  = ()=>btn.style.borderColor='#2a5a3a';
   // サムネイル
   const thumb = document.createElement('div');
-  thumb.style.cssText = 'width:64px;height:36px;border-radius:5px;overflow:hidden;flex-shrink:0;background:#0a1a14;border:1px solid #1a3a2a;';
+  thumb.style.cssText = 'width:100%;height:36px;border-radius:5px;overflow:hidden;flex-shrink:0;background:#0a1a14;border:1px solid #1a3a2a;';
   if(cur.url){
     const img = document.createElement('img');
     img.src = cur.url;
@@ -16016,8 +16069,8 @@ function _renderTitleBgGrid(){
   }
   btn.appendChild(thumb);
   const info = document.createElement('div');
-  info.style.cssText = 'min-width:0;';
-  info.innerHTML = `<div style="font-size:.7rem;font-weight:700;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cur.label}</div>`;
+  info.style.cssText = 'min-width:0;width:100%;';
+  info.innerHTML = `<div style="font-size:.6rem;color:#4a6a5a;line-height:1.3;">タイトル背景</div><div style="font-size:.48rem;color:#3a5a4a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cur.label}</div>`;
   btn.appendChild(info);
   grid.appendChild(btn);
 }
@@ -17610,9 +17663,7 @@ function pickAbility(ability){
 function saveProfile(){
   const ni=document.getElementById('profileName');
   PROFILE.name=(ni&&ni.value.trim())||'プレイヤー';
-  const {coins:_c3, abilities:_ab3, ability:_abl3, tbbCoins:_tbb3, ...profileToCache3} = PROFILE; // coins/abilities/ability/tbbCoins はlocalStorageに保存しない
-  try{ localStorage.setItem('mjProfile',JSON.stringify(profileToCache3)); }catch(e){}
-  updateProfileBadge();
+  saveProfileSilent(); // localStorageとサーバー(DB)両方に保存
   closeProfile();
 }
 
@@ -22613,6 +22664,26 @@ function _onOpEnd(){
     }
   };
 })();
+</script>
+<script>
+function _alignNameRowToIcons(){
+  const iconBlock = document.getElementById('icon-grid-block');
+  const nameRow = document.getElementById('name-row');
+  if(!iconBlock || !nameRow) return;
+  nameRow.style.height = iconBlock.getBoundingClientRect().height + 'px';
+}
+window.addEventListener('load', _alignNameRowToIcons);
+window.addEventListener('resize', _alignNameRowToIcons);
+// プロフィール画面が開かれるたびにも再計算
+const _origOpenProfile = typeof openProfile === 'function' ? openProfile : null;
+if(_origOpenProfile){
+  window.addEventListener('load', ()=>{
+    const _ps = document.getElementById('profileScreen');
+    if(!_ps) return;
+    const obs = new MutationObserver(()=>{ if(_ps.classList.contains('active')) setTimeout(_alignNameRowToIcons, 50); });
+    obs.observe(_ps, {attributes:true, attributeFilter:['class']});
+  });
+}
 </script>
 </body>
 </html>

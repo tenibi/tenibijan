@@ -599,6 +599,10 @@ body{
     0%   { transform: translateY(0) scale(1); }
     100% { transform: translateY(-4px) scale(1.08); }
   }
+  @keyframes adminChestGlow {
+    0%,100% { box-shadow: 0 0 0 0 #c9a84c33; border-color: #c9a84c; }
+    50%      { box-shadow: 0 0 14px 5px #c9a84c55; border-color: #ffe080; }
+  }
 
   /* ===== 左アイコン (画面左1/3、中央右寄せ) ===== */
   #llCenterIconWrap {
@@ -3271,26 +3275,7 @@ body{
     </div>
   </div>
 
-  <!-- 管理者ギフト宝箱（adminからのギフトがある場合のみ表示） -->
-  <div id="llAdminGiftChest" style="display:none;margin:0 auto 6px;max-width:900px;width:100%;cursor:pointer;" onclick="openFriendScreen()">
-    <div style="background:linear-gradient(135deg,#0a0a1a,#12082a);border:2px solid #c9a84c;
-      border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:12px;
-      animation:giftBannerPulse 1.6s ease-in-out infinite;position:relative;overflow:hidden;">
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(201,168,76,0.08),transparent 70%);pointer-events:none;"></div>
-      <div style="font-size:2rem;flex-shrink:0;filter:drop-shadow(0 0 8px rgba(201,168,76,0.6));animation:chestBounce .8s ease-in-out infinite alternate;">📦</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:.72rem;font-weight:900;color:#f0d080;letter-spacing:.08em;text-shadow:0 0 8px rgba(201,168,76,0.5);">
-          ✨ 管理者からのギフトが届いています！
-        </div>
-        <div id="llAdminGiftDesc" style="font-size:.6rem;color:#a08840;margin-top:2px;">
-          受取ボックスを確認してください
-        </div>
-      </div>
-      <div style="font-size:.6rem;color:#c9a84c;flex-shrink:0;text-align:right;">
-        宝箱を<br>開く →
-      </div>
-    </div>
-  </div>
+
 
 
   <div id="llBannerArea">
@@ -3351,6 +3336,13 @@ body{
         <span style="font-size:2.1rem;">🎁</span>
         <span class="ll-mode-label">デイリー</span>
       </div>
+    </button>
+    <button id="llAdminGiftChestBtn" class="ll-mode-btn" style="display:none;border-color:#c9a84c;background:linear-gradient(135deg,#0a0a1a,#1a1405);position:relative;animation:adminChestGlow 1.6s ease-in-out infinite;" onclick="_claimAllAdminGifts(this)" title="管理者ギフト">
+      <div class="ll-mode-emoji-wrap" style="background:transparent;">
+        <span id="llAdminGiftChestIcon" style="font-size:2.1rem;display:inline-block;animation:chestBounce .8s ease-in-out infinite alternate;">📦</span>
+        <span class="ll-mode-label" style="color:#f0d080;">受け取る</span>
+      </div>
+      <span id="llAdminGiftChestCount" style="position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#c9a84c;color:#000;font-size:.55rem;font-weight:900;line-height:18px;text-align:center;padding:0 4px;box-shadow:0 0 6px #c9a84c88;">0</span>
     </button>
   </div>
 
@@ -3424,6 +3416,18 @@ body{
         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="Googleログアウト">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;opacity:0.7;">
         <span>ログアウト</span>
+      </button>
+      <button id="portraitAdminGiftChestBtn" style="display:none;
+        background:linear-gradient(135deg,#0a0a1a,#1a1405);border:1.5px solid #c9a84c;border-radius:7px;
+        color:#f0d080;font-size:.65rem;padding:0;cursor:pointer;
+        transition:all .15s;width:100%;grid-column:1/-1;position:relative;
+        animation:adminChestGlow 1.6s ease-in-out infinite;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="管理者ギフト"
+        onclick="_claimAllAdminGifts(this)">
+        <span id="portraitAdminGiftChestIcon" style="font-size:1.4rem;display:inline-block;animation:chestBounce .8s ease-in-out infinite alternate;">📦</span>
+        <span style="font-weight:700;">管理者ギフトを受け取る</span>
+        <span id="portraitAdminGiftChestDesc" style="font-size:.55rem;color:#a08840;margin-top:1px;"></span>
+        <span id="portraitAdminGiftChestCount" style="position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#c9a84c;color:#000;font-size:.55rem;font-weight:900;line-height:18px;text-align:center;padding:0 4px;box-shadow:0 0 6px #c9a84c88;">0</span>
       </button>
     </div>
   </div>
@@ -19492,21 +19496,31 @@ function refreshGiftBadge(){
       }
     }
 
-    // タイトル画面：管理者ギフト宝箱
-    const chest     = document.getElementById('llAdminGiftChest');
-    const chestDesc = document.getElementById('llAdminGiftDesc');
-    if(chest){
-      if(adminGifts.length > 0){
-        if(chestDesc){
-          const msg = adminGifts[0].message;
-          chestDesc.textContent = msg
-            ? `「${msg}」— 受取ボックスで${adminGifts.length}件受け取れます`
-            : `${adminGifts.length}件のギフトが届いています。受取ボックスを確認してください`;
-        }
-        chest.style.display = '';
-      } else {
-        chest.style.display = 'none';
+    // タイトル画面：管理者ギフト宝箱ボタン（横画面 llModeBar & 縦画面 lobbyInner）
+    const chestBtnLL      = document.getElementById('llAdminGiftChestBtn');
+    const chestCountLL    = document.getElementById('llAdminGiftChestCount');
+    const chestBtnPort    = document.getElementById('portraitAdminGiftChestBtn');
+    const chestCountPort  = document.getElementById('portraitAdminGiftChestCount');
+    const chestDescPort   = document.getElementById('portraitAdminGiftChestDesc');
+    if(adminGifts.length > 0){
+      const msg = adminGifts[0].message;
+      const countTxt = adminGifts.length > 99 ? '99+' : String(adminGifts.length);
+      // 横画面ボタン
+      if(chestBtnLL){
+        chestBtnLL.style.display = '';
+        if(chestCountLL) chestCountLL.textContent = countTxt;
       }
+      // 縦画面ボタン
+      if(chestBtnPort){
+        chestBtnPort.style.display = 'flex';
+        if(chestCountPort) chestCountPort.textContent = countTxt;
+        if(chestDescPort) chestDescPort.textContent = msg
+          ? `「${msg}」`
+          : `${adminGifts.length}件`;
+      }
+    } else {
+      if(chestBtnLL)   chestBtnLL.style.display   = 'none';
+      if(chestBtnPort) chestBtnPort.style.display  = 'none';
     }
   }).catch(()=>{});
 }
@@ -19913,6 +19927,47 @@ async function claimGift(giftId, btn){
     if(badge){ const n=parseInt(badge.textContent||'1')-1; badge.textContent=n; if(n<=0) badge.style.display='none'; }
     // タイトル画面のギフトバッジ＆バナーも更新
     if(typeof refreshGiftBadge==='function') refreshGiftBadge();
+  }catch(e){ alert('通信エラーが発生しました'); if(btn) btn.disabled=false; }
+}
+
+// 管理者ギフトをその場で一括受け取り（タイトル画面宝箱ボタン用）
+async function _claimAllAdminGifts(btn){
+  if(btn){ btn.disabled = true; }
+  try{
+    const r = await authFetch('/api/gifts/inbox');
+    const d = await r.json();
+    if(!d.ok){ alert(d.error||'エラーが発生しました'); if(btn) btn.disabled=false; return; }
+    const adminGifts = (d.gifts||[]).filter(g=>g.is_admin_gift);
+    if(adminGifts.length === 0){
+      if(btn){ btn.style.display='none'; }
+      return;
+    }
+    // 順次受け取り
+    let claimed = 0;
+    for(const g of adminGifts){
+      try{
+        const cr = await authFetch(`/api/gifts/claim/${g.id}`,{method:'POST'});
+        const cd = await cr.json();
+        if(!cd.ok) continue;
+        claimed++;
+        // プロフィールにローカル反映（claimGiftと同処理）
+        if(cd.type==='tbb_coins'){ PROFILE.tbbCoins = cd.tbbCoins ?? ((PROFILE.tbbCoins||0)+cd.amount); updateGachaTbbDisplay(); }
+        else if(cd.type==='coins'){ PROFILE.coins = cd.coins ?? ((PROFILE.coins||0)+cd.amount); updateProfileBadge(); }
+        else if(cd.type==='skin'){ if(cd.handSkins) PROFILE.handSkins=cd.handSkins; else { PROFILE.handSkins=PROFILE.handSkins||{}; PROFILE.handSkins[cd.skinKey]=(PROFILE.handSkins[cd.skinKey]||0)+1; } _updateHandSkinUI(); }
+        else if(cd.type==='ring'){ if(cd.rings) PROFILE.rings=cd.rings; else { PROFILE.rings=PROFILE.rings||{}; PROFILE.rings[cd.ringKey]=(PROFILE.rings[cd.ringKey]||0)+1; } saveProfileSilent(); if(typeof _renderRingBookGrid==='function') _renderRingBookGrid(); }
+        else if(cd.type==='bgm'){ if(cd.riichiBgms) PROFILE.riichiBgms=cd.riichiBgms; else { PROFILE.riichiBgms=PROFILE.riichiBgms||{}; PROFILE.riichiBgms[cd.bgmKey]=(PROFILE.riichiBgms[cd.bgmKey]||0)+1; } }
+        else if(cd.type==='ability'){ if(cd.abilities) PROFILE.abilities=cd.abilities; else { PROFILE.abilities=PROFILE.abilities||[]; if(!PROFILE.abilities.includes(cd.abilityKey)) PROFILE.abilities.push(cd.abilityKey); } }
+        else if(cd.type==='icon'){ if(cd.gachaIcons) PROFILE.gachaIcons=cd.gachaIcons; else { PROFILE.gachaIcons=PROFILE.gachaIcons||[]; if(!PROFILE.gachaIcons.includes(cd.iconKey)) PROFILE.gachaIcons.push(cd.iconKey); } }
+        else if(cd.type==='emote'){ if(cd.ownedEmoteSets) PROFILE.ownedEmoteSets=cd.ownedEmoteSets; else { PROFILE.ownedEmoteSets=PROFILE.ownedEmoteSets||['01']; if(!PROFILE.ownedEmoteSets.includes(cd.emoteKey)) PROFILE.ownedEmoteSets.push(cd.emoteKey); } }
+        else if(cd.type==='agari'){ if(cd.agariVideos) PROFILE.agariVideos=cd.agariVideos; else { PROFILE.agariVideos=PROFILE.agariVideos||{}; PROFILE.agariVideos[cd.agariKey]=(PROFILE.agariVideos[cd.agariKey]||0)+1; } }
+      }catch(e2){}
+    }
+    updateProfileBadge();
+    // アイコンを宝箱開封→✨に変えてフィードバック
+    const icon1 = document.getElementById('llAdminGiftChestIcon');
+    const icon2 = document.getElementById('portraitAdminGiftChestIcon');
+    [icon1,icon2].forEach(ic=>{ if(ic){ ic.textContent='✨'; ic.style.animation='none'; } });
+    setTimeout(()=>{ refreshGiftBadge(); if(btn) btn.disabled=false; }, 1000);
   }catch(e){ alert('通信エラーが発生しました'); if(btn) btn.disabled=false; }
 }
 

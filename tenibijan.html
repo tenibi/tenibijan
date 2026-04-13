@@ -17160,13 +17160,18 @@ function renderDailyMissions() {
     list.innerHTML = '<div style="font-size:.6rem;color:#3a5a6a;text-align:center;padding:8px 0;">読み込み中<span class="thinking-dots"></span></div>';
     return;
   }
-  // サーバーから受け取った2件をそのまま使用（icon・rewardをローカル定義で補完）
-  // id が undefined / null の要素は除外して undefined 表示を防ぐ
+  // サーバーから受け取った2件をそのまま使用（label・icon・rewardをローカル定義で補完）
+  // サーバーは { id, reward } のみ返すため、label・icon は DAILY_MISSION_DEFS から必ず補完する
   let displayMissions = missions
     .filter(m => m && m.id)
     .map(m => {
       const def = DAILY_MISSION_DEFS.find(d => d.id === m.id) || {};
-      return { ...m, icon: def.icon || '📋', reward: m.reward ?? def.reward ?? 50 };
+      return {
+        ...m,
+        label:  def.label  || m.id,
+        icon:   def.icon   || '📋',
+        reward: m.reward ?? def.reward ?? 50,
+      };
     });
   list.innerHTML = displayMissions.map(m => {
     const claimed  = done.includes(m.id);
@@ -17232,14 +17237,10 @@ function loadDailyMissions() {
       }
       _dailyMissionState.done = d.done || [];
       _dailyMissionState.today = d.today;
-      _dailyMissionState.missions = (d.missions || []).filter(m => m && m.id); // undefined除外
+      _dailyMissionState.missions = d.missions || [];  // 今日の2件を保存
       // サーバーで受取済みのものはpendingから除去（ページリロード後の状態不整合を防ぐ）
       _dailyMissionState.pending = _dailyMissionState.pending.filter(
         id => !_dailyMissionState.done.includes(id)
-      );
-      // missionsが未ロード時にpendingに積まれたものを今日の2件で絞り込む
-      _dailyMissionState.pending = _dailyMissionState.pending.filter(
-        id => _dailyMissionState.missions.some(m => m.id === id)
       );
       renderDailyMissions();
     })
@@ -17315,15 +17316,9 @@ function _openTwitchAndMission() {
 // ミッション達成トリガー汎用ヘルパー（pending に追加 → renderDailyMissions）
 function _triggerDailyMission(missionId) {
   const { done, pending, missions } = _dailyMissionState;
-  if (done.includes(missionId) || pending.includes(missionId)) return;
-  // missions がまだ未ロードの場合は pending に積んでおく
-  // → loadDailyMissions 完了後の renderDailyMissions で反映される
-  if (!missions || missions.length === 0) {
-    _dailyMissionState.pending.push(missionId);
-    return;
-  }
   // 今日の2件に含まれないミッションは無視
-  if (!missions.some(m => m.id === missionId)) return;
+  if (!missions || !missions.some(m => m.id === missionId)) return;
+  if (done.includes(missionId) || pending.includes(missionId)) return;
   _dailyMissionState.pending.push(missionId);
   renderDailyMissions();
   _showDailyMissionAchievedToast(missionId);

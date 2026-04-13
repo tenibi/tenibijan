@@ -9634,6 +9634,7 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   G._soloRevealed=new Set(); // 連鎖展開済みスロット
   G._soloFlags=new Set();   // 🚩旗を立てたスロット
   G._soloQuery=new Set();   // ？マークを立てたスロット
+  G._firstPickDone=false;   // 💣 初回ピック安全処理フラグ（マインスイーパー式）
   G.yamiSelectMode=false;
   G.stealMode=false;
   G.hakuSelectPlayers=[];
@@ -11024,6 +11025,44 @@ function humanPickWall(slotIdx, _fromAuto){
   const p=G.players[myIdx];
   const tile=G.deckSlots[slotIdx];
   if(!tile)return;
+
+  // 💣 ソロBOMBモード: 初回ピック時に選んだスロットと周囲8マスを安全に確保（マインスイーパー式）
+  if(numPlayers===1 && G._soloBombs && !G._firstPickDone){
+    G._firstPickDone = true;
+    const totalSlots = G.deckSlots.length;
+    const rows2 = Math.ceil(totalSlots / W_COLS);
+    // 禁止スロット（選択スロット＋周囲8マス）
+    const forbidden = new Set();
+    const sc = slotIdx % W_COLS, sr = Math.floor(slotIdx / W_COLS);
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      const nr=sr+dr, nc=sc+dc;
+      if(nr>=0&&nr<rows2&&nc>=0&&nc<W_COLS) forbidden.add(nr*W_COLS+nc);
+    }
+    // 禁止ゾーンにある爆弾を特定
+    const bombsToMove = G.mineSlots.filter(s=>forbidden.has(s));
+    if(bombsToMove.length>0){
+      // 移動先候補: 禁止ゾーン外・まだ引かれていない・爆弾でないスロット
+      const candidates = [];
+      for(let i=0;i<totalSlots;i++){
+        if(!forbidden.has(i) && G.deckSlots[i]!==null && !G.mineSlots.includes(i)) candidates.push(i);
+      }
+      // シャッフル
+      for(let i=candidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
+      bombsToMove.forEach((oldSi, k)=>{
+        G.mineSlots = G.mineSlots.filter(s=>s!==oldSi);
+        G._soloBombs.delete(oldSi);
+        if(G.mineOwners) delete G.mineOwners[oldSi];
+        if(k < candidates.length){
+          const newSi = candidates[k];
+          G.mineSlots.push(newSi);
+          G._soloBombs.add(newSi);
+          if(G.mineOwners) G.mineOwners[newSi] = -1;
+        }
+      });
+      addLog(`💡 最初の牌は安全ゾーン確定！（爆弾${bombsToMove.length}個を移動）`,'log-dora');
+    }
+  }
+
   G.deckSlots[slotIdx]=null;
   const di=G.deck.findIndex(d=>d._pkey ? d._pkey===tile._pkey : (d.suit===tile.suit&&d.num===tile.num));
   if(di>=0)G.deck.splice(di,1);
@@ -12142,6 +12181,17 @@ function humanDiscard(){
     // これをしないと、次のホストstate受信時に_guestYamiSelected=trueのまま残り
     // 捨てた後も永遠に同じ位置が闇牌扱いになる
     if(isYamiDiscard) p.yamiTileIdx = -1;
+    // ★ 並び順保持バグ修正: ゲストもローカルhandを楽観的に更新する
+    // 修正しない場合の問題: applyHostState の _localHand は「drawnTileを除いた左4枚」として保存されるが、
+    // 左4枚のどれかを捨てた直後のホストのhandは「残り4枚（元drawnTileを含む、drawnTile=null）」になる。
+    // この両者はキーが一致しないため並び順復元に失敗し、ホスト側の並びに戻ってしまう。
+    // 修正後: 捨てた牌をローカルでも除去しdrawnTileをnullにしておくことで、
+    // 次のapplyHostState時に _localHand（残り4枚）とホストのhand（残り4枚）が一致し、
+    // 並び順が正しく復元される。
+    if(!G.pendingRiichi){
+      p.hand.splice(idx, 1);
+      p.drawnTile = null;
+    }
     return;
   }
   if(G.pendingRiichi) commitRiichi(p);

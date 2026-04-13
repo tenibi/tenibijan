@@ -3035,6 +3035,13 @@ body{
       </div>
     </div>
 
+    <!-- リーチBGM -->
+    <div style="margin-top:14px;">
+      <h3 style="margin-bottom:6px;">🎵 リーチBGM</h3>
+      <div style="font-size:.55rem;color:#4a6a5a;margin-bottom:8px;">リーチ宣言時に全体BGMがミュートされ、選択したBGMが再生されます。</div>
+      <div id="riichiBgmGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
+    </div>
+
     <!-- 上がり演出 -->
     <div style="margin-top:14px;">
       <h3 style="margin-bottom:6px;">🎬 上がり演出</h3>
@@ -3327,6 +3334,11 @@ body{
           <span style="font-size:.65rem;color:#5a7a6a;width:60px;">🎶 BGM</span>
           <input id="sliderBGM" type="range" min="0" max="0.07" step="0.005" value="0.035" style="flex:1;accent-color:var(--gold);"
             oninput="BGM.setVol(+this.value); saveSettings();">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:.65rem;color:#cc4444;width:60px;">🎵 リーチBGM</span>
+          <input id="sliderRiichiBGM" type="range" min="0" max="1" step="0.01" value="0.14" style="flex:1;accent-color:#cc4444;"
+            oninput="RIICHI_BGM.setVol(+this.value); _syncSliders('riichiBgm',+this.value); saveSettings();">
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:.65rem;color:#5a7a6a;width:60px;">タイトル曲</span>
@@ -4440,6 +4452,84 @@ const BGM = (() => {
   };
 })();
 
+// ── リーチBGMシステム ────────────────────────────────────────
+const RIICHI_BGM = (() => {
+  // ritibgm01〜10のURL（GitHub raw）
+  const BASE = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/ritibgm/';
+  const tracks = {};
+  for(let i=1;i<=10;i++){
+    const k='ritibgm'+String(i).padStart(2,'0');
+    tracks[k]=BASE+k+'.mp3';
+  }
+
+  let _audio = null;      // 現在再生中のリーチBGM Audioオブジェクト
+  let _active = false;    // リーチBGM再生中フラグ
+  let _bgmMuted = false;  // 通常BGMをミュートしているか
+  let _riichiBgmVol = 0.14; // リーチBGM音量（デフォルト: BGMの約4倍相当）
+
+  // ゲストのリーチBGM設定を保持 [pidx] => 'ritibgm01' など
+  const _guestRiichiBgm = {};
+
+  function _muteMainBgm(){
+    if(!_bgmMuted){
+      BGM.setVol(0);
+      _bgmMuted = true;
+    }
+  }
+  function _unmuteMainBgm(){
+    if(_bgmMuted){
+      const sliderBGM = document.getElementById('sliderBGM') || document.getElementById('sliderBGMhdr');
+      const vol = sliderBGM ? +sliderBGM.value : 0.035;
+      BGM.setVol(vol);
+      _bgmMuted = false;
+    }
+  }
+
+  return {
+    // リーチBGM再生（リーチ宣言時に呼ぶ）
+    play(bgmKey) {
+      if(!bgmKey || !tracks[bgmKey]) return;
+      // 既に再生中のリーチBGMがあれば止める
+      if(_audio){
+        _audio.pause();
+        _audio.currentTime=0;
+        _audio=null;
+      }
+      _muteMainBgm();
+      _active = true;
+      _audio = new Audio(tracks[bgmKey]);
+      _audio.loop = true;
+      _audio.volume = Math.min(1, _riichiBgmVol);
+      _audio.play().catch(()=>{});
+    },
+    // 音量設定（0〜1）
+    setVol(v) {
+      _riichiBgmVol = v;
+      if(_audio) _audio.volume = Math.min(1, v);
+    },
+    getVol() { return _riichiBgmVol; },
+    // リーチBGM停止（ロン・ツモ時）
+    stop() {
+      if(_audio){
+        _audio.pause();
+        _audio.currentTime=0;
+        _audio=null;
+      }
+      _active = false;
+      _unmuteMainBgm();
+    },
+    // ゲストのリーチBGM設定を保存
+    setGuestBgm(pidx, bgmKey){ _guestRiichiBgm[pidx]=bgmKey||''; },
+    // pidxのリーチBGMキーを取得
+    getBgmForPlayer(pidx){
+      if(typeof NET!=='undefined' && pidx===NET.myIdx) return (typeof PROFILE!=='undefined')?PROFILE.riichiBgm||'':'';
+      return _guestRiichiBgm[pidx]||'';
+    },
+    get isActive(){ return _active; },
+    tracks,
+  };
+})();
+
 // ── BGM遷移ヘルパー ────────────────────────────────────────
 let _titleBgmKey = 'akizuki';
 let _gameBgmKey  = 'thinking';
@@ -4460,6 +4550,7 @@ function saveSettings(){
       seVol:      document.getElementById('sliderSE')?.value   ?? '0.035',
       se2Vol:     document.getElementById('sliderSE2')?.value  ?? '0.42',
       bgmVol:     document.getElementById('sliderBGM')?.value  ?? '0.035',
+      riichiBgmVol: RIICHI_BGM.getVol(),
       titleBgm:   _titleBgmKey,
       gameBgm:    _gameBgmKey,
       yakumanVideoVol: _yakumanVideoVol,
@@ -4506,6 +4597,14 @@ function loadSettings(){
       const v = +data.bgmVol;
       BGM.setVol(v);
       ['sliderBGM','sliderBGMhdr'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.value=v;
+      });
+    }
+    // リーチBGM音量
+    if(data.riichiBgmVol != null){
+      const v = +data.riichiBgmVol;
+      RIICHI_BGM.setVol(v);
+      ['sliderRiichiBGM','sliderRiichiBGMhdr'].forEach(id=>{
         const el=document.getElementById(id); if(el) el.value=v;
       });
     }
@@ -4615,6 +4714,10 @@ function _syncSliders(type, val){
     const el=document.getElementById('sliderSE2'); if(el) el.value=val;
   } else if(type==='bgm'){
     const el=document.getElementById('sliderBGM'); if(el) el.value=val;
+  } else if(type==='riichiBgm'){
+    ['sliderRiichiBGM','sliderRiichiBGMhdr'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value=val;
+    });
   }
 }
 
@@ -6852,7 +6955,7 @@ function _reconnectToNewHost(newHostPeerId, retryCount=0){
     NET._promotingToHost = false;
     if(conn.peer) peerRegistryAdd(conn.peer, newHostIdx, conn);
     conn.send({type:'reconnect', originalIdx: myOriginalIdx, peerId: NET.peer?.id||''});
-    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+    conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||'',riichiBgm:PROFILE.riichiBgm||''});
     addLog('✅ 新ホストに再接続しました','log-new');
     hideReconnectOverlay();
   });
@@ -7795,7 +7898,7 @@ function onNetData(msg, senderIdx){
         G_ABILITY_MODE=msg.abilityMode;
       }
       // 自分のプロフィール名・アイコン・PeerIDをホストに送信
-      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+      if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||'',riichiBgm:PROFILE.riichiBgm||''});
       if(isReconnecting){
         // 再接続完了：ゲーム状態は次の stateUpdate で同期される
         addLog('🔄 新ホストと同期中…','log-new');
@@ -7909,7 +8012,7 @@ function onNetData(msg, senderIdx){
       setTimeout(saveRejoinSession, 600);
       // ゲスト: ホストに自分のアイコン情報とPeerIDを送信（makePlayer後に反映させるため）
       setTimeout(()=>{
-        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||''});
+        if(NET.conn&&NET.conn.open) NET.conn.send({type:'myName',name:PROFILE.name||'プレイヤー',ability:PROFILE.ability||'',iconId:_getProfileDisplayIconId(),vcIconId:_getProfileVcIconId(),equippedTitle:PROFILE.equippedTitle||'',emote:PROFILE.emote||'',emotes:PROFILE.emotes||['','','',''],peerId:NET.peer?.id||'',handSkin:PROFILE.handSkin||'',ring:PROFILE.ring||'',uid:PROFILE.uid||'',riichiBgm:PROFILE.riichiBgm||''});
       }, 400);
       // ★修正: ゲスト側でbroadcastStateが届かなかった場合の保険
       // G が未初期化の場合に applyHostState がクラッシュしないよう最低限初期化しておく
@@ -8029,7 +8132,7 @@ function handleGuestAction(msg, senderIdx){
       }
       break;
     case 'wallPick':  remoteWallPick(msg.pidx, msg.slotIdx); break;
-    case 'discard':   remoteDiscard(msg.pidx, msg.tidx, msg.isYami??false); break;
+    case 'discard':   remoteDiscard(msg.pidx, msg.tidx, msg.isYami??false, msg.tile??null); break;
     case 'tsumo':     remoteWin(msg.pidx, true, -1); break;
     case 'ron':       remoteRon(msg.pidx, msg.tile, msg.from); break;
     case 'skipRon':   remoteSkipRon(msg.from, msg.pidx ?? senderIdx); break;
@@ -8204,7 +8307,8 @@ function handleGuestAction(msg, senderIdx){
           peerId:NET.peer?.id||'',
           handSkin:PROFILE.handSkin||'',
           ring:PROFILE.ring||'',
-          uid:PROFILE.uid||''
+          uid:PROFILE.uid||'',
+          riichiBgm:PROFILE.riichiBgm||''
         });
       }
       break;
@@ -8220,6 +8324,8 @@ function handleGuestAction(msg, senderIdx){
       NET.guestEquippedTitles = NET.guestEquippedTitles||[]; NET.guestEquippedTitles[senderIdx-1]=msg.equippedTitle||'';
       NET.guestHandSkins = NET.guestHandSkins||[]; NET.guestHandSkins[senderIdx-1]=msg.handSkin||'';
       NET.guestRings = NET.guestRings||[]; NET.guestRings[senderIdx-1]=msg.ring||'';
+      // リーチBGMをRIICHI_BGMシステムに登録
+      if(typeof RIICHI_BGM!=='undefined') RIICHI_BGM.setGuestBgm(senderIdx, msg.riichiBgm||'');
       NET.guestUids = NET.guestUids||[]; NET.guestUids[senderIdx-1]=msg.uid||'';
       NET.guestEmotes[senderIdx-1]=msg.emote||'';
       if(msg.emotes) NET.guestEmotesSlots = NET.guestEmotesSlots||{}; if(msg.emotes) NET.guestEmotesSlots[senderIdx] = msg.emotes;
@@ -8460,6 +8566,8 @@ function applyHostState(msg){
       if(G.players && NET.myIdx != null && G.players[NET.myIdx]){
         G.players[NET.myIdx].yamiTileIdx = -1;
       }
+      // リーチBGMをリセット
+      if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive) RIICHI_BGM.stop();
       window._activePenOC = null;
       window._activeDoraOC = null;
       window._penCommitted = null;
@@ -8535,9 +8643,18 @@ function _refreshRejoinSession(){
 }
 
 // Remote action handlers (host only)
-function remoteDiscard(pidx,tidx,isYami=false){
+function remoteDiscard(pidx,tidx,isYami=false,tileRef=null){
   if(G.current!==pidx)return;
   if(G.pendingRiichi) commitRiichi(G.players[pidx]);
+  // ゲストが手牌を並び替えた場合、tidxがホスト側の順序とズレるので
+  // tileRef（牌の実体）でホスト側handを検索してインデックスを補正する
+  if(tileRef){
+    const p = G.players[pidx];
+    const foundIdx = p.hand.findIndex(
+      t => t.suit===tileRef.suit && t.num===tileRef.num && !!t._isAka===!!tileRef._isAka
+    );
+    if(foundIdx >= 0) tidx = foundIdx;
+  }
   discardAction(pidx,tidx,isYami);
 }
 function remoteWin(pidx,isTsumo,losidx){ handleWin(pidx,G.players[pidx].drawnTile,isTsumo,losidx); } // broadcastState は handleWin内で winModal付きで呼ばれる
@@ -11007,6 +11124,8 @@ function humanYamiChallenge(action){
 }
 
 function handleExhausted(){
+  // リーチBGMを停止
+  if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive) RIICHI_BGM.stop();
   if(numPlayers===1){
     // ソロ: 爆弾以外を全て引ききった → ステージクリア
     const _exStage = G._soloStage||1;
@@ -11038,6 +11157,8 @@ function handleExhausted(){
 
 function handleWin(widx,winTile,isTsumo,losidx){
   G.phase='win';
+  // ── リーチBGMを停止して通常BGMを再開 ──────────────────────
+  if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive) RIICHI_BGM.stop();
   // 役満チェックは後でするのでとりあえず上がり音、役満は showWinModal で再生
   setTimeout(()=>{
     const isYM = G.players[widx] && G.players[widx].hand &&
@@ -11889,7 +12010,7 @@ function humanDiscard(){
   selIdx=-1;
   if(NET.online&&!amIHost()){
     if(G.pendingRiichi){netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,isYami:isYamiDiscard,yamiTileIdx:p.yamiTileIdx??-1});}
-    else{netSend({type:'discard',pidx:NET.myIdx,tidx:idx,isYami:isYamiDiscard});}
+    else{const _dt=p.hand[idx];netSend({type:'discard',pidx:NET.myIdx,tidx:idx,tile:_dt?{suit:_dt.suit,num:_dt.num,_isAka:!!_dt._isAka}:null,isYami:isYamiDiscard});}
     // ★ 闇バグ修正: ゲストはdiscardActionを呼ばないためここでyamiTileIdxをリセット
     // これをしないと、次のホストstate受信時に_guestYamiSelected=trueのまま残り
     // 捨てた後も永遠に同じ位置が闇牌扱いになる
@@ -12204,6 +12325,11 @@ function commitRiichi(p){
   else if(mode==='double-open'){p.doubleRiichi=true;p.openRiichi=true;}
   const modeLabel=mode==='double-open'?'ダブルオープン':mode==='open'?'オープン':mode==='double'?'ダブル':'';
   addLog(`${p.name} が${modeLabel}リーチ！`,'log-riichi');
+  // ── リーチBGM再生 ─────────────────────────────────────────
+  if(typeof RIICHI_BGM!=='undefined'){
+    const _rbKey = RIICHI_BGM.getBgmForPlayer(_rPidx);
+    if(_rbKey) RIICHI_BGM.play(_rbKey);
+  }
   G.pendingRiichi=null;G.riichiValidIdx=null;
 }
 
@@ -15738,7 +15864,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:''};
 // vcIconId: VCアイコン（音声SE用）、未設定時はiconIdを使用
 // displayIconId: 見た目アイコン（画面表示用）、未設定時はiconIdを使用
 function _getProfileDisplayIconId(){ return PROFILE.displayIconId || PROFILE.iconId || ''; }
@@ -19724,6 +19850,8 @@ function openProfile(){
   _updateMatPreview();
   // エモート選択UIを生成
   renderEmoteSelect();
+  // リーチBGM選択UIを生成
+  _renderRiichiBgmGrid();
 }
 // ============================================================
 // MAT BOOK（マット図鑑）
@@ -21311,6 +21439,11 @@ function _showNcpToast(iconId) {
                 oninput="BGM.setVol(+this.value); _syncSliders('bgm',+this.value); saveSettings();">
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:.65rem;color:#cc4444;width:80px;flex-shrink:0;">🎵 リーチBGM</span>
+              <input id="sliderRiichiBGMhdr" type="range" min="0" max="1" step="0.01" value="0.14" style="flex:1;accent-color:#cc4444;"
+                oninput="RIICHI_BGM.setVol(+this.value); _syncSliders('riichiBgm',+this.value); saveSettings();">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
               <span style="font-size:.65rem;color:#5a7a6a;width:80px;flex-shrink:0;">対局曲</span>
               <select id="gameBgmSelHdr" style="flex:1;background:#030a10;color:var(--gold);border:1px solid #1a3a2a;border-radius:5px;font-size:.62rem;padding:3px 6px;"
                 onchange="_gameBgmKey=this.value; BGM.fadeOut(()=>BGM.fadeIn(_gameBgmKey)); document.getElementById('gameBgmSel')&&(document.getElementById('gameBgmSel').value=this.value);">
@@ -21901,6 +22034,88 @@ function _showNcpToast(iconId) {
 <style>
 #opOverlay.op-active { display:flex !important; }
 </style>
+
+
+<script>
+// ── リーチBGM選択UI ─────────────────────────────────────────
+const _RIICHI_BGM_LABELS = {
+  ritibgm01:'どこまでも続く道',ritibgm02:'ポケットの温もり',ritibgm03:'星屑',
+  ritibgm04:'猶予',ritibgm05:'終焉のカウントダウン',ritibgm06:'それぞれの道へ',
+  ritibgm07:'ラストスパート',ritibgm08:'優雅な一撃',ritibgm09:'コーヒーブレイク',
+  ritibgm10:'迷いながらも',
+};
+let _riichiBgmPreviewAudio = null;
+
+function _renderRiichiBgmGrid(){
+  const grid = document.getElementById('riichiBgmGrid');
+  if(!grid) return;
+  const current = PROFILE.riichiBgm || '';
+  // 「なし」＋ritibgm01〜10
+  const items = [
+    {key:'', label:'なし', emoji:'🔇'},
+    ...Object.keys(_RIICHI_BGM_LABELS).map(k=>({key:k, label:_RIICHI_BGM_LABELS[k], emoji:'🎵'}))
+  ];
+  grid.innerHTML = items.map(item=>{
+    const sel = item.key === current;
+    return `<div onclick="_selectRiichiBgm('${item.key}')" style="
+      cursor:pointer;background:#040c12;border:2px solid ${sel?'#ffd700':'#2a5a3a'};
+      border-radius:8px;padding:7px 4px;text-align:center;
+      transition:border-color .15s,background .15s;
+      ${sel?'background:#1a0e00;':''}
+    " onmouseover="this.style.borderColor='${sel?'#ffd700':'#4a8a6a'}'"
+       onmouseout="this.style.borderColor='${sel?'#ffd700':'#2a5a3a'}'">
+      <div style="font-size:1.1rem;">${item.emoji}</div>
+      <div style="font-size:.52rem;color:${sel?'#ffd700':'#5a8a7a'};margin-top:3px;line-height:1.3;">${item.label}</div>
+      ${item.key?`<div onclick="event.stopPropagation();_previewRiichiBgm('${item.key}',this)" style="
+        margin-top:4px;font-size:.46rem;color:#3a6a5a;border:1px solid #2a4a3a;
+        border-radius:4px;padding:1px 4px;display:inline-block;cursor:pointer;
+      ">▶ 試聴</div>`:''}
+      ${sel?'<div style="font-size:.46rem;color:#ffd700;margin-top:3px;">✓ 使用中</div>':''}
+    </div>`;
+  }).join('');
+}
+
+function _selectRiichiBgm(key){
+  PROFILE.riichiBgm = key;
+  // ローカル保存
+  try{
+    const {coins:_c,abilities:_ab,ability:_abl,tbbCoins:_tbb,...p}=PROFILE;
+    localStorage.setItem('mjProfile',JSON.stringify(p));
+  }catch(e){}
+  _stopRiichiBgmPreview();
+  _renderRiichiBgmGrid();
+}
+
+function _previewRiichiBgm(key, btn){
+  // 試聴中なら停止
+  if(_riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key===key){
+    _stopRiichiBgmPreview();
+    if(btn) btn.textContent='▶ 試聴';
+    return;
+  }
+  _stopRiichiBgmPreview();
+  const BASE='https://raw.githubusercontent.com/tenibi/tenibijan/main/ritibgm/';
+  _riichiBgmPreviewAudio = new Audio(BASE+key+'.mp3');
+  _riichiBgmPreviewAudio._key = key;
+  _riichiBgmPreviewAudio.volume = Math.min(1, (typeof RIICHI_BGM!=='undefined' ? RIICHI_BGM.getVol() : 0.14));
+  // 試聴は10秒で自動停止
+  _riichiBgmPreviewAudio.play().catch(()=>{});
+  if(btn) btn.textContent='■ 停止';
+  _riichiBgmPreviewAudio._stopTimer = setTimeout(()=>{
+    _stopRiichiBgmPreview();
+    _renderRiichiBgmGrid();
+  }, 10000);
+}
+
+function _stopRiichiBgmPreview(){
+  if(_riichiBgmPreviewAudio){
+    clearTimeout(_riichiBgmPreviewAudio._stopTimer);
+    _riichiBgmPreviewAudio.pause();
+    _riichiBgmPreviewAudio.currentTime=0;
+    _riichiBgmPreviewAudio=null;
+  }
+}
+</script>
 
 <script>
 // ── OP動画 ──────────────────────────────────────────────────────────

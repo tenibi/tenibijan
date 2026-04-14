@@ -1252,6 +1252,12 @@ body{
   background:linear-gradient(160deg,#0a1a3a,#05102a)!important;
   box-shadow:0 0 5px #4488ff44;
 }
+/* ===== RED EYE (レッドアイ) ABILITY ===== */
+.wall-tile.red-eye-hint{
+  border-color:#ff2222!important;
+  background:linear-gradient(160deg,#3a0a0a,#200505)!important;
+  box-shadow:0 0 6px #ff222466;
+}
 @keyframes wallPulse{0%,100%{border-color:#4a8a4a;}50%{border-color:#88cc88;}}
 .wall-label{font-size:.48rem;color:#2a5a3a;letter-spacing:.1em;}
 .wall-count{font-size:.6rem;color:#4a7a5a;font-weight:700;}
@@ -3783,8 +3789,8 @@ body{
     </div>
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-size:.6rem;color:#5a7a6a;margin-bottom:6px;">初期爆弾数</div>
-      <div style="font-size:1.4rem;color:#ff8866;font-weight:700;">💣 × １０</div>
-      <div style="font-size:.55rem;color:#4a6a5a;margin-top:3px;">ステージ2以降：１１個、１２個…と増加</div>
+      <div style="font-size:1.4rem;color:#ff8866;font-weight:700;">💣 × １５</div>
+      <div style="font-size:.55rem;color:#4a6a5a;margin-top:3px;">ステージ2以降：１６個、１７個…と増加</div>
     </div>
     <div id="bombBestDisplay" style="text-align:center;margin-bottom:12px;padding:8px 10px;background:#0d0505;border:1px solid #3a1a0a;border-radius:8px;display:none;">
       <div style="font-size:.55rem;color:#5a7a6a;letter-spacing:.1em;margin-bottom:4px;">🏆 自己ベスト</div>
@@ -4073,6 +4079,7 @@ body{
       <div class="info-block"><span class="info-label">本場</span><span class="info-val" id="hHonba">0本場</span></div>
       <div class="info-block"><span class="info-label">山牌</span><span class="info-val" id="hDeck">--</span></div>
       <div class="info-block"><span class="info-label">リーチ棒</span><span class="info-val" id="hRiichiPot">0</span></div>
+      <div class="info-block" id="bombCountInfoBlock" style="display:none;grid-column:1/-1;"><span class="info-label">💣 爆弾</span><span class="info-val" id="hBombCount" style="color:#ff8866;">--</span></div>
     </div>
     <!-- ドラ山: 卓右上内に固定 -->
     <div id="doraPileFixed" style="
@@ -5396,13 +5403,16 @@ function updateTenpai(p){
   if(len===4||len===1){
     p.waits=getWaits(p.hand);p.tenpai=p.waits.length>0;
   }else if(len===5){
-    let w=[];
-    for(let i=0;i<p.hand.length;i++){
-      const test=p.hand.filter((_,j)=>j!==i);
-      const ww=getWaits(test);
-      if(ww.length>0){w=ww;break;}
+    // リーチ中はwaitsを上書きしない（暗槓の待ち変化チェックに使うため）
+    if(!p.riichi){
+      let w=[];
+      for(let i=0;i<p.hand.length;i++){
+        const test=p.hand.filter((_,j)=>j!==i);
+        const ww=getWaits(test);
+        if(ww.length>0){w=ww;break;}
+      }
+      p.tenpai=w.length>0;p.waits=w;
     }
-    p.tenpai=w.length>0;p.waits=w;
   }else if(len===2){
     p.tenpai=canWin(p.hand);
     p.waits=p.tenpai?[]:[];
@@ -6333,6 +6343,19 @@ function _updateBombBestDisplay(){
   if(stEl) stEl.textContent = 'ステージ ' + bestStage;
   if(scEl) scEl.textContent = (bestScore!=null ? bestScore.toLocaleString() + ' 点' : '---');
 }
+// 💣 爆弾数表示を更新するヘルパー
+function _updateBombCountDisplay(count){
+  const el = document.getElementById('hBombCount');
+  const block = document.getElementById('bombCountInfoBlock');
+  if(el) el.textContent = count + ' 個';
+  if(block) block.style.display = '';
+}
+// 💣 爆弾数表示を非表示にするヘルパー（手にボム以外のモード用）
+function _hideBombCountDisplay(){
+  const block = document.getElementById('bombCountInfoBlock');
+  if(block) block.style.display = 'none';
+}
+
 function startBombGame(){
   NET.myIdx=0;
   NET.online=false;
@@ -6381,7 +6404,7 @@ let _rankCpuUsedNames = []; // 同一マッチで名前が被らないように�
 
 function _getRankCpuConfig(){
   // 能力: yami / pinzu / tenbi / steal からランダム
-  const _rankAbilityPool = ['yami', 'pinzu', 'tenbi', 'steal'];
+  const _rankAbilityPool = ['yami', 'pinzu', 'tenbi', 'steal', 'red_eye'];
   const ability = _rankAbilityPool[Math.floor(Math.random() * _rankAbilityPool.length)];
 
   // 名前: まだ使われていない名前からランダム
@@ -6392,7 +6415,7 @@ function _getRankCpuConfig(){
 
   // アイコン: プレイヤーが所持しているgachaIconsからランダム、なければ能力デフォルト
   const ownedIcons = (PROFILE.gachaIcons||[]).filter(id=>id&&id!=='C00');
-  const _defaultIconMap = {yami:'C03', pinzu:'C06', tenbi:'C01', steal:'C04'};
+  const _defaultIconMap = {yami:'C03', pinzu:'C06', tenbi:'C01', steal:'C04', red_eye:'C02'};
   const defaultIcon = _defaultIconMap[ability] || 'C06';
   const iconId = ownedIcons.length>0
     ? ownedIcons[Math.floor(Math.random()*ownedIcons.length)]
@@ -6407,7 +6430,22 @@ function _getRankCpuConfig(){
     ? ownedTitles[Math.floor(Math.random()*ownedTitles.length)]
     : '';
 
-  return {name, ability, iconId, title};
+  // エモートセット: 01〜04からランダム選択
+  const emoteSet = ['01','02','03','04'][Math.floor(Math.random()*4)];
+
+  return {name, ability, iconId, title, emoteSet};
+}
+
+// ランクCPU戦でCPUがたまにエモートを発動する
+function _cpuEmoteRandom(pidx){
+  if(!RANK._isCpuFill) return; // ランクCPU戦のみ
+  const p = G && G.players && G.players[pidx];
+  if(!p) return;
+  const setId = p.cpuEmoteSet || '01';
+  const setMaster = EMOTE_SETS_MASTER.find(s=>s.setId===setId);
+  if(!setMaster) return;
+  const emoteId = setMaster.ids[Math.floor(Math.random()*setMaster.ids.length)];
+  showEmoteOverlay(pidx, emoteId);
 }
 
 // マッチング1分経過・未マッチ時にCPUで埋めてCPU戦を開始する
@@ -6442,6 +6480,8 @@ function _forceStartRankCPUGame(){
   cpuSelectedAbilities[1]=cpu2.ability;
   // ゲーム開始
   bgmToGame();
+  // 💣 爆弾数表示を非表示（ランクCPU戦は手にボムなし）
+  _hideBombCountDisplay();
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,
@@ -6452,9 +6492,9 @@ function _forceStartRankCPUGame(){
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,_sessionYakuman:[]};
   startRound();
-  // CPU名・アイコン・称号を上書き
-  if(G.players[1]){G.players[1].name=cpu1.name;G.players[1].iconId=cpu1.iconId;G.players[1].equippedTitle=cpu1.title;}
-  if(G.players[2]){G.players[2].name=cpu2.name;G.players[2].iconId=cpu2.iconId;G.players[2].equippedTitle=cpu2.title;}
+  // CPU名・アイコン・称号・エモートセットを上書き
+  if(G.players[1]){G.players[1].name=cpu1.name;G.players[1].iconId=cpu1.iconId;G.players[1].equippedTitle=cpu1.title;G.players[1].cpuEmoteSet=cpu1.emoteSet;}
+  if(G.players[2]){G.players[2].name=cpu2.name;G.players[2].iconId=cpu2.iconId;G.players[2].equippedTitle=cpu2.title;G.players[2].cpuEmoteSet=cpu2.emoteSet;}
   updateEmoteAreaVisibility();
   renderAll();
 }
@@ -6489,7 +6529,9 @@ function cancelRankQueue(){
   if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
   if(RANK._cpuFillTimer){clearTimeout(RANK._cpuFillTimer);RANK._cpuFillTimer=null;}
   _rankCpuUsedNames=[];
-  if(RANK.searchStartAt){
+  // ★修正: searchStartAt が null（ゲーム中にリセット済み）でも peerId が残っていればキャンセルを送る
+  // 旧コードは searchStartAt==null だとキャンセルが飛ばず、サーバーのキューエントリが残り続けていた
+  if(RANK.searchStartAt || RANK.peerId){
     authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{});
   }
   if(NET.peer&&RANK.peerId){
@@ -6526,7 +6568,16 @@ async function _loadMyRating(){
 }
 
 async function joinRankQueue(){
-  // ボタンがクールタイム中か確認
+  // ★修正: クールダウン判定より先にサーバーの古いエントリを掃除する
+  // （連打時にもクリーンアップが確実に走るようにするため、クールダウンガードの外に出す）
+  try{
+    await Promise.all([
+      authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{}),
+      authFetch('/rank/done',{method:'DELETE'}).catch(()=>{}),
+    ]);
+  }catch(e){}
+
+  // ボタンがクールタイム中か確認（クリーンアップ後にチェック）
   if(RANK.buttonCooldown) return;
 
   // ★修正: await より前に即座にロックする（レースコンディション対策）
@@ -6539,15 +6590,6 @@ async function joinRankQueue(){
     btn.style.cursor = 'not-allowed';
   }
 
-  // ★修正: 古いマッチング残存バグ対策 - 参加前にサーバーの古いエントリを掃除する
-  // （ゲーム切断後に searchStartAt がnullのままでキャンセルが送られないケースを防ぐ）
-  try{
-    await Promise.all([
-      authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{}),
-      authFetch('/rank/done',{method:'DELETE'}).catch(()=>{}),
-    ]);
-  }catch(e){}
-  
   // 5秒後にボタンを再度有効化
   setTimeout(()=>{
     RANK.buttonCooldown = false;
@@ -7689,15 +7731,15 @@ function _addCpuToRoomWithAbility(ability){
   const CPU_PROFILE = {
     'mine':'地雷師ナミ','light':'光の探偵ヒカル','yami':'闇使いカゲ',
     'haku':'白術士ハク','sanctuary':'聖域守りセイ','pinzu':'筒子教ピン',
-    'steal':'盗賊スティール','tenbi':'手にビ','':{name:'CPU'}
+    'steal':'盗賊スティール','tenbi':'手にビ','red_eye':'赤眼レッド','':{name:'CPU'}
   };
   const CPU_ICON = {
     'mine':'C01','light':'C02','yami':'C03','haku':'C04',
-    'sanctuary':'C05','pinzu':'C06','steal':'C07','tenbi':'L01','':{id:'C08'}
+    'sanctuary':'C05','pinzu':'C06','steal':'C07','tenbi':'L01','red_eye':'C02','':{id:'C08'}
   };
   let resolvedAbility = ability;
   if(ability === 'random'){
-    const cpuAbilities=['mine','light','yami','haku','sanctuary','pinzu','steal','tenbi'];
+    const cpuAbilities=['mine','light','yami','haku','sanctuary','pinzu','steal','tenbi','red_eye'];
     const unlockedAbs = cpuAbilities.filter(a => isCpuUnlocked(a));
     const pool = unlockedAbs.length > 0 ? unlockedAbs : ['light'];
     resolvedAbility = pool[Math.floor(Math.random() * pool.length)];
@@ -9045,6 +9087,8 @@ function setOnlineStatus(msg){ const el=document.getElementById('onlineStatus');
 // ── Start online game (host calls this) ───────────────────────
 function startOnlineGame(){
   bgmToGame();
+  // 💣 爆弾数表示を非表示（オンラインモードは手にボムなし）
+  _hideBombCountDisplay();
   // CPUスロットはNET.connsに含まれているのでそのままカウント
   // CPUスロット(null)を除いた実接続数でonline管理、numPlayersは全スロット込み
   numPlayers = NET.conns.length + 1;
@@ -9197,12 +9241,12 @@ const CPU_ALWAYS_UNLOCKED = new Set(['random','','light']);
 
 // 解放チェーン定義: against の CPU がいる対戦で1位×required 回で unlocks が解放
 const CPU_UNLOCK_CHAIN = [
-  { unlocks:'sanctuary', against:'light',     required:5, label:'☀️ 光の探偵ヒカル' },
-  { unlocks:'mine',      against:'sanctuary', required:5, label:'🏛️ 聖域守りセイ' },
-  { unlocks:'yami',      against:'mine',      required:5, label:'💣 地雷師ナミ' },
-  { unlocks:'steal',     against:'yami',      required:5, label:'🌑 闇使いカゲ' },
-  { unlocks:'haku',      against:'steal',     required:5, label:'🃏 盗賊スティール' },
-  { unlocks:'pinzu',     against:'haku',      required:5, label:'🀆 白術士ハク' },
+  { unlocks:'sanctuary', against:'light',     required:3, label:'☀️ 光の探偵ヒカル' },
+  { unlocks:'mine',      against:'sanctuary', required:3, label:'🏛️ 聖域守りセイ' },
+  { unlocks:'yami',      against:'mine',      required:3, label:'💣 地雷師ナミ' },
+  { unlocks:'steal',     against:'yami',      required:3, label:'🌑 闇使いカゲ' },
+  { unlocks:'haku',      against:'steal',     required:3, label:'🃏 盗賊スティール' },
+  { unlocks:'pinzu',     against:'haku',      required:3, label:'🀆 白術士ハク' },
 ];
 // wins追跡キー: wins_<against>
 function _winsKey(against){ return 'wins_'+against; }
@@ -9397,6 +9441,22 @@ function openCpuSelectScreen(slotIdx){
     name.style.cssText = 'font-size:.48rem;text-align:center;color:' + (isSel?'#c9a84c':locked?'#2a3a2a':'#5a8a6a') + ';line-height:1.3;font-weight:' + (isSel?'700':'400') + ';';
     card.appendChild(name);
 
+    // ロック中: 入手方法とあと何回の表示
+    if(locked){
+      const chain = CPU_UNLOCK_CHAIN.find(c=>c.unlocks===o.key);
+      if(chain){
+        const wKey = _winsKey(chain.against);
+        const wins = ud[wKey] || 0;
+        const remaining = chain.required - wins;
+        const againstOpt = CPU_ABILITY_OPTIONS.find(op=>op.key===chain.against);
+        const againstName = againstOpt ? againstOpt.label : chain.against;
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:.38rem;text-align:center;color:#4a7a5a;line-height:1.5;margin-top:2px;';
+        hint.innerHTML = `<span style="color:#6a9a7a;">入手:</span> ${againstName}<br>に勝利<br><span style="color:#c9a84c;font-weight:700;">あと${remaining}回</span>`;
+        card.appendChild(hint);
+      }
+    }
+
     // 選択中バッジ
     if(isSel){
       const badge = document.createElement('div');
@@ -9433,6 +9493,8 @@ function closeCpuSelectScreen(){
 
 function initGame(){
   bgmToGame(); NET.online=false;
+  // 💣 爆弾数表示をリセット（手にボム以外では非表示）
+  _hideBombCountDisplay();
   document.getElementById('lobby').style.display='none';
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable();
@@ -9464,7 +9526,7 @@ function makePlayer(id,dealer){
     pname = (PROFILE.name||'あなた'); // 自分の名前、CPU名は後でpAbilityから設定
     if(id !== 0) pname = ''; // CPU側は後で上書き
   }
-  const cpuAbilities=['mine','light','yami','haku','sanctuary','pinzu','steal','tenbi'];
+  const cpuAbilities=['mine','light','yami','haku','sanctuary','pinzu','steal','tenbi','red_eye'];
   let pAbility;
   if(!G_ABILITY_MODE){
     pAbility = '';
@@ -9504,6 +9566,7 @@ function makePlayer(id,dealer){
     'steal':     {name:'盗賊スティール', icon:'C07'},
     '':          {name:'CPU',          icon:'C08'},
     'tenbi':     {name:'手にビ',         icon:'L01'},
+    'red_eye':   {name:'赤眼レッド',     icon:'C02'},
   };
   // ソロCPU名をpAbilityから設定
   if(!NET.online && id !== NET.myIdx){
@@ -9697,13 +9760,15 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
 
   // ── 1人モード: 爆弾をランダム配置（ステージごとに+1）──────────────
   if(numPlayers===1){
-    const bombCount = 19 + (G._soloStage||1); // ステージ1=20個、1ステージごとに+1
+    const bombCount = 14 + (G._soloStage||1); // ステージ1=15個、1ステージごとに+1
     const avail=G.deckSlots.map((_,i)=>i).filter(i=>G.deckSlots[i]!=null);
     for(let i=avail.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[avail[i],avail[j]]=[avail[j],avail[i]];}
     const bombSlots=avail.slice(0,bombCount);
     bombSlots.forEach(si=>{G.mineSlots.push(si);G.mineOwners[si]=-1;G.mineCount++;});
     G._soloBombs=new Set(bombSlots); // ソロ爆弾セット（表示用）
     addLog(`💣 ステージ${G._soloStage||1}：爆弾が${bombCount}個隠れている！`,'log-dora');
+    // 爆弾数表示を更新
+    _updateBombCountDisplay(bombCount);
   } else {
     G._soloBombs=null;
   }
@@ -10068,6 +10133,7 @@ function handleAnkan(pidx, tileKey){
     scheduleForPlayer(pidx,900,()=>{if(!checkPon(pidx,rep))nextTurn((pidx+1)%numPlayers);broadcastState();});
     return;
   }
+  p.drawnTile=rep; // 嶺上牌をdrawnTileにセット（リーチ中の再暗槓チェックに必要）
   if(pidx===NET.myIdx&&autoSortEnabled) p.hand=sortTiles(p.hand);updateTenpai(p);
   G.phase='discard';
   // 嶺上牌を選択状態にする（自分の番のみ）
@@ -10075,8 +10141,12 @@ function handleAnkan(pidx, tileKey){
   if(canWin(p.hand)){
   }
   if(p.riichi){
-    // リーチ中はツモ切り
-    scheduleForPlayer(pidx,600,()=>{discardAction(pidx,p.hand.length-1);broadcastState();});
+    // リーチ中: 再暗槓できる場合はプレイヤーに選択させる（そうでなければツモ切り）
+    const _reAnkanAvail = pidx===NET.myIdx ? canAnkan(pidx).length>0 : false;
+    if(!_reAnkanAvail){
+      scheduleForPlayer(pidx,600,()=>{discardAction(pidx,p.hand.length-1);broadcastState();});
+    }
+    // 再暗槓できる場合はrenderAllでボタンを表示して待つ
   }
   renderAll();broadcastState();
   // オンラインホスト: ゲストの番ならCPUを呼ばない
@@ -11394,6 +11464,10 @@ function handleExhausted(){
 
 function handleWin(widx,winTile,isTsumo,losidx){
   G.phase='win';
+  // ランクCPU戦: CPUが上がったとき高確率でエモートを発動（約60%）
+  if(RANK._isCpuFill && widx !== NET.myIdx && Math.random() < 0.6){
+    setTimeout(()=>_cpuEmoteRandom(widx), 600 + Math.random()*400);
+  }
   // ── リーチBGMを停止して通常BGMを再開 ──────────────────────
   if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive){
     RIICHI_BGM.stop();
@@ -11819,6 +11893,12 @@ function cpuDeclareRiichi(pidx){
 
 function cpuDiscard(){
   const idx=G.current;const p=G.players[idx];
+
+  // ランクCPU戦: 約5%の確率でエモートを発動
+  if(RANK._isCpuFill && Math.random() < 0.05){
+    setTimeout(()=>_cpuEmoteRandom(idx), 300 + Math.random()*600);
+  }
+
   if(p.riichi){discardAction(idx,p.hand.length-1);return;}
 
   // オープンリーチ中のプレイヤーの待ち牌を収集（役満警戒）
@@ -12272,10 +12352,10 @@ function humanDiscard(){
     // 修正後: 捨てた牌をローカルでも除去しdrawnTileをnullにしておくことで、
     // 次のapplyHostState時に _localHand（残り4枚）とホストのhand（残り4枚）が一致し、
     // 並び順が正しく復元される。
-    if(!G.pendingRiichi){
-      p.hand.splice(idx, 1);
-      p.drawnTile = null;
-    }
+    // ★ リーチ時も同様に楽観的更新を行う（旧: if(!G.pendingRiichi) で除外していたため
+    //   リーチ宣言後に _localHand とホスト側handのキーが一致せず並び順が戻るバグがあった）
+    p.hand.splice(idx, 1);
+    p.drawnTile = null;
     return;
   }
   if(G.pendingRiichi) commitRiichi(p);
@@ -12816,7 +12896,7 @@ function _bombSendResult(stage, score){
 function _soloShowFinalResult(cleared){
   clearRejoinSession();
   const stage = G._soloStage||1;
-  const bombCount = 19 + stage; // ステージ1=20個、1ステージごとに+1
+  const bombCount = 14 + stage; // ステージ1=15個、1ステージごとに+1
   const score = (G.players&&G.players[0]) ? G.players[0].score : 0;
   document.getElementById('resultTable').innerHTML=
     `<tr class="result-winner"><td colspan="3" style="text-align:center;font-size:1.1rem;padding:10px 0;">
@@ -12953,7 +13033,7 @@ function showFinalResult(){
         // 未解放の場合は進捗表示
         const rewardEl = document.getElementById('resultCoinReward');
         if(rewardEl) rewardEl.innerHTML +=
-          `<br><span style="font-size:.65rem;color:#5a7a6a;">🎴 mat01解放まで あと${5-d.winsVsTenbi2p}勝</span>`;
+          `<br><span style="font-size:.65rem;color:#5a7a6a;">🎴 mat01解放まで あと${3-d.winsVsTenbi2p}勝</span>`;
       }
     }).catch(()=>{});
   }
@@ -13502,6 +13582,13 @@ function backToLobby(){
   // ホストが部屋を持っていた場合はサーバーから削除する
   if(NET.isHost && NET.roomCode) authFetch('/room/'+NET.roomCode, {method:'DELETE'}).catch(()=>{});
   const wasRankMatch = NET.isRankMatch;
+  // ★修正: ランクマッチ終了時、RANK リセット前にサーバーの matchId エントリを削除する
+  // RANK.matchId は直後のリセットで null になるため、ここで先に送信する必要がある
+  // /rank/done がないと playerMatchId が残り、次回 /rank/join で古いマッチが返るバグの原因になる
+  if(wasRankMatch){
+    authFetch('/rank/done',   {method:'DELETE'}).catch(()=>{});
+    authFetch('/rank/cancel', {method:'DELETE'}).catch(()=>{});
+  }
   if(NET.peer){try{NET.peer.destroy();}catch(e){} NET.peer=null;NET.conn=null;NET.conns=[];NET.online=false;}
   NET.roomCode=null; NET.isHost=false; NET.isRankMatch=false; NET.roomTimeMode=false; NET.roomTobiMode=true;
   NET.guestNames=[]; NET.guestAbilities=[]; NET.guestIconIds=[]; NET.guestVcIconIds=[]; NET.guestPeerIds=[]; NET.guestEmotes=[]; NET.guestReady=[]; NET.guestIsCpu=[]; NET._memberDataCache=[]; NET.peerRegistry=[]; NET._lastActionId=0; stopSyncBroadcast();
@@ -14310,6 +14397,7 @@ const _doraImgCache={};
   const lightPickMode = G.lightMode==='pick';
   const amMineOwner= G_ABILITY_MODE && PROFILE.ability==='mine';
   const isPinzuMode= G_ABILITY_MODE && PROFILE.ability==='pinzu' && G.players[NET.myIdx]?.isDealer;
+  const isRedEyeMode= G_ABILITY_MODE && PROFILE.ability==='red_eye';
 
   for(let i=0;i<total;i++){
     const slot=G.deckSlots[i];
@@ -14350,6 +14438,7 @@ const _doraImgCache={};
     const isMine    = amMineOwner && G.mineOwners?.[i] === NET.myIdx;
     const isRevealed= !!(G.lightRevealedSlots?.[i]);
     const isPinzu   = isPinzuMode && slot.suit==='pin';
+    const isRedEye  = isRedEyeMode && !!slot._isAka;
     const penImg    = slot?._pkey ? G.penDrawings?.[slot._pkey] : null; // _pkeyベース
     // ソロ連鎖展開: 安全確定スロット
     const isSoloSafe= numPlayers===1 && !!(G._soloRevealed&&G._soloRevealed.has(i)) && G.deckSlots[i]!==null;
@@ -14368,6 +14457,8 @@ const _doraImgCache={};
       grad.addColorStop(0,'#3a1a10'); grad.addColorStop(1,'#1a0a08');
     } else if(isSoloSafe){
       grad.addColorStop(0,'#3a3000'); grad.addColorStop(1,'#1e1800');
+    } else if(isRedEye){
+      grad.addColorStop(0,'#3a0a0a'); grad.addColorStop(1,'#200505');
     } else {
       grad.addColorStop(0,'#1a3a50'); grad.addColorStop(1,'#0d2035');
     }
@@ -14383,6 +14474,7 @@ const _doraImgCache={};
       : isPickable ? '#6aaa6a'
       : isPenTarget ? '#3ada8a55'
       : isMine ? '#cc4422'
+      : isRedEye ? '#ff2222'
       : isSoloSafe ? '#ccaa00'
       : '#2a5a70';
     ctx.lineWidth= isPickable ? 1.5 : 1;
@@ -14456,6 +14548,8 @@ const _doraImgCache={};
       ctx.font=`${Math.round(34*_wScale())}px serif`; ctx.fillText('💣',r.x+r.w/2,r.y+r.h/2);
     } else if(isPinzu){
       ctx.font=`${Math.round(34*_wScale())}px serif`; ctx.fillText('🔵',r.x+r.w/2,r.y+r.h/2);
+    } else if(isRedEye){
+      ctx.font=`${Math.round(34*_wScale())}px serif`; ctx.fillText('🔴',r.x+r.w/2,r.y+r.h/2);
     }
   }
 
@@ -15221,7 +15315,7 @@ function renderTable(){
     const riichiStick=p.riichi?`<span class="riichi-stick">リーチ</span>`:''; 
     const afkBadge=((isHuman&&playerAFK)||(p.isCpu&&!p._rankCpuFill))?`<span class="badge" style="background:#1a0000;border:1px solid #cc3333;color:#ff6666;">離席</span>`:'';
 
-    const abilityLabels2={'':'','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン'};
+    const abilityLabels2={'':'','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン','tenbi':'🀆 手にビ','red_eye':'🔴 レッドアイ'};
     const _dispAbility2 = p.displayAbility || p.ability;
     const abilityBadge = (G_ABILITY_MODE && p.ability) ? `<span class="ability-badge">${abilityLabels2[_dispAbility2]||_dispAbility2}</span>` : '';
     stripDiv.innerHTML=`
@@ -15376,7 +15470,7 @@ function renderTable(){
 
     // 能力バッジをscoreRowの右に追加
     if(G_ABILITY_MODE && p.ability){
-      const abilityLabels3={'mine':'💣','light':'☀️','yami':'🌑','haku':'🀆','sanctuary':'🏛️','pinzu':'🔵','steal':'🃏','pen':'🖊️'};
+      const abilityLabels3={'mine':'💣','light':'☀️','yami':'🌑','haku':'🀆','sanctuary':'🏛️','pinzu':'🔵','steal':'🃏','pen':'🖊️','tenbi':'🀆'};
       const abBadge = document.createElement('div');
       abBadge.style.cssText='display:flex;align-items:center;justify-content:center;height:48px;min-width:48px;font-size:.85rem;background:#0a0a00;border:1px solid #3a3010;border-radius:4px;padding:0 6px;white-space:nowrap;';
       const _dispAbility3 = p.displayAbility || p.ability;
@@ -16274,7 +16368,7 @@ const MAT_LIST = [
   { id: '',      label: '緑（デフォルト）', url: null, free: true },
   { id: 'mat00', label: 'mat00',            url: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/mat/mat00.png', free: true },
   { id: 'mat01', label: 'mat01',            url: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/mat/mat01.png', free: false,
-    unlockDesc: 'CPU「手にビ」と２人戦で５回勝利' },
+    unlockDesc: 'CPU「手にビ」と２人戦で３回勝利' },
 ];
 function _isMatOwned(id){ if(id==='') return true; const m=MAT_LIST.find(m=>m.id===id); const mats=PROFILE.ownedMats||[]; return !!(m&&(m.free||mats.includes(id))); }
 function matUrl(id){ const m=MAT_LIST.find(m=>m.id===id); return m?.url||null; }
@@ -17745,6 +17839,7 @@ const ALL_ABILITY_DATA = [
   {key:'sanctuary',icon:'🏛️',name:'聖域',      desc:'親番中は失点しない。', tag:'防御系', initial:false},
   {key:'steal',  icon:'🃏', name:'スチール',    desc:'１局に１回、相手プレイヤーの捨て牌から１枚盗める。聴牌時には使用不可。',   tag:'奪取系', initial:false},
   {key:'pinzu',  icon:'🔵', name:'ピンズー教',  desc:'親番中は筒子の位置が分かる。親番でツモ上りが出来なくなる。',   tag:'情報系', initial:false},
+  {key:'red_eye',icon:'🔴', name:'レッドアイ',  desc:'常に山牌の中の赤ドラの位置が分かる。',                            tag:'情報系', initial:false},
 ];
 
 function _isAbilityOwned(key){
@@ -17795,6 +17890,7 @@ function pickAbility(ability){
     'steal':['🃏','スチール','１局に１回、相手プレイヤーの捨て牌から１枚盗める。聴牌時には使用不可。'],
     'pen':['🖊️','ペン','山牌に絵を描く。'],
     'pinzu':['🔵','ピンズー教','親番中は筒子の位置が分かる。親番でツモ上りが出来なくなる。'],
+    'red_eye':['🔴','レッドアイ','常に山牌の中の赤ドラの位置が分かる。'],
   };
   PROFILE.ability=ability;
   const d=ABILITY_DATA[ability]||['🚫','能力なし',''];
@@ -17822,6 +17918,7 @@ const GACHA_ABILITIES = [
   {key:'sanctuary',icon:'🏛️',name:'聖域',    tag:'防御系'},
   {key:'steal',  icon:'🃏', name:'スチール',  tag:'奪取系'},
   {key:'pinzu',  icon:'🔵', name:'ピンズー教', tag:'情報系'},
+  {key:'red_eye',icon:'🔴', name:'レッドアイ', tag:'情報系'},
 ];
 const RARITY_TABLE = [
   {rarity:'legend', label:'LEGEND', prob:0.001, color:'#ffd700', bg:'#1a0e00', border:'#ffd700'},
@@ -20116,7 +20213,7 @@ function updateProfileBadge(){
   const lpcIconInner = document.getElementById('lpcIconInner');
   if(lpcName) lpcName.textContent = PROFILE.name||'プレイヤー';
   if(lpcAbility){
-    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ'};
+    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ','red_eye':'🔴 レッドアイ'};
     lpcAbility.textContent = abilityIcons[PROFILE.ability||'']||'⚡ 能力なし';
   }
   if(lpcCoins) lpcCoins.innerHTML = '<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tenibi.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:2px;">' + (PROFILE.coins!=null ? PROFILE.coins.toLocaleString() : '---');
@@ -20136,7 +20233,7 @@ function updateProfileBadge(){
   }
   // ── 横画面ロビーUI同期 ──
   (function(){
-    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ'};
+    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ','red_eye':'🔴 レッドアイ'};
     const g = (id)=>document.getElementById(id);
     const pn=g('llPName'); if(pn) pn.textContent = PROFILE.name||'プレイヤー';
     const pa=g('llPAbility'); if(pa) pa.textContent = abilityIcons[PROFILE.ability||'']||'⚡ 能力なし';
@@ -20480,7 +20577,7 @@ function renderMatBook(){
       ? `<span class="mat-sel-badge">✓ 使用中</span>`
       : owned ? '' : `<span style="font-size:.5rem;padding:1px 6px;border-radius:3px;background:#0a0a0a;border:1px solid #2a2a2a;color:#4a4a4a;">🔒 未解放</span>`;
     const winsProgress = (!owned && m.id==='mat01')
-      ? `<div style="font-size:.48rem;color:#4a6a5a;margin-top:2px;">${PROFILE.winsVsTenbi2p??0}/5勝</div>`
+      ? `<div style="font-size:.48rem;color:#4a6a5a;margin-top:2px;">${PROFILE.winsVsTenbi2p??0}/3勝</div>`
       : '';
     const clickAttr = owned ? `onclick="selectMatBook('${m.id}')"` : '';
     return `<div class="mat-book-card${sel?' mat-selected':''}" ${clickAttr} style="${owned?'':'cursor:default;opacity:.5;filter:grayscale(.5);'}" >

@@ -2845,6 +2845,27 @@ body{
   </div>
 </div>
 
+<!-- ===== 管理者ギフト 受取確認モーダル ===== -->
+<div id="adminGiftModal" style="position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);backdrop-filter:blur(5px);" onclick="if(event.target===this)_closeAdminGiftModal()">
+  <div style="background:linear-gradient(160deg,#0a0a1a,#14100a);border:2px solid #c9a84c;border-radius:18px;padding:22px 22px 18px;width:min(92vw,380px);box-shadow:0 0 60px #c9a84c22,0 0 120px #00000099;position:relative;overflow:hidden;max-height:80vh;display:flex;flex-direction:column;">
+    <!-- 上部光沢ライン -->
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);pointer-events:none;"></div>
+    <!-- タイトル -->
+    <div style="text-align:center;margin-bottom:14px;flex-shrink:0;">
+      <div style="font-size:2.2rem;animation:chestBounce .8s ease-in-out infinite alternate;display:inline-block;">📦</div>
+      <div style="font-size:.85rem;font-weight:900;color:#f0d080;letter-spacing:.15em;margin-top:4px;text-shadow:0 0 12px #c9a84c77;">管理者からのギフト</div>
+    </div>
+    <!-- ギフト一覧 -->
+    <div id="adminGiftModalList" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:14px;padding-right:2px;"></div>
+    <!-- 一括受け取りボタン -->
+    <button id="adminGiftModalClaimBtn" onclick="_claimAllAdminGifts(this)" style="width:100%;padding:12px;background:linear-gradient(135deg,#3a2a00,#1a1400);border:1.5px solid #c9a84c;border-radius:10px;color:#f0d080;font-size:.8rem;font-weight:900;letter-spacing:.1em;cursor:pointer;transition:all .2s;flex-shrink:0;">
+      ✨ すべて受け取る
+    </button>
+    <!-- 閉じるボタン -->
+    <button onclick="_closeAdminGiftModal()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:#6a5a3a;font-size:1rem;cursor:pointer;padding:4px;">✕</button>
+  </div>
+</div>
+
 <!-- ===== GIFT MODAL ===== -->
 <div id="giftModal">
   <div class="gift-modal-inner">
@@ -3337,7 +3358,7 @@ body{
         <span class="ll-mode-label">デイリー</span>
       </div>
     </button>
-    <button id="llAdminGiftChestBtn" class="ll-mode-btn" style="display:none;border-color:#c9a84c;background:linear-gradient(135deg,#0a0a1a,#1a1405);position:relative;animation:adminChestGlow 1.6s ease-in-out infinite;" onclick="_claimAllAdminGifts(this)" title="管理者ギフト">
+    <button id="llAdminGiftChestBtn" class="ll-mode-btn" style="display:none;border-color:#c9a84c;background:linear-gradient(135deg,#0a0a1a,#1a1405);position:relative;animation:adminChestGlow 1.6s ease-in-out infinite;" onclick="_openAdminGiftModal()" title="管理者ギフト">
       <div class="ll-mode-emoji-wrap" style="background:transparent;">
         <span id="llAdminGiftChestIcon" style="font-size:2.1rem;display:inline-block;animation:chestBounce .8s ease-in-out infinite alternate;">📦</span>
         <span class="ll-mode-label" style="color:#f0d080;">受け取る</span>
@@ -3423,7 +3444,7 @@ body{
         transition:all .15s;width:100%;grid-column:1/-1;position:relative;
         animation:adminChestGlow 1.6s ease-in-out infinite;
         display:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="管理者ギフト"
-        onclick="_claimAllAdminGifts(this)">
+        onclick="_openAdminGiftModal()">
         <span id="portraitAdminGiftChestIcon" style="font-size:1.4rem;display:inline-block;animation:chestBounce .8s ease-in-out infinite alternate;">📦</span>
         <span style="font-weight:700;">管理者ギフトを受け取る</span>
         <span id="portraitAdminGiftChestDesc" style="font-size:.55rem;color:#a08840;margin-top:1px;"></span>
@@ -19930,6 +19951,61 @@ async function claimGift(giftId, btn){
   }catch(e){ alert('通信エラーが発生しました'); if(btn) btn.disabled=false; }
 }
 
+// 管理者ギフトモーダルを開く
+async function _openAdminGiftModal(){
+  const modal = document.getElementById('adminGiftModal');
+  const list  = document.getElementById('adminGiftModalList');
+  const claimBtn = document.getElementById('adminGiftModalClaimBtn');
+  if(!modal || !list) return;
+  list.innerHTML = '<div style="text-align:center;color:#6a5a3a;font-size:.7rem;padding:20px;">読み込み中…</div>';
+  modal.style.display = 'flex';
+  claimBtn.disabled = false;
+  claimBtn.textContent = '✨ すべて受け取る';
+  try{
+    const r = await authFetch('/api/gifts/inbox');
+    const d = await r.json();
+    if(!d.ok){ list.innerHTML='<div style="text-align:center;color:#aa5533;font-size:.7rem;padding:20px;">読み込みに失敗しました</div>'; return; }
+    const adminGifts = (d.gifts||[]).filter(g=>g.is_admin_gift);
+    if(adminGifts.length === 0){
+      list.innerHTML='<div style="text-align:center;color:#6a5a3a;font-size:.7rem;padding:20px;">ギフトはありません</div>';
+      claimBtn.style.display='none';
+      return;
+    }
+    claimBtn.style.display='';
+    // アイテム名ヘルパー
+    function _adminGiftLabel(g){
+      if(g.type==='tbb_coins') return `🪙 TBBコイン ×${g.amount}`;
+      if(g.type==='coins')     return `<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tenibi.png" style="width:13px;height:13px;vertical-align:middle;margin-right:2px;">手にビコイン ×${g.amount}`;
+      if(g.type==='ring')      return `💍 ${(_RING_CATALOG&&_RING_CATALOG.find(r=>r.key===g.skin_key)?.name)||g.skin_key}`;
+      if(g.type==='bgm')       return `🎵 ${(_RIICHI_BGM_LABELS&&_RIICHI_BGM_LABELS[g.skin_key])||g.skin_key}`;
+      if(g.type==='ability')   return `⚡ アビリティ: ${g.skin_key}`;
+      if(g.type==='icon')      return `🖼️ アイコン: ${g.skin_key}`;
+      if(g.type==='emote')     return `😊 エモートセット ${g.skin_key}`;
+      if(g.type==='agari')     return `🀄 あがり演出: ${g.skin_key}`;
+      const sk = typeof _SKIN_CATALOG!=='undefined' && _SKIN_CATALOG.find(s=>s.key===g.skin_key);
+      return `🖊️ ${sk?sk.name:g.skin_key}`;
+    }
+    list.innerHTML = adminGifts.map(g=>{
+      const msg = g.message && g.message.trim()
+        ? `<div style="font-size:.55rem;color:#a08840;font-style:italic;margin-top:3px;">💬 ${_esc(g.message)}</div>` : '';
+      return `<div style="background:linear-gradient(135deg,#0d0a02,#1a1405);border:1.5px solid rgba(201,168,76,0.35);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.6rem;flex-shrink:0;filter:drop-shadow(0 0 6px #c9a84c88);">📦</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.68rem;font-weight:700;color:#f0d080;">${_adminGiftLabel(g)}</div>
+          ${msg}
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML='<div style="text-align:center;color:#aa5533;font-size:.7rem;padding:20px;">通信エラーが発生しました</div>';
+  }
+}
+
+function _closeAdminGiftModal(){
+  const modal = document.getElementById('adminGiftModal');
+  if(modal) modal.style.display = 'none';
+}
+
 // 管理者ギフトをその場で一括受け取り（タイトル画面宝箱ボタン用）
 async function _claimAllAdminGifts(btn){
   if(btn){ btn.disabled = true; }
@@ -19967,7 +20043,16 @@ async function _claimAllAdminGifts(btn){
     const icon1 = document.getElementById('llAdminGiftChestIcon');
     const icon2 = document.getElementById('portraitAdminGiftChestIcon');
     [icon1,icon2].forEach(ic=>{ if(ic){ ic.textContent='✨'; ic.style.animation='none'; } });
-    setTimeout(()=>{ refreshGiftBadge(); if(btn) btn.disabled=false; }, 1000);
+    // モーダル内ボタンのフィードバック
+    if(btn && btn.id==='adminGiftModalClaimBtn'){
+      btn.textContent = `✨ ${claimed}件受け取りました！`;
+      btn.disabled = true;
+    }
+    setTimeout(()=>{
+      _closeAdminGiftModal();
+      refreshGiftBadge();
+      if(btn && btn.id!=='adminGiftModalClaimBtn') btn.disabled=false;
+    }, 900);
   }catch(e){ alert('通信エラーが発生しました'); if(btn) btn.disabled=false; }
 }
 
@@ -21067,7 +21152,7 @@ const SHOP_ABILITIES=[
   {key:'light', icon:'☀️', name:'光'},
   {key:'haku',  icon:'🀆', name:'白'},
 ];
-const SHOP_AB_COST=100;
+const SHOP_AB_COST=500;
 
 function openShop(){
   document.getElementById('lobby').style.display='none';
@@ -21097,8 +21182,8 @@ function updatePremiumBadge(){
 // ショップで販売するエモートセット定義
 const SHOP_EMOTE_SETS = [
   // セット2はTwitchサブスク特典のため販売なし
-  { setId:'03', label:'🔊 ボイス付きエモートセット3', price:100 },
-  { setId:'04', label:'🔊 ボイス付きエモートセット4', price:100 },
+  { setId:'03', label:'🔊 ボイス付きエモートセット3', price:500 },
+  { setId:'04', label:'🔊 ボイス付きエモートセット4', price:500 },
 ];
 
 function renderShop(){

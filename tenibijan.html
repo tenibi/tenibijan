@@ -6380,8 +6380,9 @@ const RANK_CPU_NAMES = [
 let _rankCpuUsedNames = []; // 同一マッチで名前が被らないようにする
 
 function _getRankCpuConfig(){
-  // 能力: yami か pinzu をランダム
-  const ability = Math.random() < 0.5 ? 'yami' : 'pinzu';
+  // 能力: yami / pinzu / tenbi / steal からランダム
+  const _rankAbilityPool = ['yami', 'pinzu', 'tenbi', 'steal'];
+  const ability = _rankAbilityPool[Math.floor(Math.random() * _rankAbilityPool.length)];
 
   // 名前: まだ使われていない名前からランダム
   const available = RANK_CPU_NAMES.filter(n=>!_rankCpuUsedNames.includes(n));
@@ -6391,7 +6392,8 @@ function _getRankCpuConfig(){
 
   // アイコン: プレイヤーが所持しているgachaIconsからランダム、なければ能力デフォルト
   const ownedIcons = (PROFILE.gachaIcons||[]).filter(id=>id&&id!=='C00');
-  const defaultIcon = ability==='yami'?'C03':'C06';
+  const _defaultIconMap = {yami:'C03', pinzu:'C06', tenbi:'C01', steal:'C04'};
+  const defaultIcon = _defaultIconMap[ability] || 'C06';
   const iconId = ownedIcons.length>0
     ? ownedIcons[Math.floor(Math.random()*ownedIcons.length)]
     : defaultIcon;
@@ -11690,7 +11692,7 @@ function cpuTryAbility(idx){
   }
 
   // 🀆 白: 手牌に使えない牌があれば30%で白に変換
-  if(ab==='haku' && G.phase==='discard' && !p.riichi && !p.abilityUsed && Math.random()<0.3){
+  if((ab==='haku' || ab==='tenbi') && G.phase==='discard' && !p.riichi && !p.abilityUsed && Math.random()<0.3){
     const idx2=cpuWorstTileIdx(p);
     if(idx2>=0 && !p.hand[idx2]._isHaku){
       const t=p.hand[idx2];
@@ -12054,8 +12056,16 @@ function _restoreDragAfterRender(){
     _cleanDrag(); _dragState=null; return;
   }
   if(_dragState.tileEl && _dragState.tileEl !== newTileEl) _dragState.tileEl.style.opacity='';
+  // ── [修正] _dragMoved を新しい要素に引き継ぐ ──
+  newTileEl._dragMoved = _dragState.tileEl ? !!_dragState.tileEl._dragMoved : false;
   _dragState.tileEl = newTileEl;
   _dragState.handEls = newHandEls;
+  // ── [修正] renderAll後にフェーズが変わっている場合（自動引きによる draw_wait→discard など）
+  // canDiscard を現在のゲーム状態に合わせて更新する
+  const myTurn = (typeof NET !== 'undefined' && NET.online) ? G.current === NET.myIdx : G.current === 0;
+  const newCanDiscard = myTurn && G.phase === 'discard' && !G.yamiSelectMode
+    && !(G.hakuSelectPlayers && G.hakuSelectPlayers.includes(NET.myIdx));
+  _dragState.canDiscard = newCanDiscard;
   newTileEl.style.opacity = '0.35';
 }
 
@@ -13183,6 +13193,8 @@ function startTenbiBattle(){
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable();
   startRound();
+  // 手にビバトルCPUの表示能力をhakuに上書き（内部ロジックはtenbiのまま）
+  if(G.players[1]) G.players[1].displayAbility = 'haku';
 }
 
 function declineTenbiBattle(){
@@ -15210,7 +15222,8 @@ function renderTable(){
     const afkBadge=((isHuman&&playerAFK)||(p.isCpu&&!p._rankCpuFill))?`<span class="badge" style="background:#1a0000;border:1px solid #cc3333;color:#ff6666;">離席</span>`:'';
 
     const abilityLabels2={'':'','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン'};
-    const abilityBadge = (G_ABILITY_MODE && p.ability) ? `<span class="ability-badge">${abilityLabels2[p.ability]||p.ability}</span>` : '';
+    const _dispAbility2 = p.displayAbility || p.ability;
+    const abilityBadge = (G_ABILITY_MODE && p.ability) ? `<span class="ability-badge">${abilityLabels2[_dispAbility2]||_dispAbility2}</span>` : '';
     stripDiv.innerHTML=`
       <div class="wind-orb${p.isDealer?' dealer-orb':''}">${p.wind}</div>
       <div style="display:flex;flex-direction:column;gap:1px;">
@@ -15366,7 +15379,8 @@ function renderTable(){
       const abilityLabels3={'mine':'💣','light':'☀️','yami':'🌑','haku':'🀆','sanctuary':'🏛️','pinzu':'🔵','steal':'🃏','pen':'🖊️'};
       const abBadge = document.createElement('div');
       abBadge.style.cssText='display:flex;align-items:center;justify-content:center;height:48px;min-width:48px;font-size:.85rem;background:#0a0a00;border:1px solid #3a3010;border-radius:4px;padding:0 6px;white-space:nowrap;';
-      abBadge.textContent=(abilityLabels3[p.ability]||'');
+      const _dispAbility3 = p.displayAbility || p.ability;
+      abBadge.textContent=(abilityLabels3[_dispAbility3]||'');
       scoreRow.appendChild(abBadge);
     }
     handOuter.appendChild(rightPanel);

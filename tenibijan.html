@@ -9687,6 +9687,8 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
       if(i !== NET.myIdx && _prevPlayers[i].equippedTitle !== undefined) p.equippedTitle = _prevPlayers[i].equippedTitle;
       if(i !== NET.myIdx && _prevPlayers[i].handSkin !== undefined) p.handSkin = _prevPlayers[i].handSkin;
       if(i !== NET.myIdx && _prevPlayers[i].ring !== undefined) p.ring = _prevPlayers[i].ring;
+      // ランクCPU戦: 試合開始時に決まったエモートセットを局をまたいで引き継ぐ
+      if(i !== NET.myIdx && _prevPlayers[i].cpuEmoteSet !== undefined) p.cpuEmoteSet = _prevPlayers[i].cpuEmoteSet;
     }
     // ★ 自分（ホスト）の ring・handSkin を PROFILE から確実にセット
     if(i === NET.myIdx){
@@ -17449,8 +17451,35 @@ function _openTwitchAndMission() {
 // ミッション達成トリガー汎用ヘルパー（pending に追加 → renderDailyMissions）
 function _triggerDailyMission(missionId) {
   const { done, pending, missions } = _dailyMissionState;
+
+  // missionsが未ロード（CPU対戦・ルーム・ランク・手にボムタブから直接ゲーム開始した場合）は
+  // APIから取得してリトライする。どのゲームモードでも役満ミッションが達成できるようにする。
+  if (!missions || missions.length === 0) {
+    const token = localStorage.getItem('jwt_token');
+    if (!token) return; // 未ログインは無視
+    authFetch('/api/daily-missions')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return;
+        // 日付が変わっていたらpendingもリセット
+        if (_dailyMissionState.today && _dailyMissionState.today !== d.today) {
+          _dailyMissionState.pending = [];
+        }
+        _dailyMissionState.done     = d.done     || [];
+        _dailyMissionState.today    = d.today;
+        _dailyMissionState.missions = d.missions  || [];
+        _dailyMissionState.pending  = _dailyMissionState.pending.filter(
+          id => !_dailyMissionState.done.includes(id)
+        );
+        // ミッション取得後にリトライ
+        _triggerDailyMission(missionId);
+      })
+      .catch(() => {});
+    return;
+  }
+
   // 今日の2件に含まれないミッションは無視
-  if (!missions || !missions.some(m => m.id === missionId)) return;
+  if (!missions.some(m => m.id === missionId)) return;
   if (done.includes(missionId) || pending.includes(missionId)) return;
   _dailyMissionState.pending.push(missionId);
   renderDailyMissions();

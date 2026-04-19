@@ -23131,16 +23131,8 @@ function _gachaPreviewBgm(key, btnId) {
   _gachaPreviewBgmAudio.volume = typeof RIICHI_BGM !== 'undefined' ? Math.min(1, RIICHI_BGM.getVol()) : 0.14;
   _gachaPreviewBgmAudio.play().catch(() => {});
   if (btn) btn.textContent = btn.id === 'gachaStdBgmPreviewBtn' ? '■ 停止' : '■';
-  // 30秒で自動停止
-  const stopTimer = setTimeout(() => {
-    if (_gachaPreviewBgmCurrentKey === key) {
-      if (_gachaPreviewBgmAudio) { _gachaPreviewBgmAudio.pause(); _gachaPreviewBgmAudio = null; }
-      _gachaPreviewBgmCurrentKey = null;
-      if (btn) btn.textContent = btn.id === 'gachaStdBgmPreviewBtn' ? '▶ 試聴' : '▶';
-    }
-  }, 30000);
+  // 曲が終わったらボタンをリセット
   _gachaPreviewBgmAudio.addEventListener('ended', () => {
-    clearTimeout(stopTimer);
     _gachaPreviewBgmCurrentKey = null;
     _gachaPreviewBgmAudio = null;
     if (btn) btn.textContent = btn.id === 'gachaStdBgmPreviewBtn' ? '▶ 試聴' : '▶';
@@ -23298,10 +23290,6 @@ function _previewRiichiBgmModal(key){
   _riichiBgmPreviewAudio._key = key;
   _riichiBgmPreviewAudio.volume = Math.min(1, (typeof RIICHI_BGM!=='undefined' ? RIICHI_BGM.getVol() : 0.14));
   _riichiBgmPreviewAudio.play().catch(()=>{});
-  _riichiBgmPreviewAudio._stopTimer = setTimeout(()=>{
-    _stopRiichiBgmPreview();
-    _renderRiichiBgmPlaylistModal();
-  }, 15000);
   // 曲が終わったら自動でBGM復元
   _riichiBgmPreviewAudio.addEventListener('ended', ()=>{
     _stopRiichiBgmPreview();
@@ -23466,10 +23454,6 @@ function _previewRiichiBgm(key, btn){
   _riichiBgmPreviewAudio._key = key;
   _riichiBgmPreviewAudio.volume = Math.min(1, (typeof RIICHI_BGM!=='undefined' ? RIICHI_BGM.getVol() : 0.14));
   _riichiBgmPreviewAudio.play().catch(()=>{});
-  _riichiBgmPreviewAudio._stopTimer = setTimeout(()=>{
-    _stopRiichiBgmPreview();
-    _renderRiichiBgmBookGrid();
-  }, 15000);
   // 曲が終わったら自動でBGM復元
   _riichiBgmPreviewAudio.addEventListener('ended', ()=>{
     _stopRiichiBgmPreview();

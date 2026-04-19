@@ -4706,7 +4706,14 @@ const RIICHI_BGM = (() => {
     setGuestBgm(pidx, bgmKey){ _guestRiichiBgm[pidx]=bgmKey||''; },
     // pidxのリーチBGMキーを取得
     getBgmForPlayer(pidx){
-      if(typeof NET!=='undefined' && pidx===NET.myIdx) return (typeof PROFILE!=='undefined')?PROFILE.riichiBgm||'':'';
+      if(typeof NET!=='undefined' && pidx===NET.myIdx){
+        if(typeof PROFILE!=='undefined'){
+          const _pl=PROFILE.riichiBgmPlaylist||[];
+          if(_pl.length>0){ return _pl[Math.floor(Math.random()*_pl.length)]; }
+          return PROFILE.riichiBgm||'';
+        }
+        return '';
+      }
       return _guestRiichiBgm[pidx]||'';
     },
     get isActive(){ return _active; },
@@ -10127,10 +10134,9 @@ function canAnkan(pidx){
   for(const[k,v] of Object.entries(cnt)){
     if(v>=4){
       if(p.riichi){
-        // リーチ中の暗槓: 以下を両方満たす場合のみ許可
-        // 1. ツモ牌が暗槓対象と同じ牌（手出しでないこと）
-        // 2. 暗槓後の待ちが現在の待ちと完全一致（待ち変化なし）
-        if(!p.drawnTile||tk(p.drawnTile)!==k) continue;
+        // リーチ中の暗槓: 暗槓後の待ちが現在の待ちと完全一致（待ち変化なし）場合のみ許可
+        // 注: 5枚手牌では4枚対子がツモ前から手牌に存在する場合もあるため、
+        // ツモ牌一致チェック（旧条件1）は除外し、待ち変化チェックのみで判定する
         const afterHand=p.hand.filter(t=>tk(t)!==k);
         const newWaits=getWaits(afterHand);
         const oldSet=new Set((p.waits||[]).map(t=>tk(t)));
@@ -12943,6 +12949,7 @@ function _bombSendResult(stage, score){
 }
 
 function _soloShowFinalResult(cleared){
+  if(typeof RIICHI_BGM!=='undefined' && RIICHI_BGM.isActive) RIICHI_BGM.stop();
   clearRejoinSession();
   const stage = G._soloStage||1;
   const bombCount = 14 + stage; // ステージ1=15個、1ステージごとに+1
@@ -16278,7 +16285,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}, reachBgmTickets:0, premium:false};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}, riichiBgmPlaylist:[], reachBgmTickets:0, premium:false};
 // vcIconId: VCアイコン（音声SE用）、未設定時はiconIdを使用
 // displayIconId: 見た目アイコン（画面表示用）、未設定時はiconIdを使用
 function _getProfileDisplayIconId(){ return PROFILE.displayIconId || PROFILE.iconId || ''; }
@@ -17109,6 +17116,7 @@ function loadProfile(){
         agariVideo:    data.agariVideo    ?? PROFILE.agariVideo    ?? 'agari01',
         agariVideos:   data.agariVideos   ?? PROFILE.agariVideos   ?? {},
         riichiBgms:    data.riichiBgms    ?? PROFILE.riichiBgms    ?? {},
+        riichiBgmPlaylist: Array.isArray(data.riichiBgmPlaylist) ? data.riichiBgmPlaylist : (Array.isArray(PROFILE.riichiBgmPlaylist) ? PROFILE.riichiBgmPlaylist : []),
         reachBgmTickets: data.reachBgmTickets ?? PROFILE.reachBgmTickets ?? 0,
         emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
         uid:           data.uid           || PROFILE.uid           || '',
@@ -22701,12 +22709,25 @@ function _showNcpToast(iconId) {
     background:#030a10;border:1px solid #2a4a3a;border-radius:8px;
     color:#5a9a7a;font-size:.72rem;padding:7px 13px;cursor:pointer;">◀ 戻る</button>
 
-  <div style="margin-top:10px;text-align:center;margin-bottom:20px;">
+  <div style="margin-top:10px;text-align:center;margin-bottom:14px;">
     <div style="font-size:clamp(1.2rem,4vw,1.8rem);font-weight:900;color:#ff7799;letter-spacing:.15em;">🎵 リーチBGM図鑑</div>
-    <div style="font-size:.58rem;color:#7a3a5a;margin-top:4px;">タップして装備・解除。リーチ宣言時に再生されます</div>
+    <div style="font-size:.58rem;color:#7a3a5a;margin-top:4px;">リーチ宣言時に再生されます</div>
   </div>
 
-  <div style="width:100%;max-width:480px;margin-bottom:16px;
+  <!-- モード切り替えタブ -->
+  <div style="width:100%;max-width:480px;display:flex;gap:0;margin-bottom:16px;border-radius:10px;overflow:hidden;border:1.5px solid #4a1a2a;">
+    <button id="riichiBgmTabSingle" onclick="switchRiichiBgmMode('single')" style="
+      flex:1;padding:9px 0;font-size:.7rem;font-weight:700;cursor:pointer;
+      background:#2a0a14;color:#ff7799;border:none;transition:background .15s,color .15s;
+    ">🎵 シングル</button>
+    <button id="riichiBgmTabPlaylist" onclick="switchRiichiBgmMode('playlist')" style="
+      flex:1;padding:9px 0;font-size:.7rem;font-weight:700;cursor:pointer;
+      background:#0a0308;color:#7a3a5a;border:none;border-left:1.5px solid #4a1a2a;transition:background .15s,color .15s;
+    ">🎲 プレイリスト</button>
+  </div>
+
+  <!-- シングルモード: 装備中表示 -->
+  <div id="riichiBgmSinglePanel" style="width:100%;max-width:480px;margin-bottom:16px;
     background:#15050d;border:1.5px solid #8a2244;border-radius:12px;padding:12px 16px;
     display:flex;align-items:center;gap:10px;">
     <span style="font-size:1.2rem;">🎵</span>
@@ -22716,7 +22737,23 @@ function _showNcpToast(iconId) {
     </div>
   </div>
 
-  <div style="width:100%;max-width:480px;margin-bottom:12px;">
+  <!-- プレイリストモード: 選択状況表示 -->
+  <div id="riichiBgmPlaylistPanel" style="display:none;width:100%;max-width:480px;margin-bottom:16px;
+    background:#0d0518;border:1.5px solid #5a2a8a;border-radius:12px;padding:12px 16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="font-size:1.2rem;">🎲</span>
+      <div>
+        <div style="font-size:.6rem;color:#8a5aaa;letter-spacing:.08em;">プレイリスト</div>
+        <div id="riichiBgmPlaylistCount" style="font-size:.78rem;font-weight:700;color:#cc88ff;">0曲選択中</div>
+      </div>
+      <button onclick="clearRiichiBgmPlaylist()" style="margin-left:auto;font-size:.58rem;padding:4px 10px;border-radius:6px;cursor:pointer;background:#0a0310;border:1px solid #5a2a8a;color:#8a5aaa;">全解除</button>
+    </div>
+    <div id="riichiBgmPlaylistNames" style="font-size:.55rem;color:#9a6acc;line-height:1.8;">未選択</div>
+    <div style="font-size:.5rem;color:#6a4a8a;margin-top:4px;">リーチ宣言時に選択曲からランダムで1曲再生</div>
+  </div>
+
+  <!-- BGMなしボタン（シングルモードのみ） -->
+  <div id="riichiBgmNoneBtnWrap" style="width:100%;max-width:480px;margin-bottom:12px;">
     <button id="riichiBgmBookNoneBtn" onclick="selectRiichiBgm('')" style="
       width:100%;padding:10px 16px;border-radius:10px;cursor:pointer;
       background:#040c12;border:2px solid #3a1a2a;
@@ -23040,10 +23077,15 @@ const _RIICHI_BGM_LABELS = {
 };
 const _RIICHI_BGM_BASE = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/ritibgm/';
 let _riichiBgmPreviewAudio = null;
+let _riichiBgmBookMode = 'single'; // 'single' | 'playlist'
 
 function openRiichiBgmBook(){
   document.getElementById('profileScreen').classList.remove('active');
   document.getElementById('riichiBgmBookScreen').style.display='flex';
+  // プレイリストに曲があればプレイリストモードで開く
+  const pl = PROFILE.riichiBgmPlaylist||[];
+  _riichiBgmBookMode = pl.length > 0 ? 'playlist' : 'single';
+  _applyRiichiBgmMode();
   _renderRiichiBgmBookGrid();
 }
 function closeRiichiBgmBook(){
@@ -23053,13 +23095,44 @@ function closeRiichiBgmBook(){
   _updateRiichiBgmBookDisplay();
 }
 
+function switchRiichiBgmMode(mode){
+  _riichiBgmBookMode = mode;
+  _stopRiichiBgmPreview();
+  _applyRiichiBgmMode();
+  _renderRiichiBgmBookGrid();
+}
+
+function _applyRiichiBgmMode(){
+  const isSingle = _riichiBgmBookMode === 'single';
+  const tabSingle = document.getElementById('riichiBgmTabSingle');
+  const tabPlaylist = document.getElementById('riichiBgmTabPlaylist');
+  const singlePanel = document.getElementById('riichiBgmSinglePanel');
+  const playlistPanel = document.getElementById('riichiBgmPlaylistPanel');
+  const noneBtn = document.getElementById('riichiBgmNoneBtnWrap');
+  if(tabSingle){ tabSingle.style.background = isSingle ? '#2a0a14' : '#0a0308'; tabSingle.style.color = isSingle ? '#ff7799' : '#7a3a5a'; }
+  if(tabPlaylist){ tabPlaylist.style.background = isSingle ? '#0a0308' : '#12042a'; tabPlaylist.style.color = isSingle ? '#7a3a5a' : '#cc88ff'; }
+  if(singlePanel) singlePanel.style.display = isSingle ? 'flex' : 'none';
+  if(playlistPanel) playlistPanel.style.display = isSingle ? 'none' : 'block';
+  if(noneBtn) noneBtn.style.display = isSingle ? 'block' : 'none';
+}
+
 function _updateRiichiBgmBookDisplay(){
   const el = document.getElementById('riichiBgmBookDisplayText');
   const wrap = document.getElementById('riichiBgmBookDisplay');
+  const pl = PROFILE.riichiBgmPlaylist || [];
   const cur = PROFILE.riichiBgm || '';
-  const label = cur ? (_RIICHI_BGM_LABELS[cur] || cur) : 'なし';
-  const hasBgm = !!cur;
-  if(el) el.innerHTML = `${label}<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で変更</span>`;
+  let label, hasBgm;
+  if(pl.length > 0){
+    label = '🎲 プレイリスト (' + pl.length + '曲)';
+    hasBgm = true;
+  } else if(cur){
+    label = _RIICHI_BGM_LABELS[cur] || cur;
+    hasBgm = true;
+  } else {
+    label = 'なし';
+    hasBgm = false;
+  }
+  if(el) el.innerHTML = label + '<br><span style="font-size:.52rem;color:#3a5a4a;">図鑑で変更</span>';
   if(wrap){
     wrap.dataset.equipped = hasBgm ? '1' : '0';
     wrap.style.borderColor = hasBgm ? '#ffd700' : '#2a5a3a';
@@ -23069,9 +23142,26 @@ function _updateRiichiBgmBookDisplay(){
 function _updateRiichiBgmNoneBtnStyle(){
   const btn = document.getElementById('riichiBgmBookNoneBtn');
   if(!btn) return;
-  const isNone = !PROFILE.riichiBgm;
+  const isNone = !PROFILE.riichiBgm && (_riichiBgmBookMode==='single');
   btn.style.borderColor = isNone ? '#ffd700' : '#3a1a2a';
   btn.style.color = isNone ? '#ffd700' : '#7a3a5a';
+}
+
+function _updateRiichiBgmPlaylistPanel(){
+  const pl = PROFILE.riichiBgmPlaylist || [];
+  const countEl = document.getElementById('riichiBgmPlaylistCount');
+  const namesEl = document.getElementById('riichiBgmPlaylistNames');
+  if(countEl) countEl.textContent = pl.length + '曲選択中';
+  if(namesEl){
+    if(pl.length === 0){
+      namesEl.textContent = '未選択';
+    } else {
+      namesEl.innerHTML = pl.map(k => {
+        const name = _RIICHI_BGM_LABELS[k] || k;
+        return '<span style="display:inline-block;background:#1a0828;border:1px solid #5a2a8a;border-radius:4px;padding:1px 7px;margin:1px 2px;color:#cc88ff;">' + name + '</span>';
+      }).join('');
+    }
+  }
 }
 
 function _renderRiichiBgmBookGrid(){
@@ -23080,57 +23170,63 @@ function _renderRiichiBgmBookGrid(){
   if(!grid) return;
   const cur = PROFILE.riichiBgm || '';
   const rb  = PROFILE.riichiBgms || {};
+  const pl  = PROFILE.riichiBgmPlaylist || [];
+  const isPlaylist = _riichiBgmBookMode === 'playlist';
+
   if(equippedEl) equippedEl.textContent = cur ? (_RIICHI_BGM_LABELS[cur] || cur) : 'なし';
   _updateRiichiBgmNoneBtnStyle();
+  if(isPlaylist) _updateRiichiBgmPlaylistPanel();
 
   grid.innerHTML = Object.keys(_RIICHI_BGM_LABELS).map(key=>{
     const label = _RIICHI_BGM_LABELS[key];
-    const sel = key === cur;
-    const isPlaying = _riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key === key;
     const unlocked = (rb[key]||0) > 0;
-    const borderCol = sel ? '#ffd700' : unlocked ? '#4a1a2a' : '#2a2a2a';
+    const isPlaying = _riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key === key;
     const srcLabel  = key === 'ritibgm01' ? '常設ガチャ LEGEND' : 'TBBガチャ';
+
     if(!unlocked){
-      return `<div style="
-        background:#0a0a0a;border:2px solid #2a2a2a;opacity:.5;
-        border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;
-        align-items:center;gap:8px;
-      ">
-        <div style="font-size:1.6rem;">🔒</div>
-        <div style="font-size:.68rem;font-weight:700;color:#555;text-align:center;line-height:1.4;">${label}</div>
-        <div style="font-size:.48rem;color:#444;">${srcLabel}で入手</div>
-      </div>`;
+      return '<div style="background:#0a0a0a;border:2px solid #2a2a2a;opacity:.5;border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;">'
+        + '<div style="font-size:1.6rem;">🔒</div>'
+        + '<div style="font-size:.68rem;font-weight:700;color:#555;text-align:center;line-height:1.4;">' + label + '</div>'
+        + '<div style="font-size:.48rem;color:#444;">' + srcLabel + 'で入手</div>'
+        + '</div>';
     }
-    return `<div style="
-      background:#0d0515;border:2px solid ${borderCol};
-      border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;
-      align-items:center;gap:8px;transition:border-color .15s;
-    "
-    onmouseover="this.style.borderColor='${sel?'#ffd700':'#cc4466'}'"
-    onmouseout="this.style.borderColor='${borderCol}'">
-      <div style="font-size:1.6rem;">🎵</div>
-      <div style="font-size:.68rem;font-weight:700;color:${sel?'#ffd700':'#ff7799'};text-align:center;line-height:1.4;">${label}</div>
-      ${sel?'<span style="font-size:.5rem;background:#2a0a14;border:1px solid #ffd700;border-radius:4px;padding:2px 8px;color:#ffd700;">✓ 装備中</span>':''}
-      <div style="display:flex;gap:6px;width:100%;">
-        <button onclick="selectRiichiBgm('${key}')" style="
-          flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;
-          background:${sel?'#2a0a14':'#1a0510'};
-          border:1.5px solid ${sel?'#ffd700':'#8a2244'};
-          color:${sel?'#ffd700':'#ff7799'};transition:background .1s;
-        ">${sel?'解除':'装備'}</button>
-        <button onclick="_previewRiichiBgm('${key}',this)" data-previewkey="${key}" style="
-          flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;
-          background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;
-        ">${isPlaying?'■ 停止':'▶ 試聴'}</button>
-      </div>
-    </div>`;
+
+    if(isPlaylist){
+      // プレイリストモード: チェックボックス風UI
+      const inPl = pl.includes(key);
+      const borderCol = inPl ? '#cc88ff' : '#4a1a2a';
+      return '<div style="background:' + (inPl?'#0d0520':'#0d0515') + ';border:2px solid ' + borderCol + ';border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .15s;"'
+        + ' onmouseover="this.style.borderColor='' + (inPl?'#ee99ff':'#9944cc') + ''"'
+        + ' onmouseout="this.style.borderColor='' + borderCol + ''">'
+        + '<div style="font-size:1.6rem;">🎵</div>'
+        + '<div style="font-size:.68rem;font-weight:700;color:' + (inPl?'#cc88ff':'#ff7799') + ';text-align:center;line-height:1.4;">' + label + '</div>'
+        + (inPl ? '<span style="font-size:.5rem;background:#1a0828;border:1px solid #cc88ff;border-radius:4px;padding:2px 8px;color:#cc88ff;">✓ リスト入り</span>' : '')
+        + '<div style="display:flex;gap:6px;width:100%;">'
+        + '<button onclick="toggleRiichiBgmPlaylist('' + key + '')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (inPl?'#1a0828':'#0e0518') + ';border:1.5px solid ' + (inPl?'#cc88ff':'#6a2a9a') + ';color:' + (inPl?'#cc88ff':'#9a5acc') + ';">' + (inPl?'解除':'追加') + '</button>'
+        + '<button onclick="_previewRiichiBgm('' + key + '',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
+        + '</div>'
+        + '</div>';
+    } else {
+      // シングルモード（従来）
+      const sel = key === cur;
+      const borderCol = sel ? '#ffd700' : '#4a1a2a';
+      return '<div style="background:#0d0515;border:2px solid ' + borderCol + ';border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .15s;"'
+        + ' onmouseover="this.style.borderColor='' + (sel?'#ffd700':'#cc4466') + ''"'
+        + ' onmouseout="this.style.borderColor='' + borderCol + ''">'
+        + '<div style="font-size:1.6rem;">🎵</div>'
+        + '<div style="font-size:.68rem;font-weight:700;color:' + (sel?'#ffd700':'#ff7799') + ';text-align:center;line-height:1.4;">' + label + '</div>'
+        + (sel ? '<span style="font-size:.5rem;background:#2a0a14;border:1px solid #ffd700;border-radius:4px;padding:2px 8px;color:#ffd700;">✓ 装備中</span>' : '')
+        + '<div style="display:flex;gap:6px;width:100%;">'
+        + '<button onclick="selectRiichiBgm('' + key + '')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (sel?'#2a0a14':'#1a0510') + ';border:1.5px solid ' + (sel?'#ffd700':'#8a2244') + ';color:' + (sel?'#ffd700':'#ff7799') + ';">' + (sel?'解除':'装備') + '</button>'
+        + '<button onclick="_previewRiichiBgm('' + key + '',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
+        + '</div>'
+        + '</div>';
+    }
   }).join('');
 }
 
 function selectRiichiBgm(key){
-  // 未解放の場合は装備不可
-  if(!((PROFILE.riichiBgms||{})[key])) return;
-  // 同じキーなら解除、違うキーなら装備
+  if(key && !((PROFILE.riichiBgms||{})[key])) return;
   PROFILE.riichiBgm = (PROFILE.riichiBgm === key) ? '' : key;
   saveProfileSilent();
   _stopRiichiBgmPreview();
@@ -23138,8 +23234,28 @@ function selectRiichiBgm(key){
   _updateRiichiBgmBookDisplay();
 }
 
+function toggleRiichiBgmPlaylist(key){
+  if(!((PROFILE.riichiBgms||{})[key])) return;
+  if(!PROFILE.riichiBgmPlaylist) PROFILE.riichiBgmPlaylist = [];
+  const idx = PROFILE.riichiBgmPlaylist.indexOf(key);
+  if(idx >= 0){
+    PROFILE.riichiBgmPlaylist.splice(idx, 1);
+  } else {
+    PROFILE.riichiBgmPlaylist.push(key);
+  }
+  saveProfileSilent();
+  _renderRiichiBgmBookGrid();
+  _updateRiichiBgmBookDisplay();
+}
+
+function clearRiichiBgmPlaylist(){
+  PROFILE.riichiBgmPlaylist = [];
+  saveProfileSilent();
+  _renderRiichiBgmBookGrid();
+  _updateRiichiBgmBookDisplay();
+}
+
 function _previewRiichiBgm(key, btn){
-  // 試聴中の同曲ならトグル停止
   if(_riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key===key){
     _stopRiichiBgmPreview();
     _renderRiichiBgmBookGrid();
@@ -23150,12 +23266,10 @@ function _previewRiichiBgm(key, btn){
   _riichiBgmPreviewAudio._key = key;
   _riichiBgmPreviewAudio.volume = Math.min(1, (typeof RIICHI_BGM!=='undefined' ? RIICHI_BGM.getVol() : 0.14));
   _riichiBgmPreviewAudio.play().catch(()=>{});
-  // 試聴は15秒で自動停止
   _riichiBgmPreviewAudio._stopTimer = setTimeout(()=>{
     _stopRiichiBgmPreview();
     _renderRiichiBgmBookGrid();
   }, 15000);
-  // ボタン表示を即時更新
   _renderRiichiBgmBookGrid();
 }
 

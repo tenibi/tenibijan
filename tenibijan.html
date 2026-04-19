@@ -2434,6 +2434,25 @@ body{
         ">💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）</button>
       </div>
 
+      <!-- リーチBGMチケット -->
+      <div id="tbbTicketArea" style="margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center;
+          background:#0a0a20;border:1px solid #3355aa;border-radius:10px;padding:8px 14px;margin-bottom:8px;">
+          <span style="font-size:1rem;">🎫</span>
+          <span style="font-size:.75rem;color:#88aaff;font-weight:700;">リーチBGMチケット</span>
+          <span style="font-size:.92rem;font-weight:700;color:#aaccff;" id="gachaTbbTicketDisplay">0</span>
+          <span style="font-size:.6rem;color:#5a6a9a;">枚所持</span>
+        </div>
+        <div class="gacha-btn-wrap" style="margin-bottom:0;">
+          <button class="gacha-pull-btn" id="tbbTicketBtn" onclick="doPullTbbTicket()" style="
+            display:none;
+            background:linear-gradient(135deg,#0a1a40,#050a20);
+            border:1.5px solid #3366cc;color:#88aaff;
+            box-shadow:0 0 10px #3366cc44;
+          ">🎫 チケットを使う（リーチBGM確定）</button>
+        </div>
+      </div>
+
       <!-- 排出アイテム一覧 -->
       <div style="margin-top:16px;background:#0a0515;border:1px solid #3a1a5a;border-radius:10px;padding:12px 14px;">
         <div style="font-size:.6rem;color:#7a5a9a;letter-spacing:.1em;margin-bottom:10px;">📋 排出アイテム（全22種）</div>
@@ -2615,6 +2634,14 @@ body{
           <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
             <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
             <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">迷いながらも</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">増長する恐怖</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;background:#12082a;border:1px solid #6a3a9a;border-radius:8px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">🎵</span>
+            <div style="flex:1;font-size:.65rem;font-weight:700;color:#cc88ff;">魔王のテーマ</div><div style="font-size:.55rem;color:#cc66ff;font-weight:700;">EPIC</div>
           </div>
         </div>
       </div>
@@ -4611,10 +4638,10 @@ const BGM = (() => {
 
 // ── リーチBGMシステム ────────────────────────────────────────
 const RIICHI_BGM = (() => {
-  // ritibgm01〜10のURL（GitHub raw）
+  // ritibgm01〜12のURL（GitHub raw）
   const BASE = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/ritibgm/';
   const tracks = {};
-  for(let i=1;i<=10;i++){
+  for(let i=1;i<=12;i++){
     const k='ritibgm'+String(i).padStart(2,'0');
     tracks[k]=BASE+k+'.mp3';
   }
@@ -6404,7 +6431,7 @@ let _rankCpuUsedNames = []; // 同一マッチで名前が被らないように�
 
 function _getRankCpuConfig(){
   // 能力: yami / pinzu / tenbi / steal からランダム
-  const _rankAbilityPool = ['yami', 'pinzu', 'tenbi', 'steal', 'red_eye'];
+  const _rankAbilityPool = ['yami', 'pinzu', 'tenbi', 'steal'];
   const ability = _rankAbilityPool[Math.floor(Math.random() * _rankAbilityPool.length)];
 
   // 名前: まだ使われていない名前からランダム
@@ -8665,6 +8692,12 @@ function applyHostState(msg){
           : _localPlayer.hand.slice())
       : null;
     G.players=s.players;
+    // ★ CPU代打修正: ゲスト自身がplayerAFK(時間切れCPU代打)中の場合、ホストsyncでisCpuがfalseに
+    // 上書きされてしまいCPU代打ボタンが押せなくなるバグを防ぐ。
+    // playerAFKはローカル変数なのでホストに通知されないが、ゲスト側でisCpuを保持しておく。
+    if(playerAFK && _myIdx!=null && G.players[_myIdx]){
+      G.players[_myIdx].isCpu = true;
+    }
     // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みだった場合、自分のyamiTileIdxをローカルの値で復元
     if((_guestYamiSelecting||_guestYamiSelected) && _myIdx!=null && G.players[_myIdx] && _savedYamiTileIdx>=0){
       G.players[_myIdx].yamiTileIdx=_savedYamiTileIdx;
@@ -10381,12 +10414,14 @@ function setAFK(on){
 function toggleCpuMode(){
   if(!G||!G.players) return;
   // ランクマッチ中はCPU代打を新たにONにすることは不可
-  // ただし時間切れ等で既にCPU代打がONになっている場合は解除できる
+  // ただし時間切れ等で既にCPU代打がONになっている場合(playerAFK または p.isCpu)は解除できる
+  // ★修正: ゲスト側ではホストsyncによりp.isCpuがfalseに上書きされることがあるため
+  //         p.isCpu だけでなく playerAFK も条件に含める
   const myIdx=NET.myIdx;
   const p=G.players[myIdx];
   if(!p) return;
-  if(NET.isRankMatch && !p.isCpu) return;
-  if(p.isCpu){
+  if(NET.isRankMatch && !p.isCpu && !playerAFK) return;
+  if(p.isCpu || playerAFK){
     // CPU解除: 自分を人間に戻す
     p.isCpu=false;
     playerAFK=false;
@@ -10704,9 +10739,10 @@ function humanAutoDiscard(){
     // noMeldON かつ autoKitaOFF → 北を無視してそのまま通過
   }
 
-  // カン可能（加槓・暗槓）→鳴き無しONなら止まらない
+  // カン可能（加槓・暗槓）→鳴き無しONなら止まらない（ただしリーチ中の暗槓は常に止まる）
   const hasKakan=p.hand.some((kt)=>p.melds.some(m=>m.type==='pon'&&teq(m.tiles[0],kt)));
   const hasAnkan=canAnkan(myIdx).length>0;
+  if(hasAnkan && p.riichi) return; // リーチ中の暗槓は鳴き無しONでも必ず止まる
   if((hasKakan||hasAnkan) && !noMeldEnabled) return;
 
   // 通常ツモ切り
@@ -11315,7 +11351,11 @@ function humanPickWall(slotIdx, _fromAuto){
       scheduleForPlayer(myIdx,550,()=>{if(G.phase==='discard'&&G.players[myIdx]?.riichi){discardAction(myIdx,G.players[myIdx].hand.length-1);broadcastState();}});
       return;
     }
-    // 暗槓できる場合はrenderAllで右下クイックボタンを表示して待つ
+    // 暗槓できる場合はrenderAllでボタンを表示して待つ（自動発火しない）
+    updateTenpai(p);
+    addLog(`${emj(tile)} ツモ（リーチ中・暗槓可能）`,'log-riichi');
+    renderAll();broadcastState();
+    return;
   }
   // リーチ中に北を引いた + 鳴き無しON（自動北抜きOFFの時のみ）→ 北を無視してツモ切り
   if(p.riichi && drawnIsKita && noMeldEnabled && !autoKitaEnabled){
@@ -12614,17 +12654,24 @@ function humanKita(){
   // 引いた嶺上牌を選択状態にする（手牌の末尾に追加されているので最後のインデックス）
   selIdx = p.hand.length - 1;
   if(canWin(p.hand)){addLog(`${emj(rep)} 嶺上開花！`,'log-tsumo');p.isRinshanKaihou=true;renderAll();broadcastState();return;}
+  const repIsKita=rep.suit==='honor'&&rep.num==='北';
   if(p.riichi){
-    const repIsKita=rep.suit==='honor'&&rep.num==='北';
     addLog(`${emj(rep)} ツモ切り（リーチ中）`,'log-riichi');
     renderAll();broadcastState();
-    if(!repIsKita){
+    if(repIsKita && autoKitaEnabled){
+      // 嶺上牌が北 かつ 自動北抜きON → 再度トリガー
+      setTimeout(()=>{ if(G.current===myIdx&&G.phase==='discard') _triggerAutoAction(myIdx,0); }, 400);
+    } else if(!repIsKita){
       scheduleForPlayer(myIdx,550,()=>{if(G.phase==='discard'&&p.riichi){discardAction(myIdx,p.hand.length-1);broadcastState();}});
     }
   }else{
     if(p.tenpai)addLog(`${emj(rep)} ツモ。テンパイ中。`,'log-new');
     else addLog(`${emj(rep)} ツモ`,'log-new');
     renderAll();broadcastState();
+    if(repIsKita && autoKitaEnabled){
+      // 嶺上牌が北 かつ 自動北抜きON → 再度トリガー
+      setTimeout(()=>{ if(G.current===myIdx&&G.phase==='discard') _triggerAutoAction(myIdx,0); }, 400);
+    }
   }
 }
 
@@ -12954,12 +13001,12 @@ function showFinalResult(){
       if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">コイン付与エラー: ${d.error||'不明'}</span>`;
     }
     // デイリーミッション: ルームマッチ1位 / ランクマッチ参加（d.okに関わらず発火）
-    if(NET.online && NET.isRankMatch) _triggerDailyMission('rank_play');
+    if(NET.isRankMatch) _triggerDailyMission('rank_play');
     else if(myRank===1 && NET.online) _triggerDailyMission('room_win');
   }).catch(e=>{
     if(rewardEl) rewardEl.innerHTML=`<span style="color:#aa4444;font-size:.7rem;">通信エラー: ${e.message}</span>`;
     // デイリーミッション: 通信エラー時もフォールバック発火
-    if(NET.online && NET.isRankMatch) _triggerDailyMission('rank_play');
+    if(NET.isRankMatch) _triggerDailyMission('rank_play');
     else if(myRank===1 && NET.online) _triggerDailyMission('room_win');
   });
   saveProfileSilent();
@@ -16231,7 +16278,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}, premium:false};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}, reachBgmTickets:0, premium:false};
 // vcIconId: VCアイコン（音声SE用）、未設定時はiconIdを使用
 // displayIconId: 見た目アイコン（画面表示用）、未設定時はiconIdを使用
 function _getProfileDisplayIconId(){ return PROFILE.displayIconId || PROFILE.iconId || ''; }
@@ -16719,6 +16766,8 @@ const _TBB_POOL = [
   { type:'bgm', key:'ritibgm08', weight:15, rarity:'epic', name:'優雅な一撃',        icon:'🎵', desc:'リーチBGM' },
   { type:'bgm', key:'ritibgm09', weight:15, rarity:'epic', name:'コーヒーブレイク',  icon:'🎵', desc:'リーチBGM' },
   { type:'bgm', key:'ritibgm10', weight:15, rarity:'epic', name:'迷いながらも',      icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm11', weight:15, rarity:'epic', name:'増長する恐怖',      icon:'🎵', desc:'リーチBGM' },
+  { type:'bgm', key:'ritibgm12', weight:15, rarity:'epic', name:'魔王のテーマ',      icon:'🎵', desc:'リーチBGM' },
 ];
 function _tbbRoll(){
   const total = _TBB_POOL.reduce((s,e)=>s+e.weight,0);
@@ -17060,6 +17109,7 @@ function loadProfile(){
         agariVideo:    data.agariVideo    ?? PROFILE.agariVideo    ?? 'agari01',
         agariVideos:   data.agariVideos   ?? PROFILE.agariVideos   ?? {},
         riichiBgms:    data.riichiBgms    ?? PROFILE.riichiBgms    ?? {},
+        reachBgmTickets: data.reachBgmTickets ?? PROFILE.reachBgmTickets ?? 0,
         emoteSets:     data.emoteSets     ?? PROFILE.emoteSets     ?? [['','','','']],
         uid:           data.uid           || PROFILE.uid           || '',
         newCharPresentDone: data.newCharPresentDone ?? PROFILE.newCharPresentDone ?? false,
@@ -18910,6 +18960,13 @@ function updateGachaCoinDisplay(){
 function updateGachaTbbDisplay(){
   const el=document.getElementById('gachaTbbDisplay');
   if(el) el.textContent=(PROFILE.tbbCoins||0).toLocaleString();
+  const tel=document.getElementById('gachaTbbTicketDisplay');
+  if(tel) tel.textContent=(PROFILE.reachBgmTickets||0);
+  const tbtn=document.getElementById('tbbTicketBtn');
+  if(tbtn){
+    const hasTicket=(PROFILE.reachBgmTickets||0)>0;
+    tbtn.style.display=hasTicket?'':'none';
+  }
 }
 
 function _showTbbMsg(msg){
@@ -19065,6 +19122,40 @@ function doPullTbb(){
     _playTbbGachaVideo(()=>{ _showTbbGachaAnim(wonItem, isNew); });
   }).catch((e)=>{
     if(btn){ btn.disabled=false; btn.innerHTML='💉 1回引く（<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin:0 1px;">100枚）'; }
+    _showTbbMsg('通信エラーが発生しました。再度お試しください');
+  });
+}
+
+// ── リーチBGMチケット使用ガチャ ──────────────────────────────────
+function doPullTbbTicket(){
+  if((PROFILE.reachBgmTickets||0)<1){
+    _showTbbMsg('リーチBGMチケットを所持していません');
+    return;
+  }
+  const btn=document.getElementById('tbbTicketBtn');
+  if(btn){ btn.disabled=true; btn.textContent='使用中…'; }
+  authFetch('/api/gacha-tbb',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({pullType:'ticket_bgm'})})
+  .then(r=>r.json()).then(d=>{
+    if(btn){ btn.disabled=false; btn.textContent='🎫 チケットを使う（リーチBGM確定）'; }
+    if(!d.ok){
+      _showTbbMsg(d.error || 'エラーが発生しました');
+      return;
+    }
+    // チケット枚数を更新
+    PROFILE.reachBgmTickets = d.reachBgmTickets ?? Math.max(0,(PROFILE.reachBgmTickets||0)-1);
+    // 当選BGMを特定
+    const wonItem = (d.bgmKey && _TBB_POOL.find(e=>e.key===d.bgmKey)) || _TBB_POOL.find(e=>e.type==='bgm');
+    if(!PROFILE.riichiBgms) PROFILE.riichiBgms={};
+    const isNew = !PROFILE.riichiBgms[wonItem.key];
+    PROFILE.riichiBgms[wonItem.key] = (PROFILE.riichiBgms[wonItem.key]||0)+1;
+    if(d.riichiBgms) PROFILE.riichiBgms = d.riichiBgms;
+    saveProfileSilent();
+    updateGachaTbbDisplay();
+    updateTbbGachaStat();
+    _playTbbGachaVideo(()=>{ _showTbbGachaAnim(wonItem, isNew); });
+  }).catch(()=>{
+    if(btn){ btn.disabled=false; btn.textContent='🎫 チケットを使う（リーチBGM確定）'; }
     _showTbbMsg('通信エラーが発生しました。再度お試しください');
   });
 }
@@ -20078,6 +20169,9 @@ async function claimGift(giftId, btn){
     } else if(d.type==='agari'){
       if(d.agariVideos) PROFILE.agariVideos = d.agariVideos;
       else { PROFILE.agariVideos=PROFILE.agariVideos||{}; PROFILE.agariVideos[d.agariKey]=(PROFILE.agariVideos[d.agariKey]||0)+1; }
+    } else if(d.type==='reach_bgm_ticket'){
+      PROFILE.reachBgmTickets = d.reachBgmTickets ?? ((PROFILE.reachBgmTickets||0)+d.amount);
+      updateGachaTbbDisplay();
     }
     updateProfileBadge();
     // 受取済み行を消す
@@ -20116,6 +20210,7 @@ async function _openAdminGiftModal(){
     function _adminGiftLabel(g){
       if(g.type==='tbb_coins') return `🪙 TBBコイン ×${g.amount}`;
       if(g.type==='coins')     return `<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tenibi.png" style="width:13px;height:13px;vertical-align:middle;margin-right:2px;">手にビコイン ×${g.amount}`;
+      if(g.type==='reach_bgm_ticket') return `🎫 リーチBGMチケット ×${g.amount}`;
       if(g.type==='ring')      return `💍 ${(_RING_CATALOG&&_RING_CATALOG.find(r=>r.key===g.skin_key)?.name)||g.skin_key}`;
       if(g.type==='bgm')       return `🎵 ${(_RIICHI_BGM_LABELS&&_RIICHI_BGM_LABELS[g.skin_key])||g.skin_key}`;
       if(g.type==='ability')   return `⚡ アビリティ: ${g.skin_key}`;
@@ -20176,6 +20271,7 @@ async function _claimAllAdminGifts(btn){
         else if(cd.type==='icon'){ if(cd.gachaIcons) PROFILE.gachaIcons=cd.gachaIcons; else { PROFILE.gachaIcons=PROFILE.gachaIcons||[]; if(!PROFILE.gachaIcons.includes(cd.iconKey)) PROFILE.gachaIcons.push(cd.iconKey); } }
         else if(cd.type==='emote'){ if(cd.ownedEmoteSets) PROFILE.ownedEmoteSets=cd.ownedEmoteSets; else { PROFILE.ownedEmoteSets=PROFILE.ownedEmoteSets||['01']; if(!PROFILE.ownedEmoteSets.includes(cd.emoteKey)) PROFILE.ownedEmoteSets.push(cd.emoteKey); } }
         else if(cd.type==='agari'){ if(cd.agariVideos) PROFILE.agariVideos=cd.agariVideos; else { PROFILE.agariVideos=PROFILE.agariVideos||{}; PROFILE.agariVideos[cd.agariKey]=(PROFILE.agariVideos[cd.agariKey]||0)+1; } }
+        else if(cd.type==='reach_bgm_ticket'){ PROFILE.reachBgmTickets = cd.reachBgmTickets ?? ((PROFILE.reachBgmTickets||0)+cd.amount); updateGachaTbbDisplay(); }
       }catch(e2){}
     }
     updateProfileBadge();
@@ -22928,6 +23024,8 @@ const _RIICHI_BGM_LABELS = {
   ritibgm04:'猶予',ritibgm05:'終焉のカウントダウン',ritibgm06:'それぞれの道へ',
   ritibgm07:'ラストスパート',ritibgm08:'優雅な一撃',ritibgm09:'コーヒーブレイク',
   ritibgm10:'迷いながらも',
+  ritibgm11:'増長する恐怖',
+  ritibgm12:'魔王のテーマ',
 };
 const _RIICHI_BGM_BASE = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/ritibgm/';
 let _riichiBgmPreviewAudio = null;

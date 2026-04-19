@@ -23196,14 +23196,14 @@ function _renderRiichiBgmBookGrid(){
       const inPl = pl.includes(key);
       const borderCol = inPl ? '#cc88ff' : '#4a1a2a';
       return '<div style="background:' + (inPl?'#0d0520':'#0d0515') + ';border:2px solid ' + borderCol + ';border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .15s;"'
-        + ' onmouseover="this.style.borderColor='' + (inPl?'#ee99ff':'#9944cc') + ''"'
-        + ' onmouseout="this.style.borderColor='' + borderCol + ''">'
+        + ' onmouseover="this.style.borderColor=\'' + (inPl?'#ee99ff':'#9944cc') + '\'"'
+        + ' onmouseout="this.style.borderColor=\'' + borderCol + '\'">'  
         + '<div style="font-size:1.6rem;">🎵</div>'
         + '<div style="font-size:.68rem;font-weight:700;color:' + (inPl?'#cc88ff':'#ff7799') + ';text-align:center;line-height:1.4;">' + label + '</div>'
         + (inPl ? '<span style="font-size:.5rem;background:#1a0828;border:1px solid #cc88ff;border-radius:4px;padding:2px 8px;color:#cc88ff;">✓ リスト入り</span>' : '')
         + '<div style="display:flex;gap:6px;width:100%;">'
-        + '<button onclick="toggleRiichiBgmPlaylist('' + key + '')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (inPl?'#1a0828':'#0e0518') + ';border:1.5px solid ' + (inPl?'#cc88ff':'#6a2a9a') + ';color:' + (inPl?'#cc88ff':'#9a5acc') + ';">' + (inPl?'解除':'追加') + '</button>'
-        + '<button onclick="_previewRiichiBgm('' + key + '',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
+        + '<button onclick="toggleRiichiBgmPlaylist(\'' + key + '\')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (inPl?'#1a0828':'#0e0518') + ';border:1.5px solid ' + (inPl?'#cc88ff':'#6a2a9a') + ';color:' + (inPl?'#cc88ff':'#9a5acc') + ';">' + (inPl?'解除':'追加') + '</button>'
+        + '<button onclick="_previewRiichiBgm(\'' + key + '\',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
         + '</div>'
         + '</div>';
     } else {
@@ -23211,14 +23211,14 @@ function _renderRiichiBgmBookGrid(){
       const sel = key === cur;
       const borderCol = sel ? '#ffd700' : '#4a1a2a';
       return '<div style="background:#0d0515;border:2px solid ' + borderCol + ';border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .15s;"'
-        + ' onmouseover="this.style.borderColor='' + (sel?'#ffd700':'#cc4466') + ''"'
-        + ' onmouseout="this.style.borderColor='' + borderCol + ''">'
+        + ' onmouseover="this.style.borderColor=\'' + (sel?'#ffd700':'#cc4466') + '\'"'
+        + ' onmouseout="this.style.borderColor=\'' + borderCol + '\'">'  
         + '<div style="font-size:1.6rem;">🎵</div>'
         + '<div style="font-size:.68rem;font-weight:700;color:' + (sel?'#ffd700':'#ff7799') + ';text-align:center;line-height:1.4;">' + label + '</div>'
         + (sel ? '<span style="font-size:.5rem;background:#2a0a14;border:1px solid #ffd700;border-radius:4px;padding:2px 8px;color:#ffd700;">✓ 装備中</span>' : '')
         + '<div style="display:flex;gap:6px;width:100%;">'
-        + '<button onclick="selectRiichiBgm('' + key + '')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (sel?'#2a0a14':'#1a0510') + ';border:1.5px solid ' + (sel?'#ffd700':'#8a2244') + ';color:' + (sel?'#ffd700':'#ff7799') + ';">' + (sel?'解除':'装備') + '</button>'
-        + '<button onclick="_previewRiichiBgm('' + key + '',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
+        + '<button onclick="selectRiichiBgm(\'' + key + '\')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (sel?'#2a0a14':'#1a0510') + ';border:1.5px solid ' + (sel?'#ffd700':'#8a2244') + ';color:' + (sel?'#ffd700':'#ff7799') + ';">' + (sel?'解除':'装備') + '</button>'
+        + '<button onclick="_previewRiichiBgm(\'' + key + '\',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
         + '</div>'
         + '</div>';
     }

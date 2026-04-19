@@ -8531,7 +8531,7 @@ function handleGuestAction(msg, senderIdx){
       }
       break;
     case 'kita':      remoteKita(msg.pidx); break;
-    case 'riichi':    remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false, msg.yamiTileIdx??-1, msg.tile??null, msg.yamiTileRef??null); break;
+    case 'riichi':    if(msg.bgmKey && typeof RIICHI_BGM!=='undefined') RIICHI_BGM.setGuestBgm(msg.pidx, msg.bgmKey); remoteRiichi(msg.pidx, msg.mode, msg.tidx, msg.isYami??false, msg.yamiTileIdx??-1, msg.tile??null, msg.yamiTileRef??null); break;
     case 'nextRound': nextRound(); break;
     case 'backToRoom': backToRoom(); break; // ホストから部屋戻り通知
     case 'requestMyName':
@@ -12387,7 +12387,7 @@ function humanDiscard(){
   if(isYamiDiscard) p.abilityUsed=true;
   selIdx=-1;
   if(NET.online&&!amIHost()){
-    if(G.pendingRiichi){const _rt=p.hand[idx];const _yt=(p.yamiTileIdx>=0&&p.yamiTileIdx<p.hand.length)?p.hand[p.yamiTileIdx]:null;netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,tile:_rt?{suit:_rt.suit,num:_rt.num,_isAka:!!_rt._isAka}:null,isYami:isYamiDiscard,yamiTileIdx:p.yamiTileIdx??-1,yamiTileRef:_yt?{suit:_yt.suit,num:_yt.num,_isAka:!!_yt._isAka}:null});}
+    if(G.pendingRiichi){const _rt=p.hand[idx];const _yt=(p.yamiTileIdx>=0&&p.yamiTileIdx<p.hand.length)?p.hand[p.yamiTileIdx]:null;const _rpl=PROFILE.riichiBgmPlaylist||[];const _rbk=_rpl.length>0?_rpl[Math.floor(Math.random()*_rpl.length)]:(PROFILE.riichiBgm||'');netSend({type:'riichi',pidx:NET.myIdx,mode:G.pendingRiichi,tidx:idx,tile:_rt?{suit:_rt.suit,num:_rt.num,_isAka:!!_rt._isAka}:null,isYami:isYamiDiscard,yamiTileIdx:p.yamiTileIdx??-1,yamiTileRef:_yt?{suit:_yt.suit,num:_yt.num,_isAka:!!_yt._isAka}:null,bgmKey:_rbk});}
     else{const _dt=p.hand[idx];netSend({type:'discard',pidx:NET.myIdx,tidx:idx,tile:_dt?{suit:_dt.suit,num:_dt.num,_isAka:!!_dt._isAka}:null,isYami:isYamiDiscard});}
     // ★ 闇バグ修正: ゲストはdiscardActionを呼ばないためここでyamiTileIdxをリセット
     // これをしないと、次のホストstate受信時に_guestYamiSelected=trueのまま残り
@@ -19006,7 +19006,7 @@ function updateTbbGachaStat(){
   }
 }
 
-// TBBガチャ: 150TBBで1回、刺青01 or 指輪が排出
+// TBBガチャ: 100TBBで1回、刺青01 or 指輪が排出
 // ── TBBガチャ演出動画 ──────────────────────────────────────────
 function _playTbbGachaVideo(callback){
   // オーバーレイを作成（既存があれば使い回す）
@@ -22714,19 +22714,7 @@ function _showNcpToast(iconId) {
     <div style="font-size:.58rem;color:#7a3a5a;margin-top:4px;">リーチ宣言時に再生されます</div>
   </div>
 
-  <!-- モード切り替えタブ -->
-  <div style="width:100%;max-width:480px;display:flex;gap:0;margin-bottom:16px;border-radius:10px;overflow:hidden;border:1.5px solid #4a1a2a;">
-    <button id="riichiBgmTabSingle" onclick="switchRiichiBgmMode('single')" style="
-      flex:1;padding:9px 0;font-size:.7rem;font-weight:700;cursor:pointer;
-      background:#2a0a14;color:#ff7799;border:none;transition:background .15s,color .15s;
-    ">🎵 シングル</button>
-    <button id="riichiBgmTabPlaylist" onclick="switchRiichiBgmMode('playlist')" style="
-      flex:1;padding:9px 0;font-size:.7rem;font-weight:700;cursor:pointer;
-      background:#0a0308;color:#7a3a5a;border:none;border-left:1.5px solid #4a1a2a;transition:background .15s,color .15s;
-    ">🎲 プレイリスト</button>
-  </div>
-
-  <!-- シングルモード: 装備中表示 -->
+  <!-- 装備中表示 -->
   <div id="riichiBgmSinglePanel" style="width:100%;max-width:480px;margin-bottom:16px;
     background:#15050d;border:1.5px solid #8a2244;border-radius:12px;padding:12px 16px;
     display:flex;align-items:center;gap:10px;">
@@ -22737,22 +22725,7 @@ function _showNcpToast(iconId) {
     </div>
   </div>
 
-  <!-- プレイリストモード: 選択状況表示 -->
-  <div id="riichiBgmPlaylistPanel" style="display:none;width:100%;max-width:480px;margin-bottom:16px;
-    background:#0d0518;border:1.5px solid #5a2a8a;border-radius:12px;padding:12px 16px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <span style="font-size:1.2rem;">🎲</span>
-      <div>
-        <div style="font-size:.6rem;color:#8a5aaa;letter-spacing:.08em;">プレイリスト</div>
-        <div id="riichiBgmPlaylistCount" style="font-size:.78rem;font-weight:700;color:#cc88ff;">0曲選択中</div>
-      </div>
-      <button onclick="clearRiichiBgmPlaylist()" style="margin-left:auto;font-size:.58rem;padding:4px 10px;border-radius:6px;cursor:pointer;background:#0a0310;border:1px solid #5a2a8a;color:#8a5aaa;">全解除</button>
-    </div>
-    <div id="riichiBgmPlaylistNames" style="font-size:.55rem;color:#9a6acc;line-height:1.8;">未選択</div>
-    <div style="font-size:.5rem;color:#6a4a8a;margin-top:4px;">リーチ宣言時に選択曲からランダムで1曲再生</div>
-  </div>
-
-  <!-- BGMなしボタン（シングルモードのみ） -->
+  <!-- BGMなしボタン -->
   <div id="riichiBgmNoneBtnWrap" style="width:100%;max-width:480px;margin-bottom:12px;">
     <button id="riichiBgmBookNoneBtn" onclick="selectRiichiBgm('')" style="
       width:100%;padding:10px 16px;border-radius:10px;cursor:pointer;
@@ -23077,43 +23050,17 @@ const _RIICHI_BGM_LABELS = {
 };
 const _RIICHI_BGM_BASE = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/ritibgm/';
 let _riichiBgmPreviewAudio = null;
-let _riichiBgmBookMode = 'single'; // 'single' | 'playlist'
-
 function openRiichiBgmBook(){
   document.getElementById('profileScreen').classList.remove('active');
   document.getElementById('riichiBgmBookScreen').style.display='flex';
-  // プレイリストに曲があればプレイリストモードで開く
-  const pl = PROFILE.riichiBgmPlaylist||[];
-  _riichiBgmBookMode = pl.length > 0 ? 'playlist' : 'single';
-  _applyRiichiBgmMode();
   _renderRiichiBgmBookGrid();
 }
 function closeRiichiBgmBook(){
   _stopRiichiBgmPreview();
+  _closeRiichiBgmPlaylistModal();
   document.getElementById('riichiBgmBookScreen').style.display='none';
   document.getElementById('profileScreen').classList.add('active');
   _updateRiichiBgmBookDisplay();
-}
-
-function switchRiichiBgmMode(mode){
-  _riichiBgmBookMode = mode;
-  _stopRiichiBgmPreview();
-  _applyRiichiBgmMode();
-  _renderRiichiBgmBookGrid();
-}
-
-function _applyRiichiBgmMode(){
-  const isSingle = _riichiBgmBookMode === 'single';
-  const tabSingle = document.getElementById('riichiBgmTabSingle');
-  const tabPlaylist = document.getElementById('riichiBgmTabPlaylist');
-  const singlePanel = document.getElementById('riichiBgmSinglePanel');
-  const playlistPanel = document.getElementById('riichiBgmPlaylistPanel');
-  const noneBtn = document.getElementById('riichiBgmNoneBtnWrap');
-  if(tabSingle){ tabSingle.style.background = isSingle ? '#2a0a14' : '#0a0308'; tabSingle.style.color = isSingle ? '#ff7799' : '#7a3a5a'; }
-  if(tabPlaylist){ tabPlaylist.style.background = isSingle ? '#0a0308' : '#12042a'; tabPlaylist.style.color = isSingle ? '#7a3a5a' : '#cc88ff'; }
-  if(singlePanel) singlePanel.style.display = isSingle ? 'flex' : 'none';
-  if(playlistPanel) playlistPanel.style.display = isSingle ? 'none' : 'block';
-  if(noneBtn) noneBtn.style.display = isSingle ? 'block' : 'none';
 }
 
 function _updateRiichiBgmBookDisplay(){
@@ -23142,26 +23089,117 @@ function _updateRiichiBgmBookDisplay(){
 function _updateRiichiBgmNoneBtnStyle(){
   const btn = document.getElementById('riichiBgmBookNoneBtn');
   if(!btn) return;
-  const isNone = !PROFILE.riichiBgm && (_riichiBgmBookMode==='single');
+  const isNone = !PROFILE.riichiBgm && !(PROFILE.riichiBgmPlaylist||[]).length;
   btn.style.borderColor = isNone ? '#ffd700' : '#3a1a2a';
   btn.style.color = isNone ? '#ffd700' : '#7a3a5a';
 }
 
-function _updateRiichiBgmPlaylistPanel(){
+// ── プレイリスト編集モーダル ─────────────────────────────────────
+function openRiichiBgmPlaylistModal(){
+  let modal = document.getElementById('riichiBgmPlaylistModal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'riichiBgmPlaylistModal';
+    modal.style.cssText = [
+      'position:fixed','inset:0','z-index:100',
+      'background:rgba(0,0,0,.82)',
+      'display:flex','align-items:center','justify-content:center',
+      'padding:16px'
+    ].join(';');
+    modal.innerHTML = `
+      <div style="background:#0d0518;border:1.5px solid #7a3aaa;border-radius:16px;
+        width:100%;max-width:460px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+        <!-- ヘッダー -->
+        <div style="padding:14px 16px 10px;border-bottom:1px solid #3a1a5a;flex-shrink:0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:.95rem;font-weight:900;color:#cc88ff;letter-spacing:.08em;">🎲 プレイリストリーチBGM</div>
+            <button onclick="_closeRiichiBgmPlaylistModal()" style="
+              background:#1a0828;border:1px solid #5a2a8a;color:#8a5aaa;
+              border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.7rem;">✕ 閉じる</button>
+          </div>
+          <div style="font-size:.55rem;color:#7a5a9a;">所有しているリーチBGMを複数選択できます。リーチ宣言時にランダムで1曲再生されます。</div>
+          <!-- 選択中の曲一覧 -->
+          <div id="plModalSelectedNames" style="margin-top:8px;min-height:20px;font-size:.55rem;color:#9a6acc;line-height:1.8;"></div>
+          <!-- 全解除ボタン -->
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <div id="plModalCount" style="font-size:.72rem;font-weight:700;color:#cc88ff;align-self:center;">0曲選択中</div>
+            <button onclick="clearRiichiBgmPlaylist()" style="
+              margin-left:auto;font-size:.58rem;padding:4px 12px;border-radius:6px;
+              cursor:pointer;background:#0a0310;border:1px solid #5a2a8a;color:#8a5aaa;">全解除</button>
+          </div>
+        </div>
+        <!-- BGM一覧（所有分のみ） -->
+        <div id="plModalGrid" style="
+          overflow-y:auto;padding:12px;
+          display:grid;grid-template-columns:repeat(2,1fr);gap:8px;
+        "></div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  _renderRiichiBgmPlaylistModal();
+}
+
+function _closeRiichiBgmPlaylistModal(){
+  const modal = document.getElementById('riichiBgmPlaylistModal');
+  if(modal) modal.style.display = 'none';
+  _renderRiichiBgmBookGrid();
+  _updateRiichiBgmBookDisplay();
+}
+
+function _renderRiichiBgmPlaylistModal(){
+  const grid = document.getElementById('plModalGrid');
+  const countEl = document.getElementById('plModalCount');
+  const namesEl = document.getElementById('plModalSelectedNames');
+  if(!grid) return;
+  const rb = PROFILE.riichiBgms || {};
   const pl = PROFILE.riichiBgmPlaylist || [];
-  const countEl = document.getElementById('riichiBgmPlaylistCount');
-  const namesEl = document.getElementById('riichiBgmPlaylistNames');
+  const owned = Object.keys(_RIICHI_BGM_LABELS).filter(k => (rb[k]||0) > 0);
+
   if(countEl) countEl.textContent = pl.length + '曲選択中';
   if(namesEl){
-    if(pl.length === 0){
-      namesEl.textContent = '未選択';
-    } else {
-      namesEl.innerHTML = pl.map(k => {
-        const name = _RIICHI_BGM_LABELS[k] || k;
-        return '<span style="display:inline-block;background:#1a0828;border:1px solid #5a2a8a;border-radius:4px;padding:1px 7px;margin:1px 2px;color:#cc88ff;">' + name + '</span>';
-      }).join('');
-    }
+    namesEl.innerHTML = pl.length === 0 ? '<span style="color:#5a3a7a;">未選択</span>'
+      : pl.map(k => '<span style="display:inline-block;background:#1a0828;border:1px solid #5a2a8a;border-radius:4px;padding:1px 7px;margin:1px 2px;color:#cc88ff;">' + (_RIICHI_BGM_LABELS[k]||k) + '</span>').join('');
   }
+
+  grid.innerHTML = owned.length === 0
+    ? '<div style="grid-column:span 2;text-align:center;padding:30px;color:#5a3a7a;font-size:.7rem;">所有しているBGMがありません</div>'
+    : owned.map(key => {
+        const label = _RIICHI_BGM_LABELS[key];
+        const inPl = pl.includes(key);
+        const isPlaying = _riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key === key;
+        const borderCol = inPl ? '#cc88ff' : '#3a1a5a';
+        return '<div style="background:' + (inPl?'#130825':'#0a0415') + ';border:2px solid ' + borderCol + ';border-radius:10px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s;"'
+          + ' onmouseover="this.style.borderColor=\'' + (inPl?'#ee99ff':'#7a44bb') + '\'"'
+          + ' onmouseout="this.style.borderColor=\'' + borderCol + '\'">'
+          + '<div style="font-size:1.4rem;">🎵</div>'
+          + '<div style="font-size:.65rem;font-weight:700;color:' + (inPl?'#cc88ff':'#dd99cc') + ';text-align:center;line-height:1.3;">' + label + '</div>'
+          + (inPl ? '<span style="font-size:.48rem;background:#1a0828;border:1px solid #cc88ff;border-radius:3px;padding:1px 6px;color:#cc88ff;">✓ 選択中</span>' : '')
+          + '<div style="display:flex;gap:5px;width:100%;">'
+          + '<button onclick="toggleRiichiBgmPlaylist(\'' + key + '\')" style="flex:1;padding:5px 2px;border-radius:6px;cursor:pointer;font-size:.58rem;font-weight:700;'
+          + 'background:' + (inPl?'#1a0828':'#0e0518') + ';border:1.5px solid ' + (inPl?'#cc88ff':'#6a2a9a') + ';color:' + (inPl?'#cc88ff':'#9a5acc') + ';">' + (inPl?'解除':'選択') + '</button>'
+          + '<button onclick="_previewRiichiBgmModal(\'' + key + '\')" style="flex:1;padding:5px 2px;border-radius:6px;cursor:pointer;font-size:.58rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■':'▶') + '</button>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+}
+
+function _previewRiichiBgmModal(key){
+  if(_riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key===key){
+    _stopRiichiBgmPreview();
+    _renderRiichiBgmPlaylistModal();
+    return;
+  }
+  _stopRiichiBgmPreview();
+  _riichiBgmPreviewAudio = new Audio(_RIICHI_BGM_BASE+key+'.mp3');
+  _riichiBgmPreviewAudio._key = key;
+  _riichiBgmPreviewAudio.volume = Math.min(1, (typeof RIICHI_BGM!=='undefined' ? RIICHI_BGM.getVol() : 0.14));
+  _riichiBgmPreviewAudio.play().catch(()=>{});
+  _riichiBgmPreviewAudio._stopTimer = setTimeout(()=>{
+    _stopRiichiBgmPreview();
+    _renderRiichiBgmPlaylistModal();
+  }, 15000);
+  _renderRiichiBgmPlaylistModal();
 }
 
 function _renderRiichiBgmBookGrid(){
@@ -23171,13 +23209,39 @@ function _renderRiichiBgmBookGrid(){
   const cur = PROFILE.riichiBgm || '';
   const rb  = PROFILE.riichiBgms || {};
   const pl  = PROFILE.riichiBgmPlaylist || [];
-  const isPlaylist = _riichiBgmBookMode === 'playlist';
 
-  if(equippedEl) equippedEl.textContent = cur ? (_RIICHI_BGM_LABELS[cur] || cur) : 'なし';
+  // 装備中表示: プレイリスト優先
+  if(equippedEl){
+    if(pl.length > 0) equippedEl.innerHTML = '<span style="color:#cc88ff;">🎲 プレイリスト (' + pl.length + '曲)</span>';
+    else equippedEl.textContent = cur ? (_RIICHI_BGM_LABELS[cur] || cur) : 'なし';
+  }
   _updateRiichiBgmNoneBtnStyle();
-  if(isPlaylist) _updateRiichiBgmPlaylistPanel();
 
-  grid.innerHTML = Object.keys(_RIICHI_BGM_LABELS).map(key=>{
+  // プレイリストカード（先頭固定）+ 各BGMカード
+  const playlistCard = (() => {
+    const hasPl = pl.length > 0;
+    const borderCol = hasPl ? '#cc88ff' : '#5a2a8a';
+    return '<div onclick="openRiichiBgmPlaylistModal()" style="'
+      + 'background:' + (hasPl?'#130825':'#0a0415') + ';border:2px solid ' + borderCol + ';'
+      + 'border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;'
+      + 'cursor:pointer;transition:border-color .15s;grid-column:span 2;"'
+      + ' onmouseover="this.style.borderColor=\'' + (hasPl?'#ee99ff':'#9944cc') + '\'"'
+      + ' onmouseout="this.style.borderColor=\'' + borderCol + '\'">'
+      + '<div style="display:flex;align-items:center;gap:10px;width:100%;">'
+      + '<div style="font-size:2rem;">🎲</div>'
+      + '<div style="flex:1;">'
+      + '<div style="font-size:.75rem;font-weight:900;color:' + (hasPl?'#cc88ff':'#9a5acc') + ';letter-spacing:.05em;">プレイリストリーチBGM</div>'
+      + '<div style="font-size:.52rem;color:' + (hasPl?'#9a6acc':'#5a3a7a') + ';margin-top:2px;">'
+      + (hasPl ? pl.length + '曲選択中 ・ リーチ時ランダム再生' : '所有BGMから複数選択してリーチ時にランダム再生') + '</div>'
+      + (hasPl ? '<div style="margin-top:4px;">' + pl.map(k=>'<span style="display:inline-block;background:#1a0828;border:1px solid #5a2a8a;border-radius:3px;padding:0px 5px;margin:1px 2px;font-size:.48rem;color:#cc88ff;">' + (_RIICHI_BGM_LABELS[k]||k) + '</span>').join('') + '</div>' : '')
+      + '</div>'
+      + (hasPl ? '<span style="font-size:.5rem;background:#1a0828;border:1px solid #cc88ff;border-radius:4px;padding:2px 8px;color:#cc88ff;white-space:nowrap;align-self:flex-start;">✓ 有効</span>' : '')
+      + '</div>'
+      + '<div style="font-size:.58rem;color:' + (hasPl?'#9a6acc':'#6a3a9a') + ';width:100%;text-align:right;">タップして編集 ▶</div>'
+      + '</div>';
+  })();
+
+  grid.innerHTML = playlistCard + Object.keys(_RIICHI_BGM_LABELS).map(key=>{
     const label = _RIICHI_BGM_LABELS[key];
     const unlocked = (rb[key]||0) > 0;
     const isPlaying = _riichiBgmPreviewAudio && _riichiBgmPreviewAudio._key === key;
@@ -23191,37 +23255,19 @@ function _renderRiichiBgmBookGrid(){
         + '</div>';
     }
 
-    if(isPlaylist){
-      // プレイリストモード: チェックボックス風UI
-      const inPl = pl.includes(key);
-      const borderCol = inPl ? '#cc88ff' : '#4a1a2a';
-      return '<div style="background:' + (inPl?'#0d0520':'#0d0515') + ';border:2px solid ' + borderCol + ';border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .15s;"'
-        + ' onmouseover="this.style.borderColor=\'' + (inPl?'#ee99ff':'#9944cc') + '\'"'
-        + ' onmouseout="this.style.borderColor=\'' + borderCol + '\'">'  
-        + '<div style="font-size:1.6rem;">🎵</div>'
-        + '<div style="font-size:.68rem;font-weight:700;color:' + (inPl?'#cc88ff':'#ff7799') + ';text-align:center;line-height:1.4;">' + label + '</div>'
-        + (inPl ? '<span style="font-size:.5rem;background:#1a0828;border:1px solid #cc88ff;border-radius:4px;padding:2px 8px;color:#cc88ff;">✓ リスト入り</span>' : '')
-        + '<div style="display:flex;gap:6px;width:100%;">'
-        + '<button onclick="toggleRiichiBgmPlaylist(\'' + key + '\')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (inPl?'#1a0828':'#0e0518') + ';border:1.5px solid ' + (inPl?'#cc88ff':'#6a2a9a') + ';color:' + (inPl?'#cc88ff':'#9a5acc') + ';">' + (inPl?'解除':'追加') + '</button>'
-        + '<button onclick="_previewRiichiBgm(\'' + key + '\',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
-        + '</div>'
-        + '</div>';
-    } else {
-      // シングルモード（従来）
-      const sel = key === cur;
-      const borderCol = sel ? '#ffd700' : '#4a1a2a';
-      return '<div style="background:#0d0515;border:2px solid ' + borderCol + ';border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .15s;"'
-        + ' onmouseover="this.style.borderColor=\'' + (sel?'#ffd700':'#cc4466') + '\'"'
-        + ' onmouseout="this.style.borderColor=\'' + borderCol + '\'">'  
-        + '<div style="font-size:1.6rem;">🎵</div>'
-        + '<div style="font-size:.68rem;font-weight:700;color:' + (sel?'#ffd700':'#ff7799') + ';text-align:center;line-height:1.4;">' + label + '</div>'
-        + (sel ? '<span style="font-size:.5rem;background:#2a0a14;border:1px solid #ffd700;border-radius:4px;padding:2px 8px;color:#ffd700;">✓ 装備中</span>' : '')
-        + '<div style="display:flex;gap:6px;width:100%;">'
-        + '<button onclick="selectRiichiBgm(\'' + key + '\')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (sel?'#2a0a14':'#1a0510') + ';border:1.5px solid ' + (sel?'#ffd700':'#8a2244') + ';color:' + (sel?'#ffd700':'#ff7799') + ';">' + (sel?'解除':'装備') + '</button>'
-        + '<button onclick="_previewRiichiBgm(\'' + key + '\',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
-        + '</div>'
-        + '</div>';
-    }
+    const sel = key === cur;
+    const borderCol = sel ? '#ffd700' : '#4a1a2a';
+    return '<div style="background:#0d0515;border:2px solid ' + borderCol + ';border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .15s;"'
+      + ' onmouseover="this.style.borderColor=\'' + (sel?'#ffd700':'#cc4466') + '\'"'
+      + ' onmouseout="this.style.borderColor=\'' + borderCol + '\'">'
+      + '<div style="font-size:1.6rem;">🎵</div>'
+      + '<div style="font-size:.68rem;font-weight:700;color:' + (sel?'#ffd700':'#ff7799') + ';text-align:center;line-height:1.4;">' + label + '</div>'
+      + (sel ? '<span style="font-size:.5rem;background:#2a0a14;border:1px solid #ffd700;border-radius:4px;padding:2px 8px;color:#ffd700;">✓ 装備中</span>' : '')
+      + '<div style="display:flex;gap:6px;width:100%;">'
+      + '<button onclick="selectRiichiBgm(\'' + key + '\')" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;font-weight:700;background:' + (sel?'#2a0a14':'#1a0510') + ';border:1.5px solid ' + (sel?'#ffd700':'#8a2244') + ';color:' + (sel?'#ffd700':'#ff7799') + ';">' + (sel?'解除':'装備') + '</button>'
+      + '<button onclick="_previewRiichiBgm(\'' + key + '\',this)" style="flex:1;padding:6px 4px;border-radius:7px;cursor:pointer;font-size:.6rem;background:#0a0510;border:1.5px solid #5a2a3a;color:#cc7799;">' + (isPlaying?'■ 停止':'▶ 試聴') + '</button>'
+      + '</div>'
+      + '</div>';
   }).join('');
 }
 
@@ -23244,14 +23290,14 @@ function toggleRiichiBgmPlaylist(key){
     PROFILE.riichiBgmPlaylist.push(key);
   }
   saveProfileSilent();
-  _renderRiichiBgmBookGrid();
+  _renderRiichiBgmPlaylistModal();
   _updateRiichiBgmBookDisplay();
 }
 
 function clearRiichiBgmPlaylist(){
   PROFILE.riichiBgmPlaylist = [];
   saveProfileSilent();
-  _renderRiichiBgmBookGrid();
+  _renderRiichiBgmPlaylistModal();
   _updateRiichiBgmBookDisplay();
 }
 

@@ -11301,7 +11301,8 @@ function humanPickWall(slotIdx, _fromAuto){
         if(dr===0&&dc===0) continue;
         const nr=r+dr, nc=c+dc;
         if(nr<0||nr>=rows2||nc<0||nc>=W_COLS) continue;
-        if(G.mineSlots.includes(nr*W_COLS+nc)) cnt++;
+        const ni=nr*W_COLS+nc;
+        if(G.mineSlots.includes(ni)&&G.deckSlots[ni]!==null) cnt++;
       }
       return cnt;
     };

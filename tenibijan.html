@@ -4723,6 +4723,8 @@ const RIICHI_BGM = (() => {
     },
     get isActive(){ return _active; },
     tracks,
+    _muteBgm(){ _muteMainBgm(); },
+    _unmuteBgm(){ _unmuteMainBgm(); },
   };
 })();
 

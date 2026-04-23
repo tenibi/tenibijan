@@ -1845,14 +1845,23 @@ function updateRightEntryTunnel(b) {
 
 let balls = [];
 let score = 0;
-let ballCount = 0; // 持ち玉
+let ballCount = parseInt(localStorage.getItem('pachi_ballCount') || '0', 10); // 持ち玉
 let atarigoStartBallCount = 0; // atarigo開始時の持ち玉数
 let rushContinueCount = 0; // RUSH継続回数（リザルト表示用）
-let totalLaunched = 0; // 消費玉数
-let totalRotations = 0; // 回転数
+let totalLaunched = parseInt(localStorage.getItem('pachi_totalLaunched') || '0', 10); // 消費玉数
+let totalRotations = parseInt(localStorage.getItem('pachi_totalRotations') || '0', 10); // 回転数
+
+function savePachiState() {
+  localStorage.setItem('pachi_ballCount', ballCount);
+  localStorage.setItem('pachi_totalLaunched', totalLaunched);
+  localStorage.setItem('pachi_totalRotations', totalRotations);
+}
+window.addEventListener('beforeunload', savePachiState);
+setInterval(savePachiState, 2000);
 
 function updateBallCountDisplay() {
   document.getElementById('ball-count-disp').innerHTML = `${ballCount}<span>個</span>`;
+  savePachiState();
 }
 
 // ─── 手にビじゃんDB連携 ─────────────────────────────────────────
@@ -4749,6 +4758,10 @@ const _origRebuildLayout = typeof rebuildLayout === 'function' ? rebuildLayout :
 window.addEventListener('load', () => {
   setTimeout(positionOseBtn, 200);
   _initPachiCoins(); // DBからビコイン残高を取得
+  // localStorage から持ち玉・消費玉数・回転数を表示に反映
+  updateBallCountDisplay();
+  document.getElementById('consumption-disp').innerHTML = `${totalLaunched}<span>個</span>`;
+  document.getElementById('rotations-disp').innerHTML = `${totalRotations}<span>回</span>`;
 });
 window.addEventListener('resize', positionOseBtn);
 

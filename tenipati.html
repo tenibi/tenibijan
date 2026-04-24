@@ -966,6 +966,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
       <video id="vid-hukatu2" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hukatu02.mp4" preload="auto" playsinline></video>
       <video id="vid-atarigo" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atarigo01.mp4"  preload="auto" playsinline></video>
       <video id="vid-zenkaiten" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/putyun.mp4" preload="auto" playsinline></video>
+      <video id="vid-kanecorn"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/kanecorn.mp4" preload="auto" playsinline></video>
       <video id="vid-ose"     src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/ose.mp4"          preload="auto" playsinline></video>
       <video id="vid-bonus01"      src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/bonus01.mp4"       preload="auto" playsinline></video>
       <!-- RUSH突入・継続動画 -->
@@ -1108,11 +1109,11 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 
   <!-- ⚙ギアボタン（管理用・非表示） -->
   <div id="gear-btn-wrap" style="display:none;">
-    <button id="gear-btn" onclick="toggleGearPanel()">⚙</button>
+    <button id="gear-btn" onclick="toggleGearPanel()" style="transform:rotate(90deg);background:rgba(124,58,237,0.55);color:#fbbf24;">⚙</button>
   </div>
 
   <!-- ドロワーパネル -->
-  <div id="side-panel" style="display:none;">
+  <div id="side-panel" style="display:flex;">
     <div class="panel-item">
       <h3>消費玉数</h3>
       <div id="consumption-disp" class="panel-value">0<span>個</span></div>
@@ -1161,6 +1162,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
         <button id="test-reach-normal-btn" style="background:rgba(120,53,15,0.3);border-color:rgba(251,191,36,0.7);color:#fde68a;">💥 弱リーチ</button>
         <button id="test-rush-bonus-btn" style="background:rgba(124,58,237,0.4);border-color:rgba(167,139,250,0.9);color:#fbbf24;font-weight:700;letter-spacing:1px;">⚡ BONUS</button>
         <button id="test-zenkaiten-btn" style="background:rgba(190,18,60,0.35);border-color:rgba(244,114,182,0.9);color:#fbcfe8;font-weight:700;letter-spacing:1px;">🌀 全回転</button>
+        <button id="test-kanecorn-btn" style="background:rgba(234,179,8,0.35);border-color:rgba(253,224,71,0.9);color:#fef08a;font-weight:700;letter-spacing:1px;">🌽 カネコーン</button>
         <span style="color:rgba(167,139,250,0.5);font-size:11px;font-family:sans-serif;">TEST</span>
       </div>
     </div>
@@ -2156,6 +2158,7 @@ let currentConsumedColor = 'white'; // 消費中の保留玉の色
 let currentWakuColor = null; // 現在再生中のワク動画の色（_beginRouletteで引き継ぎ用）
 let currentConsumedResult = false;  // 消費中の保留玉の内部当否（true=当たり）
 let currentConsumedZenkaiten = false; // 消費中の保留玉が全回転当たりか
+let currentConsumedKanecorn = false;  // 消費中の保留玉がカネコーン当たりか
 
 // ─── 保留データ生成（色＋内部当否をセットで決定） ───────────
 // 内部確率1/319で当否を先に決め、その後「示唆」として色を選ぶ。
@@ -2174,6 +2177,8 @@ function _pickHoldData() {
   const isWin = Math.random() < WIN_PROBABILITY; // 1/319
   // 当たりの1%を全回転当たりに昇格（1/319 のうち 1%）
   const isZenkaiten = isWin && (Math.random() < 0.01);
+  // 当たりの10〜20%をカネコーン当たりに昇格（全回転当たり以外）
+  const isKanecorn = isWin && !isZenkaiten && (Math.random() < 0.15);
   let color;
   if (isWin) {
     // 当たり時：LR × ハズレ分布 を正規化した分布
@@ -2192,7 +2197,7 @@ function _pickHoldData() {
     else if (r < 0.9999)  color = 'red';
     else                  color = 'gold';
   }
-  return { color, isWin, isZenkaiten };
+  return { color, isWin, isZenkaiten, isKanecorn };
 }
 
 // ─── RUSH時専用 保留データ生成 ───────────────────────────
@@ -2510,6 +2515,7 @@ function consumeHold(callback) {
   currentConsumedColor = holdData.color;   // 消費する玉の色を記録
   currentConsumedResult = holdData.isWin;  // 内部当否（保留追加時に決定済み）
   currentConsumedZenkaiten = !!holdData.isZenkaiten; // 全回転当たりフラグ
+  currentConsumedKanecorn = !!holdData.isKanecorn;   // カネコーン当たりフラグ
 
   // 保留消費時：displayColor に対応するワク動画を透過再生
   playWakuVideo(holdData.displayColor || holdData.color);
@@ -2910,6 +2916,34 @@ function _playAtarigoAnimation(proceedFn) {
   }
 }
 
+// ─── カネコーン用：atariSE / bonus01.mp4 をスキップして atarigo01.mp4 へ直行 ───
+function _playAtarigoAnimationDirect(proceedFn) {
+  stopWakuVideo();
+
+  // 右打ち固定（自動発射OFF）
+  rightMode = true;
+  autoMode  = false;
+  const _rBtn = document.getElementById('right-btn');
+  const _aBtn = document.getElementById('auto-btn');
+  if (_rBtn) { _rBtn.textContent = '⏸ 停止'; _rBtn.classList.add('active'); }
+  if (_aBtn) { _aBtn.textContent = '▶ 自動発射'; _aBtn.classList.remove('active'); }
+
+  syncNiziOverlay();
+  document.getElementById('nizi-overlay').style.display = 'block';
+
+  // atarigo01.mp4 を直接再生
+  vidAtarigo.onended = null;
+  vidAtarigo.onended = () => {
+    vidAtarigo.onended = null;
+    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
+    stopRoundCounter();
+    setTimeout(proceedFn, 300);
+  };
+  playVideo(vidAtarigo);
+  if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); }
+  rouletteEndTimeout = setTimeout(proceedFn, 600000);
+}
+
 // ─── atarigo / rush-atarigo 共通：8ラウンド分割＋10玉制限の扉制御 ───
 // 各ラウンドは「動画長/8」を最大時間とし、10玉入賞で即座に扉を閉じて次ラウンドへ。
 // 閉じてから1秒後に次ラウンド開始（扉を開ける）。最終ラウンドは閉じて終了。
@@ -3076,7 +3110,65 @@ function playAtarigoRoute(proceedFn) {
     });
     return;
   }
+
+  if (currentConsumedKanecorn) {
+    // カネコーン当たりルート：kanecorn.mp4 再生 → atarigo01.mp4 直行（SEなし）
+    currentConsumedKanecorn = false;
+    _playKanecornAnimation(() => {
+      _playAtarigoAnimationDirect(() => _maybeRush(proceedFn));
+    });
+    return;
+  }
+
   _playAtarigoAnimation(() => _maybeRush(proceedFn));
+}
+
+// ─── カネコーン当たり演出 ───
+// kanecorn.mp4 を再生し、終了後 proceedFn を呼ぶ。
+// digit 1/2/3 は 7 で揃っているが非表示のまま。
+function _playKanecornAnimation(proceedFn) {
+  stopWakuVideo();
+  document.querySelectorAll('#video-layer video').forEach(v => {
+    v.pause(); v.style.display = 'none';
+  });
+
+  // digit を 7 に設定するが visible クラスは付与しない（非表示のまま）
+  const d1 = document.getElementById('digit1');
+  const d2 = document.getElementById('digit2');
+  const d3 = document.getElementById('digit3');
+  [d1, d2, d3].forEach(d => {
+    d.classList.remove('visible', 'spinning', 'd1-result', 'd2-result', 'd3-result');
+    const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
+    if (c) c.remove();
+    if (d._d2Anim) { cancelAnimationFrame(d._d2Anim); d._d2Anim = null; }
+    d.style.clipPath = '';
+    d.style.overflow = '';
+  });
+  setDigitImg(d1, 7);
+  setDigitImg(d2, 7);
+  setDigitImg(d3, 7);
+  // visible は付けない → 非表示のまま
+
+  // BGM停止（playVideo経由ではないので明示的に止める）
+  bgm.pause();
+
+  const vidKanecorn = document.getElementById('vid-kanecorn');
+  vidKanecorn.onended = null;
+  vidKanecorn.style.display = 'block';
+  vidKanecorn.currentTime = 0;
+  vidKanecorn.volume = videoVolume;
+
+  vidKanecorn.onended = () => {
+    vidKanecorn.onended = null;
+    vidKanecorn.style.display = 'none';
+    proceedFn();
+  };
+
+  vidKanecorn.play().catch(() => {
+    vidKanecorn.onended = null;
+    vidKanecorn.style.display = 'none';
+    proceedFn();
+  });
 }
 
 // ─── 全回転当たり演出 ───
@@ -5595,6 +5687,50 @@ function triggerTestZenkaiten() {
 }
 
 document.getElementById('test-zenkaiten-btn').addEventListener('click', triggerTestZenkaiten);
+
+// ─── テスト用：カネコーン当たり演出に直接移行するボタン ─────────────────
+function triggerTestKanecorn() {
+  if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
+  stopOseBlink();
+  rouletteActive = false;
+  rouletteWaiting = false;
+  reachTriggered = false;
+  reachVideoEnded = false;
+  if (window._d2FeverCleanup) window._d2FeverCleanup();
+
+  const d1 = document.getElementById('digit1');
+  const d2 = document.getElementById('digit2');
+  const d3 = document.getElementById('digit3');
+  [d1, d2, d3].forEach(d => {
+    d.classList.remove('visible', 'spinning', 'd1-result', 'd2-result', 'd3-result');
+    const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
+    if (c) c.remove();
+    if (d._d2Anim) { cancelAnimationFrame(d._d2Anim); d._d2Anim = null; }
+    d.style.clipPath = '';
+    d.style.overflow = '';
+  });
+
+  stopAllVideosNoResume();
+
+  function proceedAfterKanecornTest() {
+    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
+    rouletteWaiting = false;
+    stopAllVideos();
+    stopOseBlink();
+    [d1, d2, d3].forEach(d => {
+      d.classList.remove('visible');
+      d.style.clipPath = '';
+      d.style.overflow = '';
+    });
+  }
+
+  jackpotTimer = 300;
+  score += 1000;
+  currentConsumedKanecorn = true;
+  playAtarigoRoute(proceedAfterKanecornTest);
+}
+
+document.getElementById('test-kanecorn-btn').addEventListener('click', triggerTestKanecorn);
 
 // ─── テスト用：弱リーチ演出に直接移行するボタン ─────────────────
 function triggerTestReachNormal() {

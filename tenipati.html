@@ -30,6 +30,12 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
   overflow-x: visible;
 }
 #board-canvas { display: block; border-radius: 4px; position: relative; z-index: 3; }
+/* 持ち玉0で発射しようとしたときの赤点滅 */
+@keyframes ballEmptyFlash {
+  0%, 100% { color: inherit; background-color: inherit; }
+  20%, 60% { color: #fff; background-color: #d32f2f; }
+}
+.ball-empty-flash { animation: ballEmptyFlash 0.4s linear 3; }
 /* frame.png オーバーレイ（framenizi.gifの後ろ） */
 #frame-overlay {
   display: block;
@@ -959,6 +965,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
       <video id="vid-atari2"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atari02.mp4"  preload="auto" playsinline></video>
       <video id="vid-hukatu2" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hukatu02.mp4" preload="auto" playsinline></video>
       <video id="vid-atarigo" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atarigo01.mp4"  preload="auto" playsinline></video>
+      <video id="vid-zenkaiten" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/putyun.mp4" preload="auto" playsinline></video>
       <video id="vid-ose"     src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/ose.mp4"          preload="auto" playsinline></video>
       <video id="vid-bonus01"      src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/bonus01.mp4"       preload="auto" playsinline></video>
       <!-- RUSH突入・継続動画 -->
@@ -1042,6 +1049,15 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 
   <!-- 常時表示エリア：持ち玉・期待値表・音量 -->
   <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+    <!-- タイトルへ戻るボタン -->
+    <div class="panel-item" style="padding:0;">
+      <a href="https://tenibi.github.io/tenibijan/tenibijan.html"
+         style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px 12px;font-size:14px;font-weight:700;letter-spacing:1px;background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(124,58,237,0.2));border:1.5px solid rgba(251,191,36,0.6);border-radius:8px;color:#fbbf24;text-decoration:none;font-family:sans-serif;text-shadow:0 0 8px rgba(251,191,36,0.4);box-shadow:0 0 10px rgba(251,191,36,0.15);transition:all 0.15s;"
+         onmouseover="this.style.background='linear-gradient(135deg,rgba(251,191,36,0.3),rgba(124,58,237,0.35))'"
+         onmouseout="this.style.background='linear-gradient(135deg,rgba(251,191,36,0.15),rgba(124,58,237,0.2))'">
+        🏠 タイトルへ戻る
+      </a>
+    </div>
     <div class="panel-item">
       <h3>持ち玉</h3>
       <div id="ball-count-disp" class="panel-value">0<span>個</span></div>
@@ -1133,6 +1149,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
         <button id="auto-btn">▶ 自動発射</button>
         <button id="right-btn">▶ 右打ち</button>
         <button id="open-close-btn">↔ 開閉</button>
+        <button id="infinite-btn">∞ 玉無限</button>
       </div>
     </div>
     <div class="panel-item" id="test-btns-row">
@@ -1143,6 +1160,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
         <button id="test-reach02-btn" style="background:rgba(6,78,59,0.3);border-color:rgba(52,211,153,0.7);color:#6ee7b7;">🎯 リーチ02</button>
         <button id="test-reach-normal-btn" style="background:rgba(120,53,15,0.3);border-color:rgba(251,191,36,0.7);color:#fde68a;">💥 弱リーチ</button>
         <button id="test-rush-bonus-btn" style="background:rgba(124,58,237,0.4);border-color:rgba(167,139,250,0.9);color:#fbbf24;font-weight:700;letter-spacing:1px;">⚡ BONUS</button>
+        <button id="test-zenkaiten-btn" style="background:rgba(190,18,60,0.35);border-color:rgba(244,114,182,0.9);color:#fbcfe8;font-weight:700;letter-spacing:1px;">🌀 全回転</button>
         <span style="color:rgba(167,139,250,0.5);font-size:11px;font-family:sans-serif;">TEST</span>
       </div>
     </div>
@@ -2094,6 +2112,7 @@ function hideAtarigoResult() {
 }
 let frameCount = 0;
 let autoMode = false;
+let infiniteMode = false;
 let lastLaunchTime = 0;
 let jackpotTimer = 0;
 
@@ -2129,7 +2148,9 @@ const MAX_HOLD = 4;
 let holdCount = 0;
 let holdColors = []; // index 0 = leftmost (oldest, next to consume)
 let currentConsumedColor = 'white'; // 消費中の保留玉の色
+let currentWakuColor = null; // 現在再生中のワク動画の色（_beginRouletteで引き継ぎ用）
 let currentConsumedResult = false;  // 消費中の保留玉の内部当否（true=当たり）
+let currentConsumedZenkaiten = false; // 消費中の保留玉が全回転当たりか
 
 // ─── 保留データ生成（色＋内部当否をセットで決定） ───────────
 // 内部確率1/319で当否を先に決め、その後「示唆」として色を選ぶ。
@@ -2146,6 +2167,8 @@ let currentConsumedResult = false;  // 消費中の保留玉の内部当否（tr
 // 当たり時の色分布（LR×P(lose)を正規化）: 白33.9% 青30.5% 緑20.5% 赤11.6% 金3.5%
 function _pickHoldData() {
   const isWin = Math.random() < WIN_PROBABILITY; // 1/319
+  // 当たりの1%を全回転当たりに昇格（1/319 のうち 1%）
+  const isZenkaiten = isWin && (Math.random() < 0.01);
   let color;
   if (isWin) {
     // 当たり時：LR × ハズレ分布 を正規化した分布
@@ -2164,7 +2187,7 @@ function _pickHoldData() {
     else if (r < 0.9999)  color = 'red';
     else                  color = 'gold';
   }
-  return { color, isWin };
+  return { color, isWin, isZenkaiten };
 }
 
 // ─── RUSH時専用 保留データ生成 ───────────────────────────
@@ -2481,6 +2504,7 @@ function consumeHold(callback) {
   const holdData = holdColors[0] || { color: 'white', isWin: false };
   currentConsumedColor = holdData.color;   // 消費する玉の色を記録
   currentConsumedResult = holdData.isWin;  // 内部当否（保留追加時に決定済み）
+  currentConsumedZenkaiten = !!holdData.isZenkaiten; // 全回転当たりフラグ
 
   // 保留消費時：displayColor に対応するワク動画を透過再生
   playWakuVideo(holdData.displayColor || holdData.color);
@@ -2505,6 +2529,8 @@ function consumeHold(callback) {
         h0.displayColor = h0.color;
         const dot0 = document.getElementById('hold-dot-0');
         if (dot0) _animateHoldColorChange(dot0, 'white', h0.color);
+        // 色変化後に対応するワク動画をループ再生
+        playWakuVideo(h0.color);
       } else if (h0.willStepChange) {
         // 繰り下げ色 → 本来の色へ変化
         h0.willStepChange = false;
@@ -2512,6 +2538,8 @@ function consumeHold(callback) {
         h0.displayColor = h0.color;
         const dot0 = document.getElementById('hold-dot-0');
         if (dot0) _animateHoldColorChange(dot0, fromColor, h0.color);
+        // 色変化後に対応するワク動画をループ再生
+        playWakuVideo(h0.color);
       }
     }
     if (callback) callback();
@@ -2522,12 +2550,12 @@ function launchBall() {
   const xs = sx(), ys = sy();
   const jitter = (Math.random() - 0.5) * 4 * xs;
   
-  // 持ち玉が0以下なら発射しない
-  if (ballCount <= 0) {
-    return;
+  // 持ち玉が0以下なら発射しない（玉無限モードOFFの時）
+  if (!infiniteMode) {
+    if (ballCount <= 0) { return; }
+    ballCount--;
+    updateBallCountDisplay();
   }
-  ballCount--;
-  updateBallCountDisplay();
 
   balls.push({
     x: ENTRY_START_X_PX * xs + jitter, y: ENTRY_START_Y_PX * ys, vx: 0, vy: 0, r: 4.2 * xs,
@@ -2589,6 +2617,7 @@ function playWakuVideo(color) {
   vid.currentTime    = 0;
   vid.volume         = videoVolume;
   vid.play().catch(() => {});
+  currentWakuColor = color; // 再生中の色を記録
 }
 
 // ワク動画を明示的に停止・非表示にする
@@ -2597,6 +2626,7 @@ function stopWakuVideo() {
   if (!waku) return;
   waku.querySelectorAll('video').forEach(v => { v.pause(); v.currentTime = 0; v.loop = false; v.style.display = 'none'; });
   waku.style.display = 'none';
+  currentWakuColor = null; // クリア
 }
 
 function rebuildLayout() {
@@ -2615,7 +2645,9 @@ function rebuildLayout() {
 function startRoulette() {
   // atarigo動画再生中は保留に積むのみ（動画を止めない）
   const isAtarigoPlaying = !vidAtarigo.paused;
-  if (rouletteActive || rouletteWaiting || isAtarigoPlaying || window._bonusSpinning) {
+  // 全回転演出中（putyun.mp4 / 数字回転シーケンス / atarigo前のSE再生中）も保留に積む
+  const isZenkaitenAnim = !!window._zenkaitenAnimActive;
+  if (rouletteActive || rouletteWaiting || isAtarigoPlaying || isZenkaitenAnim || window._bonusSpinning) {
     // ルーレット回転中・待機中・atarigo再生中・BONUSスピン中は保留に積む
     addHold();
     return;
@@ -2871,6 +2903,84 @@ function _playAtarigoAnimation(proceedFn) {
   }
 }
 
+// ─── atarigo / rush-atarigo 共通：8ラウンド分割＋10玉制限の扉制御 ───
+// 各ラウンドは「動画長/8」を最大時間とし、10玉入賞で即座に扉を閉じて次ラウンドへ。
+// 閉じてから1秒後に次ラウンド開始（扉を開ける）。最終ラウンドは閉じて終了。
+function _startAtarigoRoundManagement(videoEl) {
+  rightMode = true;
+  autoMode = false;
+  const rBtn = document.getElementById('right-btn');
+  const aBtn = document.getElementById('auto-btn');
+  if (rBtn) { rBtn.textContent = '⏸ 停止'; rBtn.classList.add('active'); }
+  if (aBtn) { aBtn.textContent = '▶ 自動発射'; aBtn.classList.remove('active'); }
+
+  isAtarigoRound = true;
+  currentRound = 0;
+  roundBallCount = 0;
+  barTargetRatio = 1;
+  startRoundCounter();
+  atarigoStartBallCount = ballCount;
+
+  // 既存タイマーをクリア
+  if (window._atarigoRoundTimers) {
+    window._atarigoRoundTimers.forEach(t => clearTimeout(t));
+  }
+  window._atarigoRoundTimers = [];
+
+  function start(videoLen) {
+    if (!videoLen || !isFinite(videoLen)) return;
+    const roundDuration = videoLen / TOTAL_ROUNDS; // 1ラウンド最大秒数
+    const CLOSE_GAP_MS = 1000; // 閉じてから次ラウンド開始までの間隔
+    let activeRound = -1;
+
+    function openRound(r) {
+      if (!isAtarigoRound) return;
+      activeRound = r;
+      currentRound = r;
+      roundBallCount = 0;
+      barTargetRatio = 1;
+      // 最大時間で強制クローズ
+      const tMax = setTimeout(() => {
+        if (!isAtarigoRound || activeRound !== r) return;
+        closeRound(r);
+      }, roundDuration * 1000);
+      window._atarigoRoundTimers.push(tMax);
+    }
+
+    function closeRound(r) {
+      if (activeRound !== r) return;
+      activeRound = -1;
+      barTargetRatio = 0;
+      markRoundComplete(r);
+      if (r + 1 >= TOTAL_ROUNDS) {
+        isAtarigoRound = false;
+        return;
+      }
+      const tNext = setTimeout(() => openRound(r + 1), CLOSE_GAP_MS);
+      window._atarigoRoundTimers.push(tNext);
+    }
+
+    // 10玉到達による早期クローズを監視
+    function watchBalls() {
+      if (!isAtarigoRound) return;
+      if (activeRound >= 0 && roundBallCount >= ROUND_BALL_LIMIT) {
+        closeRound(activeRound);
+      }
+      const tWatch = setTimeout(watchBalls, 80);
+      window._atarigoRoundTimers.push(tWatch);
+    }
+
+    openRound(0);
+    watchBalls();
+  }
+
+  if (videoEl.readyState >= 1 && isFinite(videoEl.duration)) {
+    start(videoEl.duration);
+  } else {
+    videoEl.addEventListener('loadedmetadata', () => start(videoEl.duration), { once: true });
+  }
+}
+
 // ─── RUSH継続演出：keizoku.mp4終了後に atarigo.mp4 へ直行 ───
 // atariSEは _playKeizoku 内で keizoku.mp4 と同時再生済みなのでここでは再生しない。
 // atarigoStartBallCount を保護してリザルト玉数がリセットされないようにする。
@@ -2894,15 +3004,32 @@ function _playRushContinuationAtarigo(proceedFn) {
   const vidRushAtarigo02 = document.getElementById('vid-rush-atarigo02');
   const _useVid = (Math.random() < 0.5 ? vidRushAtarigo02 : vidRushAtarigo) || vidAtarigo;
 
+  // RUSHatarigo動画再生と同時に digit を 今の位置から 90px / strip img 90px / still-img top:320px へ
+  // 滑らかに移動する。keizoku中にすでに移動済みの場合は現在値（90px）が起点になり動きなし。
+  _animateDigitsToContinuation(() => {});
+
   // playVideo が atarigoStartBallCount を上書きするので保存して戻す
   const _savedStart = atarigoStartBallCount;
   playVideo(_useVid);
+  atarigoStartBallCount = _savedStart;
+
+  // vid-rush-atarigo / vid-rush-atarigo02 は playVideo 内の toggle 条件に含まれないため
+  // atarigo-video-playing クラスが自動付与されない。手動で付与してCSSによる
+  // digit縮小（width:90px / strip img height:90px / still-img top:320px）を維持する。
+  const _wrap = document.getElementById('wrap');
+  _wrap.classList.add('atarigo-video-playing');
+
+  // RUSH atarigo 動画にも 8ラウンド分割＋10玉制限の扉制御を適用
+  _startAtarigoRoundManagement(_useVid);
+  // _startAtarigoRoundManagement は atarigoStartBallCount を再設定するため再度保存値を戻す
   atarigoStartBallCount = _savedStart;
 
   if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); }
   rouletteEndTimeout = setTimeout(proceedFn, 600000);
   _useVid.onended = () => {
     _useVid.onended = null;
+    // 動画終了時に手動付与したクラスを除去
+    _wrap.classList.remove('atarigo-video-playing');
     if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
     stopRoundCounter();
     setTimeout(proceedFn, 300);
@@ -2910,7 +3037,269 @@ function _playRushContinuationAtarigo(proceedFn) {
 }
 
 function playAtarigoRoute(proceedFn) {
+  if (currentConsumedZenkaiten) {
+    currentConsumedZenkaiten = false;
+    _playZenkaitenAnimation(() => {
+      // _playAtarigoAnimation の atariSE 再生中（約3秒）は vidAtarigo がまだ paused なので、
+      // _zenkaitenAnimActive フラグを残したまま渡し、vidAtarigo 終了後（_maybeRush に
+      // 入る直前）に解除する。それ以降は _maybeRush 側のフラグ（_bonusActive/_bonusSpinning）
+      // と showAtarigoResult 側の _bonusSpinning で startRoulette を引き続きブロックする。
+      _playAtarigoAnimation(() => {
+        window._zenkaitenAnimActive = false;
+        _maybeRush(proceedFn);
+      });
+    });
+    return;
+  }
   _playAtarigoAnimation(() => _maybeRush(proceedFn));
+}
+
+// ─── 全回転当たり演出 ───
+// putyun.mp4 を最初に再生し、その後 digit1/2/3 を通常スロット回転と同じ
+// 円/3D回転で 999 → 111 → 222 → ... → 777 の順で1段ずつ細かく回転表示する。
+// 各ゾロ目で1秒ホールドし、停止SEを鳴らす。
+function _playZenkaitenAnimation(proceedFn) {
+  stopWakuVideo();
+  document.querySelectorAll('#video-layer video').forEach(v => {
+    v.pause(); v.style.display = 'none';
+  });
+
+  // 全回転演出中フラグを立てる（startRoulette がこの間に通常スピンを開始しないように）
+  // rightMode は変更しない（ユーザー設定の発射モードを維持）
+  window._zenkaitenAnimActive = true;
+
+  const d1 = document.getElementById('digit1');
+  const d2 = document.getElementById('digit2');
+  const d3 = document.getElementById('digit3');
+
+  // クリーンアップ
+  [d1, d2, d3].forEach(d => {
+    d.classList.remove('visible', 'spinning', 'd1-result', 'd2-result', 'd3-result');
+    const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
+    if (c) c.remove();
+    if (d._d2Anim) { cancelAnimationFrame(d._d2Anim); d._d2Anim = null; }
+    d.style.clipPath = '';
+    d.style.overflow = '';
+  });
+
+  jackpotTimer = 300;
+
+  // d2の still-img を強制非表示（d2-result中も circle のみで表示するため）
+  const d2StillImg = d2.querySelector('.still-img');
+  const _origD2StillDisplay = d2StillImg ? d2StillImg.style.display : '';
+  if (d2StillImg) d2StillImg.style.setProperty('display', 'none', 'important');
+
+  // ── d1 円配置（時計回り） ──
+  // 通常スピン（CW）と同じ向きに回しつつ 1 段で次のゾロ目へ進めるため、
+  // アイテムの角度配置を反転させる（-90 - i*40）。
+  function _buildD1Circle() {
+    const circle = document.createElement('div');
+    circle.className = 'd1-circle';
+    circle.style.animation = 'none';
+    const radius = 435;
+    for (let i = 0; i < 9; i++) {
+      const angleDeg = -90 - i * 40;
+      const angleRad = angleDeg * Math.PI / 180;
+      const x = Math.round(Math.cos(angleRad) * radius);
+      const y = Math.round(Math.sin(angleRad) * radius);
+      const item = document.createElement('div');
+      item.className = 'd1-item';
+      item.style.left = (x - 68) + 'px';
+      item.style.top  = (y - 68) + 'px';
+      const img = document.createElement('img');
+      img.src = slotImgSrc(i + 1);
+      img.style.animation = 'none';
+      item.appendChild(img);
+      circle.appendChild(item);
+    }
+    d1.appendChild(circle);
+    return circle;
+  }
+  // ── d3 円配置（反時計回り） ──
+  function _buildD3Circle() {
+    const circle = document.createElement('div');
+    circle.className = 'd3-circle';
+    circle.style.animation = 'none';
+    const radius = 435;
+    for (let i = 0; i < 9; i++) {
+      const angleDeg = -90 + i * 40;
+      const angleRad = angleDeg * Math.PI / 180;
+      const x = Math.round(Math.cos(angleRad) * radius);
+      const y = Math.round(Math.sin(angleRad) * radius);
+      const item = document.createElement('div');
+      item.className = 'd3-item';
+      item.style.left = (x - 68) + 'px';
+      item.style.top  = (y - 68) + 'px';
+      const img = document.createElement('img');
+      img.src = slotImgSrc(i + 1);
+      img.style.animation = 'none';
+      item.appendChild(img);
+      circle.appendChild(item);
+    }
+    d3.appendChild(circle);
+    return circle;
+  }
+  // ── d2 縦3D円配置 ──
+  // 通常スピン（下方向）と同じ向きに回しつつ 1 段で次のゾロ目へ進めるため、
+  // アイテムの基準角度を反転させる（-i*step）。
+  function _buildD2Circle() {
+    const circle = document.createElement('div');
+    circle.className = 'd2-circle';
+    const d2AngleStep = 360 / 9;
+    for (let i = 0; i < 9; i++) {
+      const item = document.createElement('div');
+      item.className = 'd2-item';
+      item.dataset.angle = String(-i * d2AngleStep);
+      const img = document.createElement('img');
+      img.src = slotImgSrc(i + 1);
+      item.appendChild(img);
+      circle.appendChild(item);
+    }
+    d2.appendChild(circle);
+    return circle;
+  }
+
+  const d1Circle = _buildD1Circle();
+  const d3Circle = _buildD3Circle();
+  const d2Circle = _buildD2Circle();
+
+  // 表示状態（putyun.mp4 再生中は非表示にし、動画終了後に表示する）
+  d1.classList.add('d1-result');
+  d3.classList.add('d3-result');
+  d2.classList.add('d2-result');
+  d1.style.visibility = 'hidden';
+  d2.style.visibility = 'hidden';
+  d3.style.visibility = 'hidden';
+
+  // 角度ヘルパー（数字 n → 各digitの目標角度）
+  // d1/d2 は配置を反転させたため、ヘルパーも反転（CW / 下方向に1段で進む）。
+  const _angleD1 = (n) => 90 + (n - 1) * 40;
+  const _angleD3 = (n) => -(90 + (n - 1) * 40);
+  const _angleD2 = (n) => (n - 1) * 40;
+
+  // 適用ヘルパー
+  function _applyD1(angle) {
+    d1Circle.style.transform = `rotate(${angle}deg)`;
+    d1Circle.querySelectorAll('.d1-item img').forEach(img => {
+      img.style.transform = `rotate(${-angle}deg)`;
+    });
+  }
+  function _applyD3(angle) {
+    d3Circle.style.transform = `rotate(${angle}deg)`;
+    d3Circle.querySelectorAll('.d3-item img').forEach(img => {
+      img.style.transform = `rotate(${-angle}deg)`;
+    });
+  }
+  function _applyD2(phase) {
+    const p = ((phase % 360) + 360) % 360;
+    updateDigit2VerticalItems(d2, p);
+  }
+
+  // シーケンス: putyun.mp4 終了後に 9 から回転して 1 → 2 → … → 7 と進む。
+  // 9 は止まらず、そのまま 1 に向かって回転する。
+  const sequence = [1, 2, 3, 4, 5, 6, 7];
+  const STEP_MS = 280;   // 1段ぶんの回転時間（細かい回転）
+  const HOLD_MS = 1000;  // ゾロ目で止まる時間
+
+  // 初期位置: 9（putyun.mp4 再生中はこの位置で静止）
+  let curN = 9;
+  let curA1 = _angleD1(curN);
+  let curA3 = _angleD3(curN);
+  let curA2 = _angleD2(curN);
+  _applyD1(curA1); _applyD3(curA3); _applyD2(curA2);
+
+  let idx = 0;
+  let rafId = null;
+
+  function _animateTo(target, done) {
+    // 9 → 1 のように前進方向(数字小→大)で1段ずつ進む（モジュロ9）
+    let stepCount = ((target - curN) % 9 + 9) % 9;
+    if (stepCount === 0) {
+      // 同じ数字の場合は1周回転して同じ位置に戻る
+      stepCount = 9;
+    }
+    // d1/d2 は配置を反転させたため、+方向回転で 1 段（40°）進む（CW / 下方向）。
+    // d3 は従来どおり -方向回転で 1 段（40°）進む（CCW）。
+    const fromA1 = curA1, toA1 = curA1 + stepCount * 40; // d1: CW
+    const fromA3 = curA3, toA3 = curA3 - stepCount * 40; // d3: CCW
+    const fromA2 = curA2, toA2 = curA2 + stepCount * 40; // d2: 下方向
+
+    const durationMs = STEP_MS * stepCount;
+    const startTime = performance.now();
+    function frame() {
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(1, elapsed / durationMs);
+      const a1 = fromA1 + (toA1 - fromA1) * t;
+      const a3 = fromA3 + (toA3 - fromA3) * t;
+      const a2 = fromA2 + (toA2 - fromA2) * t;
+      _applyD1(a1); _applyD3(a3); _applyD2(a2);
+      if (t < 1) {
+        rafId = requestAnimationFrame(frame);
+      } else {
+        curN = target;
+        curA1 = _angleD1(curN); curA3 = _angleD3(curN); curA2 = _angleD2(curN);
+        _applyD1(curA1); _applyD3(curA3); _applyD2(curA2);
+        try { playStopSound(); } catch (e) {}
+        setTimeout(done, HOLD_MS);
+      }
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function _cleanup() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    [d1, d2, d3].forEach(d => {
+      d.classList.remove('visible', 'd1-result', 'd2-result', 'd3-result');
+      const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
+      if (c) c.remove();
+      d.style.clipPath = '';
+      d.style.overflow = '';
+      d.style.visibility = '';
+    });
+    if (d2StillImg) {
+      d2StillImg.style.removeProperty('display');
+      if (_origD2StillDisplay) d2StillImg.style.display = _origD2StillDisplay;
+    }
+    // 注: _zenkaitenAnimActive は ここでは解除しない。
+    // _cleanup → setTimeout(proceedFn, 200) → _playAtarigoAnimation の atariSE 再生中も
+    // vidAtarigo はまだ paused なので、フラグを残しておかないと startRoulette が走ってしまう。
+    // 解除は playAtarigoRoute 側で _playAtarigoAnimation 完了後に行う。
+  }
+
+  function _next() {
+    if (idx >= sequence.length) {
+      _cleanup();
+      setTimeout(proceedFn, 200);
+      return;
+    }
+    const t = sequence[idx++];
+    _animateTo(t, _next);
+  }
+
+  // putyun.mp4 を最初に再生 → 終了後に 9 から回転して 1, 2, ... と進める
+  // 全回転中は framenizi.gif を出さない（atarigo 移行時に _playAtarigoAnimation 側で表示）
+  const vidZ = document.getElementById('vid-zenkaiten');
+  document.getElementById('nizi-overlay').style.display = 'none';
+  vidZ.style.display = 'block';
+  vidZ.currentTime = 0;
+  vidZ.volume = (typeof videoVolume === 'number') ? videoVolume : 0.8;
+  vidZ.play().catch(() => {});
+  if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); }
+  rouletteEndTimeout = setTimeout(proceedFn, 600000);
+
+  vidZ.onended = () => {
+    vidZ.onended = null;
+    vidZ.style.display = 'none';
+    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
+    // 動画終了後に digit を表示
+    d1.classList.add('visible');
+    d2.classList.add('visible');
+    d3.classList.add('visible');
+    d1.style.visibility = '';
+    d2.style.visibility = '';
+    d3.style.visibility = '';
+    _next();
+  };
 }
 
 // BGM（ループ動画再生中のみ流す）
@@ -3114,65 +3503,7 @@ function playVideo(videoEl) {
   }
   // atarigo動画再生時：右打ちON＆ラウンドカウンター開始
   if (videoEl === vidAtarigo) {
-    rightMode = true;
-    autoMode = false;
-    const rBtn = document.getElementById('right-btn');
-    const aBtn = document.getElementById('auto-btn');
-    if (rBtn) { rBtn.textContent = '⏸ 停止'; rBtn.classList.add('active'); }
-    if (aBtn) { aBtn.textContent = '▶ 自動発射'; aBtn.classList.remove('active'); }
-    // ラウンド管理を初期化してラウンド1開始
-    isAtarigoRound = true;
-    currentRound = 0;
-    roundBallCount = 0;
-    barTargetRatio = 1; // ラウンド1：扉を開ける
-    startRoundCounter();
-    atarigoStartBallCount = ballCount; // リザルト用：開始時の持ち玉を記録
-
-    // ─── 時間ベースのラウンド管理 ───────────────────────────
-    function startTimedRounds() {
-      const dur = vidAtarigo.duration;
-      if (!dur || !isFinite(dur)) return;
-      const roundDuration = dur / TOTAL_ROUNDS; // 1ラウンドの秒数
-
-      // 既存タイマーをクリア
-      if (window._atarigoRoundTimers) {
-        window._atarigoRoundTimers.forEach(t => clearTimeout(t));
-      }
-      window._atarigoRoundTimers = [];
-
-      for (let r = 0; r < TOTAL_ROUNDS; r++) {
-        // ラウンド終了タイミング（扉を閉める）
-        const closeTime = (r + 1) * roundDuration * 1000;
-        // 次ラウンド開始（扉を開ける）：閉じてから1秒後（最終ラウンドは除く）
-        const openTime  = closeTime + 1000;
-
-        const closeTimer = setTimeout(() => {
-          if (!isAtarigoRound) return;
-          barTargetRatio = 0;
-          currentRound = r + 1;
-          markRoundComplete(r);
-          if (r + 1 >= TOTAL_ROUNDS) {
-            isAtarigoRound = false;
-          }
-        }, closeTime);
-        window._atarigoRoundTimers.push(closeTimer);
-
-        if (r + 1 < TOTAL_ROUNDS) {
-          const openTimer = setTimeout(() => {
-            if (!isAtarigoRound) return;
-            roundBallCount = 0;
-            barTargetRatio = 1;
-          }, openTime);
-          window._atarigoRoundTimers.push(openTimer);
-        }
-      }
-    }
-
-    if (vidAtarigo.readyState >= 1 && isFinite(vidAtarigo.duration)) {
-      startTimedRounds();
-    } else {
-      vidAtarigo.addEventListener('loadedmetadata', startTimedRounds, { once: true });
-    }
+    _startAtarigoRoundManagement(vidAtarigo);
   }
   // 当たり後動画・復活当たり動画のときだけGIFオーバーレイを表示
   const niziOverlay = document.getElementById('nizi-overlay');
@@ -3252,7 +3583,8 @@ function _beginRoulette() {
     clearTimeout(rouletteEndTimeout);
     rouletteEndTimeout = null;
   }
-  // 前の保留消費ワク動画を止める
+  // 前の保留消費ワク動画を止める（今回のconsumeHoldで設定された色は直後に復元）
+  const _savedWakuColor = currentWakuColor;
   stopWakuVideo();
   // fever演出が残っていればクリア
   if (window._d2FeverCleanup) window._d2FeverCleanup();
@@ -3277,6 +3609,8 @@ function _beginRoulette() {
   d2SpinStartFrame = null;
   d2WeakReachSpinStartTime = null;
   stopAllVideos();
+  // 今回のconsumeHoldで設定されたワク動画を復元（ルーレット中も表示継続）
+  if (_savedWakuColor) playWakuVideo(_savedWakuColor);
 
   // 全digit非表示にリセット
   const _d1 = document.getElementById('digit1');
@@ -3911,7 +4245,13 @@ function updateBalls() {
             b.active = false;
             ballCount += 10; // 当たり回収：10玉増える
             updateBallCountDisplay();
-            // ─── ラウンド入賞管理（時間ベースに移行のため入賞数管理は無効）───
+            // ─── ラウンド入賞管理：10玉到達で扉を閉じる ───
+            if (isAtarigoRound && barTargetRatio > 0) {
+              roundBallCount++;
+              if (roundBallCount >= ROUND_BALL_LIMIT) {
+                barTargetRatio = 0; // 即座に扉を閉じる
+              }
+            }
           }
         }
       }
@@ -4682,10 +5022,28 @@ function launchRightBall() {
   document.getElementById('consumption-disp').innerHTML = `${totalLaunched}<span>個</span>`;
 }
 
+// 持ち玉0で発射操作したときに、持ち玉表示と対象ボタンを赤く点滅させる
+function _flashBallEmpty(btnEl) {
+  const ballDisp = document.getElementById('ball-count-disp');
+  [ballDisp, btnEl].forEach(el => {
+    if (!el) return;
+    el.classList.remove('ball-empty-flash');
+    // 強制リフロー（連打時にもアニメをリスタート）
+    void el.offsetWidth;
+    el.classList.add('ball-empty-flash');
+    setTimeout(() => el.classList.remove('ball-empty-flash'), 1300);
+  });
+}
+
 const autoBtn = document.getElementById('auto-btn');
 autoBtn.addEventListener('click', function() {
   // 当たり中・RUSH中は自動発射に切り替えない
   if (isAtarigoRound || window._bonusActive) return;
+  // 持ち玉0（玉無限OFF）で自動発射ONにしようとしたときは赤点滅でフィードバック
+  if (!autoMode && !infiniteMode && ballCount <= 0) {
+    _flashBallEmpty(this);
+    return;
+  }
   autoMode = !autoMode;
   if (autoMode) rightMode = false; // 排他
   document.getElementById('right-btn').classList.remove('active');
@@ -4717,6 +5075,13 @@ const openCloseBtn = document.getElementById('open-close-btn');
 openCloseBtn.addEventListener('click', function() {
   barTargetRatio = barTargetRatio === 0 ? 1 : 0;
   this.classList.toggle('active', barTargetRatio === 1);
+});
+
+const infiniteBtn = document.getElementById('infinite-btn');
+infiniteBtn.addEventListener('click', function() {
+  infiniteMode = !infiniteMode;
+  this.textContent = infiniteMode ? '∞ 玉無限 ON' : '∞ 玉無限';
+  this.classList.toggle('active', infiniteMode);
 });
 
 // ─── OSEボタン ─────────────────────────────────────
@@ -5147,6 +5512,50 @@ function triggerTestRushBonus() {
 
 document.getElementById('test-rush-bonus-btn').addEventListener('click', triggerTestRushBonus);
 
+// ─── テスト用：全回転当たり演出に直接移行するボタン ─────────────────
+function triggerTestZenkaiten() {
+  if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
+  stopOseBlink();
+  rouletteActive = false;
+  rouletteWaiting = false;
+  reachTriggered = false;
+  reachVideoEnded = false;
+  if (window._d2FeverCleanup) window._d2FeverCleanup();
+
+  const d1 = document.getElementById('digit1');
+  const d2 = document.getElementById('digit2');
+  const d3 = document.getElementById('digit3');
+  [d1, d2, d3].forEach(d => {
+    d.classList.remove('visible', 'spinning', 'd1-result', 'd2-result', 'd3-result');
+    const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
+    if (c) c.remove();
+    if (d._d2Anim) { cancelAnimationFrame(d._d2Anim); d._d2Anim = null; }
+    d.style.clipPath = '';
+    d.style.overflow = '';
+  });
+
+  stopAllVideosNoResume();
+
+  function proceedAfterZenkaitenTest() {
+    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
+    rouletteWaiting = false;
+    stopAllVideos();
+    stopOseBlink();
+    [d1, d2, d3].forEach(d => {
+      d.classList.remove('visible');
+      d.style.clipPath = '';
+      d.style.overflow = '';
+    });
+  }
+
+  jackpotTimer = 300;
+  score += 1000;
+  currentConsumedZenkaiten = true;
+  playAtarigoRoute(proceedAfterZenkaitenTest);
+}
+
+document.getElementById('test-zenkaiten-btn').addEventListener('click', triggerTestZenkaiten);
+
 // ─── テスト用：弱リーチ演出に直接移行するボタン ─────────────────
 function triggerTestReachNormal() {
   if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
@@ -5280,11 +5689,13 @@ document.getElementById('test-hold-step-green-btn').addEventListener('click',  (
 document.getElementById('test-hold-step-red-btn').addEventListener('click',    () => triggerTestHoldChange('step-red'));
 document.getElementById('test-hold-step-gold-btn').addEventListener('click',   () => triggerTestHoldChange('step-gold'));
 
-// ─── GOボタンのクリック判定 ───────────────────────────
-canvas.addEventListener('click', function(e) {
+// ─── GOボタンのタップ判定（タッチのみ・マウスクリック無効） ───────────────────────────
+canvas.addEventListener('touchend', function(e) {
+  e.preventDefault(); // マウスイベントへの変換を阻止
+  const touch = e.changedTouches[0];
   const rect = canvas.getBoundingClientRect();
-  const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
-  const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const clickX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+  const clickY = (touch.clientY - rect.top) * (canvas.height / rect.height);
 
   const xs = sx(), ys = sy();
 
@@ -5306,28 +5717,9 @@ canvas.addEventListener('click', function(e) {
     // 保留を1増やす（最大値を超えない）
     addHold();
   }
-});
+}, { passive: false });
 
-// ─── GOボタンにホバーしたときカーソルを変える ──────────
-canvas.addEventListener('mousemove', function(e) {
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
-  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-  const xs = sx(), ys = sy();
-  const BAR_END_Y   = 900 + 2 + 12;
-  const SLOPE_END_X = 512 + 150;
-  const SLOPE_END_Y = BAR_END_Y + 60;
-  const GO_HOLE_W   = 45;
-  const GO_HOLE_H   = 40;
-  const GO_HOLE_X   = SLOPE_END_X - GO_HOLE_W;
-  const GO_HOLE_Y   = SLOPE_END_Y;
-
-  const gx1 = GO_HOLE_X * xs, gy1 = GO_HOLE_Y * ys;
-  const gx2 = (GO_HOLE_X + GO_HOLE_W) * xs, gy2 = (GO_HOLE_Y + GO_HOLE_H) * ys;
-
-  canvas.style.cursor = (mx >= gx1 && mx <= gx2 && my >= gy1 && my <= gy2) ? 'pointer' : 'default';
-});
 
 updateHoldDisplay();
 _startRaf();
@@ -6036,9 +6428,67 @@ function _playRushFullVid(vidId, callback) {
   };
 }
 
+// RUSH継続時：digit を 今の位置から 90px / strip img 90px / still-img top:320px へ
+// 滑らかに移動する。CSSクラス切替だけでは同期的に元サイズへ戻ってしまうので、
+// インラインスタイルで明示的にトランジションを掛ける。
+function _animateDigitsToContinuation(callback) {
+  const d1 = document.getElementById('digit1');
+  const d2 = document.getElementById('digit2');
+  const d3 = document.getElementById('digit3');
+  const DURATION_MS = 500;
+  [d1, d2, d3].forEach(d => {
+    if (!d) return;
+    // 現在の computed サイズを起点にして、トランジションを確実に発火させる
+    const cs = window.getComputedStyle(d);
+    d.style.transition = 'width 0.5s ease, height 0.5s ease';
+    d.style.width = cs.width; // 一旦現在値を固定
+    void d.offsetWidth;        // 強制リフロー
+    d.style.width = '90px';
+
+    const stillImg = d.querySelector('.still-img');
+    if (stillImg) {
+      const sCs = window.getComputedStyle(stillImg);
+      stillImg.style.transition = 'top 0.5s ease, height 0.5s ease';
+      stillImg.style.top = sCs.top;
+      stillImg.style.height = sCs.height;
+      void stillImg.offsetWidth;
+      stillImg.style.top = '320px';
+      stillImg.style.height = '90px';
+    }
+
+    d.querySelectorAll('.strip img').forEach(img => {
+      const iCs = window.getComputedStyle(img);
+      img.style.transition = 'height 0.5s ease';
+      img.style.height = iCs.height;
+      void img.offsetWidth;
+      img.style.height = '90px';
+    });
+  });
+
+  setTimeout(() => {
+    // インラインスタイルを除去（以降は atarigo-video-playing クラスのCSSが適用される）
+    [d1, d2, d3].forEach(d => {
+      if (!d) return;
+      d.style.transition = '';
+      d.style.width = '';
+      const stillImg = d.querySelector('.still-img');
+      if (stillImg) {
+        stillImg.style.transition = '';
+        stillImg.style.top = '';
+        stillImg.style.height = '';
+      }
+      d.querySelectorAll('.strip img').forEach(img => {
+        img.style.transition = '';
+        img.style.height = '';
+      });
+    });
+    callback();
+  }, DURATION_MS);
+}
+
 // keizoku.mp4 + atariSE.mp3 を同時再生し、動画終了後にcallbackを呼ぶ
 // atariSEはkeizoku再生中に鳴らし、動画終了を待ってからcallbackへ進む
-// digitの縮小移動はkeizoku再生開始時点で起動する（atarigo再生まで待たない）
+// keizoku.mp4 再生開始と同時に digit を 今の位置から 90px / strip img 90px / still-img top:320px へ滑らかに移動
 function _playKeizoku(callback) {
   const vid = document.getElementById('vid-rush-keizoku');
   if (!vid) { callback(); return; }
@@ -6049,9 +6499,6 @@ function _playKeizoku(callback) {
   document.querySelectorAll('#video-layer video').forEach(v => {
     v.pause(); v.style.display = 'none';
   });
-
-  // keizoku再生開始と同時にdigitを縮小位置へ移動させる
-  document.getElementById('wrap').classList.add('atarigo-video-playing');
 
   vid.style.display = 'block';
   vid.currentTime = 0;
@@ -6071,6 +6518,13 @@ function _playKeizoku(callback) {
 
   vid.play().catch(() => {});
   atariSE.play().catch(() => {});
+
+  // keizoku.mp4 再生開始と同時に digit を 今の位置から滑らかに縮小移動
+  // atarigo-video-playing クラスを先に付与することで、500ms後にインラインスタイルを
+  // 除去した後も CSS の width:90px / still-img top:320px が維持される。
+  // クラスは後続の _playRushContinuationAtarigo → playVideo で一旦除去・再付与される。
+  document.getElementById('wrap').classList.add('atarigo-video-playing');
+  _animateDigitsToContinuation(() => {});
 }
 
 // playAtarigoRoute完了後に呼ぶラッパー

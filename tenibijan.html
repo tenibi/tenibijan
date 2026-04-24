@@ -19906,8 +19906,7 @@ async function startIconTradeMatch(friendId, friendName) {
       await _itmLoadIconsAndEnterSelect();
     } else {
       // 相手待ち → ポーリング
-      _itmSetBanner('相手の参加を待っています…
-相手も「🔄 交換」ボタンを押してください', '#88ccaa');
+      _itmSetBanner('相手の参加を待っています…\n相手も「🔄 交換」ボタンを押してください', '#88ccaa');
       if (_itm.pollTimer) clearInterval(_itm.pollTimer);
       _itm.pollTimer = setInterval(_itmPollQueue, 2000);
     }

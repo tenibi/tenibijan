@@ -2092,6 +2092,11 @@ function showAtarigoResult() {
     }
   }
 
+  // 初めてリザルトで10000以上獲得したとき → manpatu 称号解禁
+  if (gained >= 10000) {
+    _unlockPachiTitle('manpatu');
+  }
+
   document.getElementById('atarigo-result').classList.add('visible');
   // リザルト表示時にBGMを再開（RUSH中は抑制されていたので解除）
   rushBgmSuppressed = false;
@@ -3036,8 +3041,26 @@ function _playRushContinuationAtarigo(proceedFn) {
   };
 }
 
+// ─── 手にパチ称号解禁ヘルパー ───────────────────────────────────
+function _unlockPachiTitle(titleKey) {
+  const KEY = 'pachi_title_' + titleKey + '_unlocked';
+  if (localStorage.getItem(KEY)) return; // 既に解禁済み
+  localStorage.setItem(KEY, '1');
+  const token = localStorage.getItem('jwt_token') || '';
+  if (!token) return; // 未ログインは無視
+  _pachiAuthFetch('/api/pachi/unlock-title', {
+    method: 'POST',
+    body: JSON.stringify({ titleKey: 'pachi_' + titleKey }),
+  }).catch(() => {});
+}
+
 function playAtarigoRoute(proceedFn) {
+  // 初めて playAtarigoRoute に到達したとき → bonus 称号解禁
+  _unlockPachiTitle('bonus');
+
   if (currentConsumedZenkaiten) {
+    // 全回転当たりルート → 初回のみ zenkaiten 称号解禁
+    _unlockPachiTitle('zenkaiten');
     currentConsumedZenkaiten = false;
     _playZenkaitenAnimation(() => {
       // _playAtarigoAnimation の atariSE 再生中（約3秒）は vidAtarigo がまだ paused なので、

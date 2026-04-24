@@ -2843,15 +2843,17 @@ function _playAtarigoAnimation(proceedFn) {
   document.getElementById('nizi-overlay').style.display = 'block';
 
   function _startAtarigo() {
-    playVideo(vidAtarigo);
-    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); }
-    rouletteEndTimeout = setTimeout(proceedFn, 600000);
+    // onended を play() より先に設定（ended イベント競合による1秒停止バグを防ぐ）
+    vidAtarigo.onended = null;
     vidAtarigo.onended = () => {
       vidAtarigo.onended = null;
       if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
       stopRoundCounter();
       setTimeout(proceedFn, 300);
     };
+    playVideo(vidAtarigo);
+    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); }
+    rouletteEndTimeout = setTimeout(proceedFn, 600000);
   }
 
   atariSE.pause();
@@ -3874,7 +3876,8 @@ function updateRoulette() {
                 // riti02（15%）が優先、riti01（25%）はriti02でない場合のみ
                 const useRiti02 = reachType === 'riti02';
               const reachVid = useRiti02 ? vidReach2 : vidReach;
-              playVideo(reachVid);
+              // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
+              reachVid.onended = null;
               reachVid.onended = () => {
                 reachVid.onended = null;
                 document.getElementById('wrap').classList.remove('reach-video-playing', 'hazure-video-playing', 'atarigo-video-playing', 'atari02-video-playing');
@@ -3912,8 +3915,8 @@ function updateRoulette() {
                     jackpotTimer = 300;
                     score += 1000;
                     d2.classList.remove('visible');
-                    playVideo(vidAtari2);
-                    rouletteEndTimeout = setTimeout(proceedAfterRoulette2, 30000);
+                    // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
+                    vidAtari2.onended = null;
                     vidAtari2.onended = () => {
                       vidAtari2.onended = null;
                       // ① MP4は最終フレームが残るので明示的に非表示（WebMは透過で自然に消える）
@@ -3926,6 +3929,8 @@ function updateRoulette() {
                         playAtarigoRoute(proceedAfterRoulette2);
                       });
                     };
+                    playVideo(vidAtari2);
+                    rouletteEndTimeout = setTimeout(proceedAfterRoulette2, 30000);
                   }
 
                   // 内部当たり時：直接当たり02 か ハズレ02→復活02→当たり02 かをランダムで決定
@@ -3936,15 +3941,15 @@ function updateRoulette() {
                     playAtari02Seq();
                   } else {
                     // ハズレ02を再生（内部当たり時は復活ルートへ、内部ハズレ時はそのまま終了）
-                    playVideo(vidHazure2);
-                    rouletteEndTimeout = setTimeout(proceedAfterRoulette2, 30000);
+                    // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
+                    vidHazure2.onended = null;
                     vidHazure2.onended = () => {
                       vidHazure2.onended = null;
                       if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
                       if (goHukatuRoute) {
                         // 内部当たり・復活ルート：復活02 → 当たり後関数
-                        playVideo(vidHukatu2);
-                        rouletteEndTimeout = setTimeout(proceedAfterRoulette2, 30000);
+                        // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
+                        vidHukatu2.onended = null;
                         vidHukatu2.onended = () => {
                           vidHukatu2.onended = null;
                           if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
@@ -3954,11 +3959,15 @@ function updateRoulette() {
                             playAtarigoRoute(proceedAfterRoulette2);
                           });
                         };
+                        playVideo(vidHukatu2);
+                        rouletteEndTimeout = setTimeout(proceedAfterRoulette2, 30000);
                       } else {
                         // 内部ハズレ：そのまま終了
                         setTimeout(proceedAfterRoulette2, 300);
                       }
                     };
+                    playVideo(vidHazure2);
+                    rouletteEndTimeout = setTimeout(proceedAfterRoulette2, 30000);
                   }
                   }); // end startOseBlink (riti02)
                 } else {
@@ -5307,8 +5316,8 @@ function triggerTestAtari(type) {
   if (type === 'atari01') {
     stopAllVideosNoResume();
     d2.classList.remove('visible');
-    playVideo(vidAtari);
-    rouletteEndTimeout = setTimeout(proceedAfterTest, 30000);
+    // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
+    vidAtari.onended = null;
     vidAtari.onended = () => {
       vidAtari.onended = null;
       if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
@@ -5318,11 +5327,13 @@ function triggerTestAtari(type) {
         playAtarigoRoute(proceedAfterTest);
       });
     };
+    playVideo(vidAtari);
+    rouletteEndTimeout = setTimeout(proceedAfterTest, 30000);
   } else {
     stopAllVideosNoResume();
     d2.classList.remove('visible');
-    playVideo(vidAtari2);
-    rouletteEndTimeout = setTimeout(proceedAfterTest, 30000);
+    // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
+    vidAtari2.onended = null;
     vidAtari2.onended = () => {
       vidAtari2.onended = null;
       vidAtari2.style.display = 'none';
@@ -5333,6 +5344,8 @@ function triggerTestAtari(type) {
         playAtarigoRoute(proceedAfterTest);
       });
     };
+    playVideo(vidAtari2);
+    rouletteEndTimeout = setTimeout(proceedAfterTest, 30000);
   }
 }
 
@@ -5400,8 +5413,8 @@ function triggerTestReach(type) {
         jackpotTimer = 300;
         score += 1000;
         d2.classList.remove('visible');
-        playVideo(vidAtari2);
-        rouletteEndTimeout = setTimeout(proceedAfterReachTest, 30000);
+        // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
+        vidAtari2.onended = null;
         vidAtari2.onended = () => {
           vidAtari2.onended = null;
           vidAtari2.style.display = 'none';
@@ -5411,6 +5424,8 @@ function triggerTestReach(type) {
             playAtarigoRoute(proceedAfterReachTest);
           });
         };
+        playVideo(vidAtari2);
+        rouletteEndTimeout = setTimeout(proceedAfterReachTest, 30000);
       });
     } else {
       // riti01: OSEシーケンス（ose.mpループ + osevc → OSEボタン押下 → oseend → 次へ）
@@ -5420,8 +5435,8 @@ function triggerTestReach(type) {
         score += 1000;
         showDigit2Result(d2, 7);
         d2.classList.remove('visible');
-        playVideo(vidAtari);
-        rouletteEndTimeout = setTimeout(proceedAfterReachTest, 30000);
+        // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
+        vidAtari.onended = null;
         vidAtari.onended = () => {
           vidAtari.onended = null;
           if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
@@ -5430,6 +5445,8 @@ function triggerTestReach(type) {
             playAtarigoRoute(proceedAfterReachTest);
           });
         };
+        playVideo(vidAtari);
+        rouletteEndTimeout = setTimeout(proceedAfterReachTest, 30000);
       });
     }
   };
@@ -6704,4 +6721,5 @@ function _maybeRush(proceedFn) {
   </div>
 </div>
 </body>
-</html>
+</html>              playVideo(reachVid);
+

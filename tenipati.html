@@ -957,8 +957,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
     <div id="jackpot-banner">★★★ 777 大当たり！ ★★★</div>
     <div id="video-layer">
       <video id="vid-loop"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/loop.mp4"     preload="auto" playsinline loop muted></video>
-      <video id="vid-reach"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riiti01.webm" preload="auto" playsinline></video>
-      <video id="vid-reach2"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti02.mp4"  preload="auto" playsinline></video>
+      <video id="vid-reach"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti01.mp4" preload="auto" playsinline muted></video>
+      <video id="vid-reach2"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti02.mp4"  preload="auto" playsinline muted></video>
       <video id="vid-hazure"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hazure01.webm" preload="auto" playsinline></video>
       <video id="vid-hazure2" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hazure02.mp4" preload="auto" playsinline></video>
       <video id="vid-atari"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atari01.webm" preload="auto" playsinline></video>
@@ -3609,7 +3609,17 @@ function playVideo(videoEl) {
   document.getElementById('wrap').classList.toggle('atari02-video-playing', videoEl === vidAtari2);
   videoEl.style.display = 'block';
   videoEl.currentTime = 0;
-  videoEl.play().catch(() => {});
+  // play()失敗時はonendedをフォールバック実行してゲームを進行させる（中・強リーチ止まり防止）
+  const _playPromise = videoEl.play();
+  if (_playPromise !== undefined) {
+    _playPromise.catch(() => {
+      if (videoEl.onended) {
+        const _fallbackH = videoEl.onended;
+        videoEl.onended = null;
+        _fallbackH.call(videoEl, new Event('ended'));
+      }
+    });
+  }
   if (videoEl === vidReach) {
     // 中リーチ：riti04固定
     ritiSE = ritiSEList[3]; // riti04
@@ -4119,6 +4129,20 @@ function updateRoulette() {
                 }
               };
               playVideo(reachVid);
+              // フォールバック：リーチ動画が再生されない/長時間終了しない場合に強制進行（90秒）
+              // ※ onendedをラップしてタイマーとの二重実行を防ぐ
+              const _reachFallbackTimer = (function() {
+                const _origOnended = reachVid.onended;
+                const _timer = setTimeout(() => {
+                  const _h = reachVid.onended;
+                  if (_h) { reachVid.onended = null; _h.call(reachVid, new Event('ended')); }
+                }, 90000);
+                reachVid.onended = function(e) {
+                  clearTimeout(_timer);
+                  if (_origOnended) { reachVid.onended = _origOnended; _origOnended.call(this, e); }
+                };
+                return _timer;
+              })();
               } // end else (riti01/riti02 video reach)
             } // end if (!reachTriggered ...)
           }, remainingMs);

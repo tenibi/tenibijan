@@ -1672,13 +1672,6 @@ body{
 .icon-col-owned-count{
   font-size:.55rem;color:#4a7a5a;margin-top:-6px;margin-bottom:10px;letter-spacing:.05em;
 }
-.ic-count-badge{
-  position:absolute;top:3px;right:3px;
-  background:rgba(180,120,0,.9);color:#fff;
-  font-size:.42rem;font-weight:700;letter-spacing:.02em;
-  padding:1px 4px;border-radius:4px;line-height:1.4;
-  border:1px solid rgba(255,200,80,.5);
-}
 /* ===== アイコン装備スロット選択 ===== */
 #iconSlotSelectorWrap{
   width:100%;max-width:520px;
@@ -3554,6 +3547,61 @@ body{
           </div>
         </label>
       </div>
+      <!-- ゲームパッド設定 -->
+      <div style="border-top:1px solid #1a3a2a;margin-top:14px;padding-top:12px;">
+        <div style="font-size:.65rem;color:#5a7a6a;margin-bottom:10px;letter-spacing:.05em;">🎮 ゲームパッド</div>
+        <!-- コントローラー有効/無効トグル -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🎮 コントローラー</span>
+          <div id="gpActiveToggleTitle" onclick="toggleGpActive()" style="
+            position:relative;width:40px;height:22px;border-radius:11px;
+            background:var(--gold);cursor:pointer;transition:background .25s;flex-shrink:0;">
+            <div class="gp-toggle-thumb" style="
+              position:absolute;top:3px;left:calc(100% - 19px);
+              width:16px;height:16px;border-radius:50%;background:#fff;
+              transition:left .2s;pointer-events:none;"></div>
+          </div>
+          <span id="gpActiveLabelTitle" style="font-size:.58rem;color:var(--gold);width:120px;">ON</span>
+        </div>
+        <!-- 振動トグル -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:.6rem;color:#5a7a6a;flex:1;">📳 振動</span>
+          <div id="gpRumbleToggleTitle" onclick="toggleGpRumble()" style="
+            position:relative;width:40px;height:22px;border-radius:11px;
+            background:#4a8aff;cursor:pointer;transition:background .25s;flex-shrink:0;">
+            <div class="gp-toggle-thumb" style="
+              position:absolute;top:3px;left:calc(100% - 19px);
+              width:16px;height:16px;border-radius:50%;background:#fff;
+              transition:left .2s;pointer-events:none;"></div>
+          </div>
+          <span id="gpRumbleLabelTitle" style="font-size:.58rem;color:#4a8aff;width:120px;">ON</span>
+        </div>
+        <!-- 仮想パッドトグル -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ 仮想パッド</span>
+          <div id="gpVpadToggleTitleSetting" onclick="toggleGpVpad()" style="
+            position:relative;width:40px;height:22px;border-radius:11px;
+            background:#1a3a2a;cursor:pointer;transition:background .25s;flex-shrink:0;">
+            <div class="gp-toggle-thumb" style="
+              position:absolute;top:3px;left:3px;
+              width:16px;height:16px;border-radius:50%;background:#fff;
+              transition:left .2s;pointer-events:none;"></div>
+          </div>
+          <span id="gpVpadLabelTitleSetting" style="font-size:.58rem;color:#4a6a5a;width:120px;">OFF</span>
+        </div>
+        <!-- 接続状態 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span id="gpStatusDotTitle" style="width:9px;height:9px;border-radius:50%;background:#2a4a3a;flex-shrink:0;box-shadow:0 0 4px #2a4a3a;transition:background .3s,box-shadow .3s;"></span>
+          <span id="gpStatusTextTitle" style="font-size:.6rem;color:#3a5a4a;">未接続（コントローラーを繋いでボタンを押してください）</span>
+        </div>
+        <!-- ボタン割り当てテーブル -->
+        <div id="gpBindTableTitle" style="display:flex;flex-direction:column;gap:5px;"></div>
+        <!-- リセットボタン -->
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button onclick="gpRefresh()" style="flex:1;background:#030a10;border:1px solid #1a3a4a;border-radius:6px;color:#4a8aaa;font-size:.6rem;padding:6px;cursor:pointer;">🔄 再検出</button>
+          <button onclick="gpResetBindings()" style="flex:1;background:#030a10;border:1px solid #2a3a2a;border-radius:6px;color:#5a7a6a;font-size:.6rem;padding:6px;cursor:pointer;">↺ リセット</button>
+        </div>
+      </div>
     </div>
     <div id="titleTabContentRules" style="display:none;font-size:.85rem;color:#8aaa8a;line-height:1.8;text-align:center;padding:20px 10px;">
       同じ図柄を２つと同じ図柄を３つ<br>or 同じ図柄の並んだ数字を３つ<br>集めると上がれるよ。
@@ -4035,6 +4083,155 @@ body{
 
 <!-- GAME -->
 <div id="gameScreen">
+  <!-- ══════════ 仮想コントローラー ══════════ -->
+  <div id="vpadOverlay" style="display:none;position:fixed;inset:0;z-index:19000;pointer-events:none;">
+    <!-- 十字キー（左下） -->
+    <div id="vpadDpad" style="
+      position:absolute;bottom:24px;left:20px;
+      width:138px;height:138px;
+      pointer-events:auto;user-select:none;-webkit-user-select:none;
+    ">
+      <!-- 上 -->
+      <div data-vpad="up" style="
+        position:absolute;left:50%;top:0;transform:translateX(-50%);
+        width:44px;height:44px;border-radius:8px 8px 4px 4px;
+        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:#c9a84c;cursor:pointer;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      ">▲</div>
+      <!-- 下 -->
+      <div data-vpad="down" style="
+        position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+        width:44px;height:44px;border-radius:4px 4px 8px 8px;
+        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:#c9a84c;cursor:pointer;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      ">▼</div>
+      <!-- 左 -->
+      <div data-vpad="left" style="
+        position:absolute;top:50%;left:0;transform:translateY(-50%);
+        width:44px;height:44px;border-radius:8px 4px 4px 8px;
+        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:#c9a84c;cursor:pointer;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      ">◀</div>
+      <!-- 右 -->
+      <div data-vpad="right" style="
+        position:absolute;top:50%;right:0;transform:translateY(-50%);
+        width:44px;height:44px;border-radius:4px 8px 8px 4px;
+        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:#c9a84c;cursor:pointer;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      ">▶</div>
+      <!-- 中心 -->
+      <div style="
+        position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+        width:34px;height:34px;border-radius:50%;
+        background:rgba(10,20,15,0.6);border:1px solid #1a3a2a;
+        pointer-events:none;
+      "></div>
+    </div>
+    <!-- AボタンとBボタン（右下） -->
+    <div style="
+      position:absolute;bottom:24px;right:20px;
+      width:120px;height:120px;
+      pointer-events:auto;user-select:none;-webkit-user-select:none;
+    ">
+      <!-- B（キャンセル・左） -->
+      <div data-vpad="skip" style="
+        position:absolute;left:0;top:50%;transform:translateY(-50%);
+        width:52px;height:52px;border-radius:50%;
+        background:rgba(10,20,15,0.82);border:2px solid #5a3a2a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:.7rem;color:#cc8844;font-weight:700;cursor:pointer;
+        flex-direction:column;gap:1px;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      "><span style="font-size:.85rem;">B</span><span style="font-size:.5rem;opacity:.7;">キャンセル</span></div>
+      <!-- A（決定・右） -->
+      <div data-vpad="select_tile" style="
+        position:absolute;right:0;top:50%;transform:translateY(-50%);
+        width:52px;height:52px;border-radius:50%;
+        background:rgba(10,20,15,0.82);border:2px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:.7rem;color:#44cc88;font-weight:700;cursor:pointer;
+        flex-direction:column;gap:1px;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      "><span style="font-size:.85rem;">A</span><span style="font-size:.5rem;opacity:.7;">決定</span></div>
+    </div>
+  </div>
+  <script>
+  // ══════════ 仮想パッド ══════════
+  (function(){
+    const REPEAT_DELAY = 400;
+    const REPEAT_INTERVAL = 160;
+    const DIRS = ['up','down','left','right'];
+    let _timers = {};
+
+    function _press(action){
+      if(typeof _dispatchPhys === 'function'){
+        // _dispatchPhys はクロージャ内なので window経由で呼べないが、
+        // postMessage経由で自前ゲームパッドイベントとして送る
+      }
+      // 直接 _execAction を公開関数経由で呼ぶ
+      if(typeof window.__vpadDispatch === 'function') window.__vpadDispatch(action);
+    }
+
+    function _startRepeat(action){
+      _press(action);
+      if(DIRS.includes(action)){
+        _timers[action] = setTimeout(function tick(){
+          _press(action);
+          _timers[action] = setTimeout(tick, REPEAT_INTERVAL);
+        }, REPEAT_DELAY);
+      }
+    }
+
+    function _stopRepeat(action){
+      if(_timers[action]){ clearTimeout(_timers[action]); delete _timers[action]; }
+    }
+
+    function _attach(el){
+      const action = el.dataset.vpad;
+      if(!action) return;
+
+      const _activeClass = ()=>{
+        el.style.background = 'rgba(40,80,50,0.92)';
+        el.style.transform = (el.style.transform||'').replace('scale(0.88)','') + ' scale(0.88)';
+      };
+      const _inactiveClass = ()=>{
+        el.style.background = 'rgba(10,20,15,0.82)';
+        el.style.transform = (el.style.transform||'').replace(' scale(0.88)','').replace('scale(0.88)','');
+      };
+
+      el.addEventListener('touchstart', e=>{
+        e.preventDefault();
+        _activeClass();
+        _startRepeat(action);
+      }, {passive:false});
+      el.addEventListener('touchend', e=>{
+        e.preventDefault();
+        _inactiveClass();
+        _stopRepeat(action);
+      }, {passive:false});
+      el.addEventListener('touchcancel', e=>{
+        _inactiveClass();
+        _stopRepeat(action);
+      });
+      // マウスでも動作
+      el.addEventListener('mousedown', e=>{ e.preventDefault(); _activeClass(); _startRepeat(action); });
+      el.addEventListener('mouseup',   e=>{ _inactiveClass(); _stopRepeat(action); });
+      el.addEventListener('mouseleave',e=>{ _inactiveClass(); _stopRepeat(action); });
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      document.querySelectorAll('[data-vpad]').forEach(_attach);
+    });
+  })();
+  </script>
   <div class="game-header" style="display:none;">
     <div id="timerDisplay" style="display:none!important;">
       <div class="timer-bar-wrap" style="width:80px;height:8px;background:#111;border-radius:4px;overflow:hidden;border:1px solid #223;">
@@ -4515,6 +4712,25 @@ const SFX = (() => {
 
 
 // ============================================================
+// ── SFX → ゲームパッド振動ブリッジ ──────────────────────────
+// ron/tsumo/pon/kan/riichi/kita が鳴るたびに強振動1回
+(function(){
+  const _RUMBLE_KEYS = ['ron','tsumo','pon','kan','riichi','doubleRiichi','kita'];
+  function _patch(){
+    if(typeof SFX === 'undefined') return;
+    _RUMBLE_KEYS.forEach(key=>{
+      if(typeof SFX[key] !== 'function') return;
+      const _orig = SFX[key].bind(SFX);
+      SFX[key] = function(){
+        if(typeof window.gpRumble === 'function') window.gpRumble(300, 300, 1.0, 0.8);
+        return _orig.apply(this, arguments);
+      };
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _patch);
+  else _patch();
+})();
+
 // BGM ENGINE — 8bit可愛い曲 (Web Audio API 完全合成 / ~2分ループ)
 // ============================================================
 const BGM = (() => {
@@ -4703,8 +4919,12 @@ function saveSettings(){
       gachaVideoVol: _gachaVideoVol,
       gachaSeVol: _gachaSeVol,
       oneClickDiscard: oneClickDiscard,
+      gpBindings: typeof gpGetBindings === 'function' ? gpGetBindings() : null,
       discardAnimEnabled: discardAnimEnabled,
       opEnabled: _opEnabled,
+      gpActive: typeof window.gpGetActive === 'function' ? window.gpGetActive() : true,
+      gpRumbleOn: typeof window.gpGetRumbleOn === 'function' ? window.gpGetRumbleOn() : true,
+      gpVpadOn: typeof window.gpGetVpadOn === 'function' ? window.gpGetVpadOn() : false,
       iconVoiceScale: Object.assign({}, iconVoiceScale),
       seScale: Object.fromEntries(
         ['draw','discard','ron','tsumo','riichi','pon','kan','kita','yakuman','light','yami','haku','steal','mine','myTurn','countdown','voice']
@@ -4816,6 +5036,10 @@ function loadSettings(){
       oneClickDiscard = !!data.oneClickDiscard;
       _applyDiscardModeUI();
     }
+    // gpBindings（ゲームパッドボタン割り当て）
+    if(data.gpBindings && typeof gpLoadBindings === 'function'){
+      gpLoadBindings(data.gpBindings);
+    }
     // 捨てアニメ設定
     if(data.discardAnimEnabled != null){
       discardAnimEnabled = !!data.discardAnimEnabled;
@@ -4825,6 +5049,21 @@ function loadSettings(){
     if(data.opEnabled != null){
       _opEnabled = !!data.opEnabled;
       _applyOpToggleUI();
+    }
+    // コントローラー有効/無効
+    if(data.gpActive != null && typeof window.gpSetActive === 'function'){
+      window.gpSetActive(data.gpActive);
+      _applyGpActiveUI();
+    }
+    // 振動ON/OFF
+    if(data.gpRumbleOn != null && typeof window.gpSetRumbleOn === 'function'){
+      window.gpSetRumbleOn(data.gpRumbleOn);
+      _applyGpRumbleUI();
+    }
+    // 仮想パッドON/OFF
+    if(data.gpVpadOn != null && typeof window.gpSetVpadOn === 'function'){
+      window.gpSetVpadOn(data.gpVpadOn);
+      _applyGpVpadUI();
     }
     // レジェンドアイコン個別ボイス音量
     if(data.iconVoiceScale){
@@ -4842,13 +5081,77 @@ function toggleOpSetting(){
   saveSettings();
 }
 function _applyOpToggleUI(){
-  const toggle = document.getElementById('opToggle');
-  const thumb  = document.getElementById('opToggleThumb');
-  const label  = document.getElementById('opToggleLabel');
-  if(toggle) toggle.style.background = _opEnabled ? 'var(--gold)' : '#1a3a2a';
-  if(thumb)  thumb.style.left = _opEnabled ? 'calc(100% - 19px)' : '3px';
-  if(label)  label.style.color = _opEnabled ? 'var(--gold)' : '#4a6a5a';
-  if(label)  label.textContent = _opEnabled ? 'ON（次回から表示）' : 'OFF';
+  [['opToggle','opToggleThumb','opToggleLabel'],
+   ['opToggleHdr','opToggleThumbHdr','opToggleLabelHdr']].forEach(([tId,dId,lId])=>{
+    const toggle = document.getElementById(tId);
+    const thumb  = document.getElementById(dId);
+    const label  = document.getElementById(lId);
+    if(toggle) toggle.style.background = _opEnabled ? 'var(--gold)' : '#1a3a2a';
+    if(thumb)  thumb.style.left = _opEnabled ? 'calc(100% - 19px)' : '3px';
+    if(label)  label.style.color = _opEnabled ? 'var(--gold)' : '#4a6a5a';
+    if(label)  label.textContent = _opEnabled ? 'ON（次回から表示）' : 'OFF';
+  });
+}
+
+function toggleGpActive(){
+  if(typeof window.gpSetActive==='function') window.gpSetActive(!window.gpGetActive());
+  _applyGpActiveUI();
+  saveSettings();
+}
+function _applyGpActiveUI(){
+  const on = typeof window.gpGetActive==='function' ? window.gpGetActive() : true;
+  ['gpActiveToggle','gpActiveToggleHdr','gpActiveToggleTitle'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.style.background = on ? 'var(--gold)' : '#1a3a2a';
+    const thumb = el.querySelector('.gp-toggle-thumb');
+    if(thumb) thumb.style.left = on ? 'calc(100% - 19px)' : '3px';
+  });
+  ['gpActiveLabel','gpActiveLabelHdr','gpActiveLabelTitle'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.style.color = on ? 'var(--gold)' : '#4a6a5a';
+    el.textContent = on ? 'ON' : 'OFF（入力を無視）';
+  });
+}
+function toggleGpRumble(){
+  if(typeof window.gpSetRumbleOn==='function') window.gpSetRumbleOn(!window.gpGetRumbleOn());
+  _applyGpRumbleUI();
+  saveSettings();
+}
+function _applyGpRumbleUI(){
+  const on = typeof window.gpGetRumbleOn==='function' ? window.gpGetRumbleOn() : true;
+  ['gpRumbleToggle','gpRumbleToggleHdr','gpRumbleToggleTitle'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.style.background = on ? '#4a8aff' : '#1a3a2a';
+    const thumb = el.querySelector('.gp-toggle-thumb');
+    if(thumb) thumb.style.left = on ? 'calc(100% - 19px)' : '3px';
+  });
+  ['gpRumbleLabel','gpRumbleLabelHdr','gpRumbleLabelTitle'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.style.color = on ? '#4a8aff' : '#4a6a5a';
+    el.textContent = on ? 'ON' : 'OFF';
+  });
+}
+
+function toggleGpVpad(){
+  if(typeof window.gpSetVpadOn==='function') window.gpSetVpadOn(!window.gpGetVpadOn());
+  _applyGpVpadUI();
+  saveSettings();
+}
+function _applyGpVpadUI(){
+  const on = typeof window.gpGetVpadOn==='function' ? window.gpGetVpadOn() : false;
+  const overlay = document.getElementById('vpadOverlay');
+  if(overlay) overlay.style.display = on ? 'block' : 'none';
+  ['gpVpadToggleHdr','gpVpadToggleTitleSetting'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.style.background = on ? '#aa66ff' : '#1a3a2a';
+    const thumb = el.querySelector('.gp-toggle-thumb');
+    if(thumb) thumb.style.left = on ? 'calc(100% - 19px)' : '3px';
+  });
+  ['gpVpadLabelHdr','gpVpadLabelTitleSetting'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.style.color = on ? '#aa66ff' : '#4a6a5a';
+    el.textContent = on ? 'ON' : 'OFF';
+  });
 }
 
 // タイトル画面とゲームヘッダーのスライダーを相互同期する
@@ -10501,16 +10804,18 @@ function toggleDiscardAnim(){
   saveSettings();
 }
 function _applyDiscardAnimUI(){
-  const toggle = document.getElementById('discardAnimToggle');
-  if(!toggle) return;
-  const dot = toggle.firstElementChild;
-  if(discardAnimEnabled){
-    toggle.style.background = 'var(--gold)';
-    if(dot) dot.style.left = 'calc(100% - 19px)';
-  } else {
-    toggle.style.background = '#1a3a2a';
-    if(dot) dot.style.left = '3px';
-  }
+  ['discardAnimToggle','discardAnimToggleHdr'].forEach(id=>{
+    const toggle = document.getElementById(id);
+    if(!toggle) return;
+    const dot = toggle.firstElementChild;
+    if(discardAnimEnabled){
+      toggle.style.background = 'var(--gold)';
+      if(dot) dot.style.left = 'calc(100% - 19px)';
+    } else {
+      toggle.style.background = '#1a3a2a';
+      if(dot) dot.style.left = '3px';
+    }
+  });
 }
 function toggleTitleSettings(){
   const p=document.getElementById('titleSettingsPanel');
@@ -10783,6 +11088,8 @@ function _timerRender(){
 function timerOnMyTurn(){
   // 自分のターン通知SE（制限時間モード関係なく常に鳴らす）
   SFX.myTurn();
+  // ゲームパッド振動（接続中のみ）
+  if(typeof window.gpRumbleMyTurn === 'function') window.gpRumbleMyTurn();
   if(!G_TIME_MODE) return;
   // ベース秒は負債で減少するが最低0、ボーナス5秒は毎ターン必ず付与
   const baseSec = Math.max(0, _timerBase - _timerDebt);
@@ -10938,14 +11245,16 @@ function toggleAutoSort(){
 }
 function setDiscardMode(mode){
   oneClickDiscard = (mode === 'oneclick');
-  // タイトル設定パネルのラベル更新
-  const selLabel = document.getElementById('discardModeSelectLabel');
-  const oneLabel = document.getElementById('discardModeOneClickLabel');
-  if(selLabel){ selLabel.style.borderColor=oneClickDiscard?'#1a3a2a':'var(--gold)'; selLabel.style.background=oneClickDiscard?'#030a10':'#0a1a0a'; }
-  if(oneLabel){ oneLabel.style.borderColor=oneClickDiscard?'var(--gold)':'#1a3a2a'; oneLabel.style.background=oneClickDiscard?'#0a1a0a':'#030a10'; }
-  if(selLabel){ const t=selLabel.querySelector('.discard-mode-title'); if(t) t.style.color=oneClickDiscard?'#5a7a6a':'var(--gold)'; }
-  if(oneLabel){ const t=oneLabel.querySelector('.discard-mode-title'); if(t) t.style.color=oneClickDiscard?'var(--gold)':'#8aaa8a'; }
-  // ゲーム内パネルのボタン更新
+  // 全設定パネルのラベル更新（タイトル版・ゲーム中版）
+  ['','Hdr'].forEach(sfx=>{
+    const selLabel = document.getElementById('discardModeSelectLabel'+sfx);
+    const oneLabel = document.getElementById('discardModeOneClickLabel'+sfx);
+    if(selLabel){ selLabel.style.borderColor=oneClickDiscard?'#1a3a2a':'var(--gold)'; selLabel.style.background=oneClickDiscard?'#030a10':'#0a1a0a'; }
+    if(oneLabel){ oneLabel.style.borderColor=oneClickDiscard?'var(--gold)':'#1a3a2a'; oneLabel.style.background=oneClickDiscard?'#0a1a0a':'#030a10'; }
+    if(selLabel){ const t=selLabel.querySelector('.discard-mode-title'); if(t) t.style.color=oneClickDiscard?'#5a7a6a':'var(--gold)'; }
+    if(oneLabel){ const t=oneLabel.querySelector('.discard-mode-title'); if(t) t.style.color=oneClickDiscard?'var(--gold)':'#8aaa8a'; }
+  });
+  // ゲーム内パネルのボタン更新（後方互換性）
   const selBtn = document.getElementById('discardModeSelectBtn');
   const oneBtn = document.getElementById('discardModeOneClickBtn');
   if(selBtn){ selBtn.style.borderColor=oneClickDiscard?'#1a3a2a':'var(--gold)'; selBtn.style.background=oneClickDiscard?'#030a10':'#0a1a0a'; selBtn.style.color=oneClickDiscard?'#5a7a6a':'var(--gold)'; selBtn.style.fontWeight=oneClickDiscard?'400':'700'; }
@@ -12763,6 +13072,8 @@ function _startWinTimer(){
   if(statusEl) statusEl.textContent = '';
   const timerEl = document.getElementById('winTimerDisplay');
   if(timerEl) timerEl.textContent = '10';
+  // コントローラー接続中ならHUDヒントを表示
+  setTimeout(()=>{ if(typeof _hud==='function') _hud('🎮 Aボタン: OK'); }, 200);
   if(WIN_READY.timer){ clearInterval(WIN_READY.timer); WIN_READY.timer=null; }
   WIN_READY.timer = setInterval(()=>{
     WIN_READY.countdown--;
@@ -13299,6 +13610,8 @@ function _setResultBtn(){
   } else {
     el.innerHTML=`<button class="btn btn-primary" onclick="backToLobby()">ロビーへ戻る</button>`;
   }
+  // コントローラー接続中ならHUDヒントを表示
+  setTimeout(()=>{ if(typeof _hud==='function') _hud('🎮 Aボタン: OK ／ Bボタン: 戻る'); }, 200);
 }
 
 // 💣 手にボムモード: 安全自動などの設定を保持したままステージ1からリスタート
@@ -14070,6 +14383,8 @@ function openDiscardZoom(){
   document.getElementById('discardZoomOverlay').style.display='flex';
   _moveCornerLeftTo('discardZoomOverlay');
   _updateDiscardZoomActions();
+  // ゲームパッドカーソルを初期化
+  setTimeout(()=>{ if(typeof window._dzInitCursor==='function') window._dzInitCursor(); }, 50);
 }
 function renderDiscardZoom(){
   if(!G||!G.players) return;
@@ -14113,6 +14428,10 @@ function closeDiscardZoom(){
   document.getElementById('discardZoomOverlay').style.display='none';
   _restoreDiscardZoomCorner();
   _restoreCornerLeft();
+  // カーソルハイライトをリセット
+  document.querySelectorAll('#discardZoomContent .tile').forEach(t=>{
+    t.style.outline=''; t.style.outlineOffset=''; t.style.transform=''; t.style.zIndex='';
+  });
 }
 function _updateDiscardZoomActions(){
   const wrap=document.getElementById('discardZoomActionWrap');
@@ -14175,6 +14494,14 @@ function openWallExpand(){
     ec.classList.toggle('pen-on', _penModeOn);
     ec.classList.toggle('pick-on', !_penModeOn && (G.phase==='draw_wait'&&G.current===NET.myIdx || !!(G.minePlantPlayers&&G.minePlantPlayers.includes(NET.myIdx)) || G.lightMode==='pick'));
   }
+  // ゲームパッドカーソルを先頭有効スロットへ
+  setTimeout(()=>{
+    if(G && G.deckSlots){
+      const fi = G.deckSlots.findIndex(s=>s!==null);
+      if(fi>=0 && typeof window._gpWallIdxInit==='function') window._gpWallIdxInit(fi);
+      if(typeof window._drawWallCursor==='function') window._drawWallCursor(fi>=0 ? fi : 0);
+    }
+  }, 80);
 }
 
 function closeWallExpand(e){
@@ -14185,6 +14512,9 @@ function closeWallExpand(e){
   if(ov) ov.classList.remove('show');
   // 確定バッファをクリア（元の卓に戻ったときに二重合成しない）
   window._activePenOC = null;
+  // ゲームパッドカーソルを非表示
+  const gpCursor = document.getElementById('gpWallCursor');
+  if(gpCursor) gpCursor.style.display = 'none';
 }
 
 function renderWallExpand(){
@@ -16297,7 +16627,7 @@ function _doSteal(myIdx,fromPidx,discardIdx){
 // ============================================================
 // PROFILE  (localStorage)
 // ============================================================
-let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], gachaIconCounts:{}, yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}, riichiBgmPlaylist:[], reachBgmTickets:0, premium:false};
+let PROFILE = {name:'プレイヤー', ability:'', abilities:[], totalPulls:0, coins:0, tbbCoins:0, matId:'mat00', ownedMats:[], winsVsTenbi2p:0, titleBgId:'', iconId:'C00', vcIconId:'', displayIconId:'', gachaIcons:[], yakumanTitles:[], equippedTitle:'', cpuUnlocks:[], bombBestStage:0, bombBestScore:0, bombBestScoreOnly:null, bombBestScoreOnlyStage:null, handSkin:'', handSkins:{}, ring:'', rings:{}, agariVideo:'agari01', agariVideos:{}, riichiBgm:'', riichiBgms:{}, riichiBgmPlaylist:[], reachBgmTickets:0, premium:false};
 // vcIconId: VCアイコン（音声SE用）、未設定時はiconIdを使用
 // displayIconId: 見た目アイコン（画面表示用）、未設定時はiconIdを使用
 function _getProfileDisplayIconId(){ return PROFILE.displayIconId || PROFILE.iconId || ''; }
@@ -17098,7 +17428,6 @@ function loadProfile(){
         abilities:  data.abilities  ?? PROFILE.abilities,
         totalPulls: data.totalPulls ?? PROFILE.totalPulls,
         gachaIcons: data.gachaIcons ?? PROFILE.gachaIcons,
-        gachaIconCounts: data.gachaIconCounts ?? PROFILE.gachaIconCounts ?? {},
         iconId:          data.iconId          || PROFILE.iconId,
         vcIconId:        data.vcIconId        ?? PROFILE.vcIconId      ?? '',
         displayIconId:   data.displayIconId   ?? PROFILE.displayIconId ?? '',
@@ -17776,15 +18105,12 @@ function renderIconCollection(){
     for(const icon of icons){
       const isOwned=owned.has(icon.id);
       const bc = _cardBorderColor(icon.id, m.border);
-      const cnt = (PROFILE.gachaIconCounts?.[icon.id] || 0);
-      const countBadge = isOwned && cnt > 1 ? `<div class="ic-count-badge">×${cnt}</div>` : '';
       html+=`<div class="icon-col-card ${isOwned?'owned':'unowned'} ${_cardClass(icon.id)}" style="background:${m.bg};border-color:${bc};" ${isOwned?`onclick="pickGachaIconFromCollection('${icon.id}')"`:''}>
         ${isOwned
           ?`<img src="${gachaIconUrl(icon.id)}" alt="${icon.id}">`
           :`<div class="ic-question">？</div>`}
         <div class="ic-label" style="color:${m.color};">${isOwned?icon.label:'???'}</div>
         ${isOwned?_cardBadges(icon.id):''}
-        ${countBadge}
       </div>`;
     }
     html+=`</div></div>`;
@@ -17794,8 +18120,7 @@ function renderIconCollection(){
 
 function pickGachaIconFromCollection(id){
   const isLocal = LOCAL_ICONS.some(i=>i.id===id);
-  const isOwned = (PROFILE.gachaIconCounts?.[id]||0) >= 1 || (PROFILE.gachaIcons||[]).includes(id);
-  if(!isLocal && !isOwned) return;
+  if(!isLocal && (!PROFILE.gachaIcons||!PROFILE.gachaIcons.includes(id))) return;
 
   if(_iconSlotMode === 'vc'){
     PROFILE.vcIconId = id;
@@ -17833,14 +18158,11 @@ function renderProfileGachaIcons(){
     const isVC   = vcId   === id;
     const isDisp = dispId === id;
     const borderColor = (isVC&&isDisp)?'#ffd700':isVC?'#88aaff':isDisp?'#ffaa44':rd.border;
-    const cnt = (PROFILE.gachaIconCounts?.[id]||0);
-    const cntBadge = cnt > 1 ? `<div style="position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:.38rem;background:rgba(180,120,0,.9);color:#fff;border:1px solid rgba(255,200,80,.5);border-radius:4px;padding:1px 5px;font-weight:700;">×${cnt}</div>` : '';
     html+=`<div onclick="pickGachaIcon('${id}');renderProfileGachaIcons();" style="cursor:pointer;text-align:center;border:2px solid ${borderColor};border-radius:8px;padding:3px;background:${rd.bg};position:relative;">
       <img src="${gachaIconUrl(id)}" style="width:80px;height:112px;object-fit:contain;border-radius:6px;display:block;margin:0 auto;background:#fff;" alt="${id}">
       <div style="font-size:.42rem;color:${rd.color};margin-top:1px;">${info?info.label:id}</div>
       ${isVC?'<div style="position:absolute;top:2px;left:3px;font-size:.38rem;background:#0a0a30;color:#88aaff;border:1px solid #4466ff;border-radius:3px;padding:1px 3px;">🎤VC</div>':''}
       ${isDisp?'<div style="position:absolute;top:2px;right:3px;font-size:.38rem;background:#1a0a00;color:#ffcc66;border:1px solid #ff8800;border-radius:3px;padding:1px 3px;">🖼見た目</div>':''}
-      ${cntBadge}
     </div>`;
   }
   grid.innerHTML=html;
@@ -18303,12 +18625,9 @@ function pullOnce(){
       PROFILE.handSkins[pick.data.key] = (PROFILE.handSkins[pick.data.key]||0)+1;
     } else if(pick.type === 'icon'){
       result.icon = pick.data;
-      if(!PROFILE.gachaIconCounts) PROFILE.gachaIconCounts={};
       if(!PROFILE.gachaIcons) PROFILE.gachaIcons=[];
-      const _prevCnt = PROFILE.gachaIconCounts[pick.data.id] || 0;
-      result.iconIsNew = (_prevCnt === 0);
+      result.iconIsNew = !PROFILE.gachaIcons.includes(pick.data.id);
       result.isNew = result.iconIsNew;
-      PROFILE.gachaIconCounts[pick.data.id] = _prevCnt + 1;
       if(result.iconIsNew) PROFILE.gachaIcons.push(pick.data.id);
     } else if(pick.type === 'bgm'){
       const bgm = pick.data;
@@ -18333,11 +18652,8 @@ function pullOnce(){
     if(availIcons.length > 0){
       const icon = availIcons[Math.floor(Math.random()*availIcons.length)];
       result.icon = icon;
-      if(!PROFILE.gachaIconCounts) PROFILE.gachaIconCounts={};
       if(!PROFILE.gachaIcons) PROFILE.gachaIcons=[];
-      const _prevCnt2 = PROFILE.gachaIconCounts[icon.id] || 0;
-      result.iconIsNew = (_prevCnt2 === 0);
-      PROFILE.gachaIconCounts[icon.id] = _prevCnt2 + 1;
+      result.iconIsNew = !PROFILE.gachaIcons.includes(icon.id);
       if(result.iconIsNew) PROFILE.gachaIcons.push(icon.id);
     }
   }
@@ -18457,7 +18773,6 @@ function doPull10(){
     PROFILE.totalPulls = d.totalPulls;
     PROFILE.abilities  = d.abilities;
     PROFILE.gachaIcons = d.gachaIcons;
-    if(d.gachaIconCounts) PROFILE.gachaIconCounts = d.gachaIconCounts;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
     if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
     if(d.riichiBgms) { PROFILE.riichiBgms = d.riichiBgms; }
@@ -18489,7 +18804,6 @@ function doPull100(){
     PROFILE.totalPulls = d.totalPulls;
     PROFILE.abilities  = d.abilities;
     PROFILE.gachaIcons = d.gachaIcons;
-    if(d.gachaIconCounts) PROFILE.gachaIconCounts = d.gachaIconCounts;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
     if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
     if(d.riichiBgms) { PROFILE.riichiBgms = d.riichiBgms; }
@@ -18517,7 +18831,6 @@ function doPull1(){
     PROFILE.totalPulls = d.totalPulls;
     PROFILE.abilities  = d.abilities;
     PROFILE.gachaIcons = d.gachaIcons;
-    if(d.gachaIconCounts) PROFILE.gachaIconCounts = d.gachaIconCounts;
     if(d.handSkins) { PROFILE.handSkins = d.handSkins; _updateHandSkinUI(); }
     if(d.agariVideos) { PROFILE.agariVideos = d.agariVideos; _updateAgariBookDisplay(); }
     if(d.riichiBgms) { PROFILE.riichiBgms = d.riichiBgms; }
@@ -19821,25 +20134,8 @@ function refreshGiftBadge(){
 }
 
 // ============================================================
-// プレゼント機能
+// アイコン交換機能
 // ============================================================
-let _giftTarget = {id:'', name:''};
-let _giftTab    = 'tbb';
-const GIFT_SKIN_CATALOG = [
-  {key:'irezumi01ao',    icon:'🌸', name:'花 青',      desc:'青い花の刺青が入る'},
-  {key:'irezumi01kiiro', icon:'🌼', name:'花 黄色',    desc:'黄色い花の刺青が入る'},
-  {key:'irezumi01kuro',  icon:'🖤', name:'花 黒',      desc:'黒い花の刺青が入る'},
-  {key:'irezumi01pink',  icon:'🌺', name:'花 ピンク',  desc:'ピンクの花の刺青が入る'},
-  {key:'hyou',           icon:'🐆', name:'豹',         desc:'豹の手で牌を切る'},
-  {key:'nekonote',       icon:'🐱', name:'猫の手',     desc:'猫の手で牌を切る'},
-  {key:'siroinekonote',  icon:'🤍', name:'白猫の手',   desc:'白猫の手で牌を切る'},
-  {key:'tenibinote',     icon:'🫱', name:'手にビの手', desc:'手にビの手で牌を切る'},
-  {key:'tora',           icon:'🐯', name:'虎の手',     desc:'虎の手で牌を切る'},
-];
-
-
-// ── アイコントレード ──────────────────────────────────────────────
-// フェーズ: A=Browse提案, B=受け取り確認, C=提案者待機, D=完了
 // ── アイコン交換 マッチング方式 ─────────────────────────────────
 const _itm = {
   friendId: null, friendName: null,
@@ -19934,7 +20230,7 @@ async function _itmPollQueue() {
   } catch(e) {}
 }
 
-// ─ アイコン読み込み → SELECT フェーズへ
+// ─ アイコン読み込み → 役割に応じたフェーズへ
 async function _itmLoadIconsAndEnterSelect() {
   _itmSetBanner('アイコンを読み込み中…', '#88ccaa');
   try {
@@ -19952,13 +20248,20 @@ async function _itmLoadIconsAndEnterSelect() {
       _itm.myIcons = (meData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
     _itm.theirIcons = theirData.legendIcons || [];
 
-    _itmShowPhase('SELECT');
-    _itmRenderSelectGrids();
-    _itmSetBanner('💡 相手に渡すアイコンと、欲しいアイコンを選んでください', '#88ccaa');
+    if (_itm.iam === 'from') {
+      // 提案者: アイコン選択画面へ
+      _itmShowPhase('SELECT');
+      _itmRenderSelectGrids();
+      _itmSetBanner('💡 相手に渡すアイコンと、欲しいアイコンを選んでください', '#88ccaa');
+    } else {
+      // 承認者: 相手が選択するまで待機
+      _itmShowPhase('WAIT');
+      _itmSetBanner('相手が交換内容を選んでいます…\nしばらくお待ちください', '#88ccaa');
+    }
 
-    // セッションステータスポーリング開始（相手のキャンセル検知用）
+    // セッションステータスポーリング開始
     if (_itm.pollTimer) clearInterval(_itm.pollTimer);
-    _itm.pollTimer = setInterval(_itmPollSession, 2500);
+    _itm.pollTimer = setInterval(_itmPollSession, 2000);
   } catch(e) {
     _itmSetBanner('読み込み失敗', '#cc6666');
   }
@@ -20075,7 +20378,7 @@ function _itmUpdateSelectBtn() {
   }
 }
 
-// ─ 選択確定（サーバーへ送信し、相手の確定待ちへ）
+// ─ 提案者(from)が選択を確定 → 承認者(to)の確認待ちへ
 async function itmConfirmSelect() {
   if (!_itm.selectedWant || !_itm.selectedOffer) return;
   const btn = document.getElementById('itm-sel-confirmBtn');
@@ -20097,11 +20400,10 @@ async function itmConfirmSelect() {
       if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
       return;
     }
-    // CONFIRM フェーズへ
+    // CONFIRM フェーズへ（提案者は相手の承認待ち表示）
     _itmShowPhase('CONFIRM');
-    _itmRenderConfirmView();
-    _itmSetBanner('相手の選択を待っています…', '#88ccaa');
-    // セッションポーリング（両者確定待ち）
+    _itmRenderFromConfirmView();
+    _itmSetBanner('相手の承認を待っています…', '#88ccaa');
     if (_itm.pollTimer) clearInterval(_itm.pollTimer);
     _itm.pollTimer = setInterval(_itmPollSession, 2000);
   } catch(e) {
@@ -20110,14 +20412,85 @@ async function itmConfirmSelect() {
   }
 }
 
-// ─ CONFIRM フェーズの表示
-function _itmRenderConfirmView() {
+// ─ 提案者(from)のCONFIRM表示（自分が選んだ内容を確認）
+function _itmRenderFromConfirmView() {
   const wEl = document.getElementById('itm-conf-wantIcon');
   const oEl = document.getElementById('itm-conf-offerIcon');
   if (wEl && _itm.selectedWant)
     wEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedWant)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
   if (oEl && _itm.selectedOffer)
     oEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedOffer)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
+  // 承認/拒否ボタンを非表示
+  const acceptBtn = document.getElementById('itm-conf-acceptBtn');
+  const rejectBtn = document.getElementById('itm-conf-rejectBtn');
+  if (acceptBtn) acceptBtn.style.display = 'none';
+  if (rejectBtn) rejectBtn.style.display = 'none';
+}
+
+// ─ 承認者(to)のCONFIRM表示（fromの提案内容を見て承認/拒否）
+function _itmRenderToConfirmView(t) {
+  // fromが「欲しい(=toが渡す)」と「渡す(=toが受け取る)」を表示
+  const wEl = document.getElementById('itm-conf-wantIcon');   // 自分(to)が渡すもの
+  const oEl = document.getElementById('itm-conf-offerIcon');  // 自分(to)が受け取るもの
+  if (wEl && t.wantIcon)
+    wEl.innerHTML = `<img src="${gachaIconUrl(t.wantIcon)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
+  if (oEl && t.offerIcon)
+    oEl.innerHTML = `<img src="${gachaIconUrl(t.offerIcon)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
+  // 承認/拒否ボタンを表示
+  const acceptBtn = document.getElementById('itm-conf-acceptBtn');
+  const rejectBtn = document.getElementById('itm-conf-rejectBtn');
+  if (acceptBtn) acceptBtn.style.display = '';
+  if (rejectBtn) rejectBtn.style.display = '';
+  _itmSetBanner('📋 交換内容を確認してください', '#88ccaa');
+}
+
+// ─ 承認者(to)が承認ボタンを押す
+async function itmAcceptTrade() {
+  const btn = document.getElementById('itm-conf-acceptBtn');
+  const rej = document.getElementById('itm-conf-rejectBtn');
+  if (btn) { btn.style.opacity = '.5'; btn.style.pointerEvents = 'none'; }
+  if (rej) { rej.style.opacity = '.5'; rej.style.pointerEvents = 'none'; }
+  _itmSetBanner('承認中…', '#88ccaa');
+  try {
+    const res = await authFetch('/api/icon-trade/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offerId: _itm.offerId }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      _itmSetBanner(data.error || 'エラー', '#cc6666');
+      if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
+      if (rej) { rej.style.opacity = '1'; rej.style.pointerEvents = ''; }
+      return;
+    }
+    _itmSetBanner('✅ 承認しました！交換中…', '#55ee88');
+    if (btn) btn.style.display = 'none';
+    if (rej) rej.style.display = 'none';
+    // ポーリングで完了を検知
+    if (_itm.pollTimer) clearInterval(_itm.pollTimer);
+    _itm.pollTimer = setInterval(_itmPollSession, 1500);
+  } catch(e) {
+    _itmSetBanner('エラーが発生しました', '#cc6666');
+    if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
+    if (rej) { rej.style.opacity = '1'; rej.style.pointerEvents = ''; }
+  }
+}
+
+// ─ 承認者(to)が拒否ボタンを押す
+async function itmRejectTrade() {
+  _itmSetBanner('拒否中…', '#cc9944');
+  try {
+    await authFetch('/api/icon-trade/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offerId: _itm.offerId }),
+    });
+  } catch(e) {}
+  if (_itm.pollTimer) { clearInterval(_itm.pollTimer); _itm.pollTimer = null; }
+  _itm.offerId = null;
+  _itmSetBanner('交換を断りました', '#cc9944');
+  _itmShowPhase('WAIT');
 }
 
 // ─ セッションポーリング（マッチング後）
@@ -20129,7 +20502,6 @@ async function _itmPollSession() {
     if (!data.ok) return;
     const t = data.trade;
     if (!t) {
-      // セッション消滅
       if (_itm.pollTimer) clearInterval(_itm.pollTimer);
       _itmSetBanner('⚠️ セッションが終了しました', '#cc9944');
       _itmShowPhase('WAIT');
@@ -20137,7 +20509,7 @@ async function _itmPollSession() {
     }
     if (t.cancelled) {
       if (_itm.pollTimer) clearInterval(_itm.pollTimer);
-      _itmSetBanner('⚠️ キャンセルされました', '#cc9944');
+      _itmSetBanner('⚠️ 交換が断られました', '#cc9944');
       _itmShowPhase('WAIT');
       return;
     }
@@ -20146,9 +20518,16 @@ async function _itmPollSession() {
       _itmShowComplete(t);
       return;
     }
-    // 両者が選択完了しているかチェック
+
+    // ── 承認者(to)側: fromが選択完了したら提案内容を表示 ──
+    if (_itm.iam === 'to' && t.fromReady && !t.toReady && _itm.phase !== 'CONFIRM') {
+      _itmShowPhase('CONFIRM');
+      _itmRenderToConfirmView(t);
+      return;
+    }
+
+    // ── 両者準備完了 → 交換実行 ──
     if (t.fromReady && t.toReady) {
-      // 自動実行
       if (_itm.pollTimer) { clearInterval(_itm.pollTimer); _itm.pollTimer = null; }
       _itmSetBanner('🔄 交換実行中…', '#f0d080');
       try {
@@ -20160,20 +20539,21 @@ async function _itmPollSession() {
         const ed = await er.json();
         if (ed.ok && ed.completed) {
           _itmShowComplete({ ...t, gotIcon: ed.gotIcon, gaveIcon: ed.gaveIcon });
+        } else if (ed.pending) {
+          // 相手が先に実行中、少し待って再ポーリング
+          if (!_itm.pollTimer) _itm.pollTimer = setInterval(_itmPollSession, 1500);
         } else {
           _itmSetBanner(ed.error || '交換に失敗しました', '#cc6666');
-          if (_itm.pollTimer) clearInterval(_itm.pollTimer);
+          // エラー後も再試行できるようポーリング再開
+          if (!_itm.pollTimer) _itm.pollTimer = setInterval(_itmPollSession, 2000);
         }
       } catch(e) { _itmSetBanner('交換エラー', '#cc6666'); }
       return;
     }
-    // CONFIRM フェーズでバナー更新
-    if (_itm.phase === 'CONFIRM') {
-      const partnerReady = _itm.iam === 'from' ? t.toReady : t.fromReady;
-      _itmSetBanner(
-        partnerReady ? '✅ 相手の選択完了！交換中…' : '相手の選択を待っています…',
-        partnerReady ? '#55ee88' : '#88ccaa'
-      );
+
+    // ── 提案者(from)がCONFIRMフェーズ中: 相手の承認待ちバナー更新 ──
+    if (_itm.iam === 'from' && _itm.phase === 'CONFIRM') {
+      _itmSetBanner('相手の承認を待っています…', '#88ccaa');
     }
   } catch(e) {}
 }
@@ -20219,6 +20599,22 @@ function closeIconTradeModal() {
 function cancelIconTrade() { closeIconTradeModal(); }
 function openIconTradeModal(friendId, friendName) { startIconTradeMatch(friendId, friendName); }
 
+// ============================================================
+// プレゼント機能
+// ============================================================
+let _giftTarget = {id:'', name:''};
+let _giftTab    = 'tbb';
+const GIFT_SKIN_CATALOG = [
+  {key:'irezumi01ao',    icon:'🌸', name:'花 青',      desc:'青い花の刺青が入る'},
+  {key:'irezumi01kiiro', icon:'🌼', name:'花 黄色',    desc:'黄色い花の刺青が入る'},
+  {key:'irezumi01kuro',  icon:'🖤', name:'花 黒',      desc:'黒い花の刺青が入る'},
+  {key:'irezumi01pink',  icon:'🌺', name:'花 ピンク',  desc:'ピンクの花の刺青が入る'},
+  {key:'hyou',           icon:'🐆', name:'豹',         desc:'豹の手で牌を切る'},
+  {key:'nekonote',       icon:'🐱', name:'猫の手',     desc:'猫の手で牌を切る'},
+  {key:'siroinekonote',  icon:'🤍', name:'白猫の手',   desc:'白猫の手で牌を切る'},
+  {key:'tenibinote',     icon:'🫱', name:'手にビの手', desc:'手にビの手で牌を切る'},
+  {key:'tora',           icon:'🐯', name:'虎の手',     desc:'虎の手で牌を切る'},
+];
 
 function openGiftModal(friendId, friendName){
   _giftTarget = {id:friendId, name:friendName};
@@ -20237,6 +20633,103 @@ function closeGiftModal(){
   document.getElementById('giftModal').classList.remove('show');
 }
 // モーダル背景クリックで閉じる
+// ═══════════════════════════════════════════════════════
+// 🔧 設定パネル同期: タイトル版をゲーム中版に自動反映
+// タイトルの各タブHTMLを正（single source of truth）とし、
+// ゲーム中パネルにクローンして注入する。
+// 今後タイトル側のHTMLを編集するだけで両方に反映される。
+// ═══════════════════════════════════════════════════════
+function _syncSettingsPanels(){
+  // ─── Audio タブ ───
+  (function(){
+    const src = document.getElementById('titleTabContentAudio');
+    const dst = document.getElementById('igTabContentAudio');
+    if(!src || !dst) return;
+
+    let h = src.innerHTML;
+
+    // スライダー ID リネーム（SE2→SE2hdr を先に処理して誤置換を防ぐ）
+    h = h.replace(/id="sliderSE2"/g,        'id="sliderSE2hdr"')
+         .replace(/id="sliderSE"/g,          'id="sliderSEhdr"')
+         .replace(/id="sliderBGM"/g,         'id="sliderBGMhdr"')
+         .replace(/id="sliderRiichiBGM"/g,   'id="sliderRiichiBGMhdr"')
+         .replace(/id="gameBgmSel"/g,        'id="gameBgmSelHdr"')
+         .replace(/id="legendVoiceSliders"/g,'id="legendVoiceSlidersHdr"')
+         .replace(/id="opToggleThumb"/g,     'id="opToggleThumbHdr"')
+         .replace(/id="opToggleLabel"/g,     'id="opToggleLabelHdr"')
+         .replace(/id="opToggle"/g,          'id="opToggleHdr"');
+
+    // ゲーム中版 oninput: _syncSliders 追加（タイトル版にはない）
+    h = h.replace(
+      'oninput="SFX.setVol(+this.value); saveSettings();"',
+      "oninput=\"SFX.setVol(+this.value); _syncSliders('se',+this.value); saveSettings();\""
+    ).replace(
+      'oninput="SFX.setSeVol(+this.value); saveSettings();"',
+      "oninput=\"SFX.setSeVol(+this.value); _syncSliders('se2',+this.value); saveSettings();\""
+    ).replace(
+      'oninput="BGM.setVol(+this.value); saveSettings();"',
+      "oninput=\"BGM.setVol(+this.value); _syncSliders('bgm',+this.value); saveSettings();\""
+    );
+
+    // gameBgmSelHdr onchange: ゲーム中はBGMを即時切り替え＋タイトルselectも同期
+    h = h.replace(
+      'onchange="_gameBgmKey=this.value; saveSettings();"',
+      "onchange=\"_gameBgmKey=this.value; BGM.fadeOut(()=>BGM.fadeIn(_gameBgmKey)); const _gs=document.getElementById('gameBgmSel'); if(_gs)_gs.value=this.value;\""
+    );
+
+    dst.innerHTML = h;
+
+    // titleBgmSel の行を削除（タイトル専用）
+    const titleBgmEl = dst.querySelector('#titleBgmSel');
+    if(titleBgmEl){
+      const row = titleBgmEl.closest('[style*="align-items"]') || titleBgmEl.parentElement;
+      if(row && row !== dst) row.remove();
+    }
+  })();
+
+  // ─── Operation タブ ───
+  (function(){
+    const src = document.getElementById('titleTabContentOperation');
+    const dst = document.getElementById('igTabContentOperation');
+    if(!src || !dst) return;
+
+    let h = src.innerHTML;
+    h = h
+      .replace(/id="gpActiveToggleTitle"/g,     'id="gpActiveToggleHdr"')
+      .replace(/id="gpActiveLabelTitle"/g,       'id="gpActiveLabelHdr"')
+      .replace(/id="gpRumbleToggleTitle"/g,      'id="gpRumbleToggleHdr"')
+      .replace(/id="gpRumbleLabelTitle"/g,       'id="gpRumbleLabelHdr"')
+      .replace(/id="gpVpadToggleTitleSetting"/g, 'id="gpVpadToggleHdr"')
+      .replace(/id="gpVpadLabelTitleSetting"/g,  'id="gpVpadLabelHdr"')
+      .replace(/id="gpStatusDotTitle"/g,         'id="gpStatusDot"')
+      .replace(/id="gpStatusTextTitle"/g,        'id="gpStatusText"')
+      .replace(/id="gpBindTableTitle"/g,         'id="gpBindTable"')
+      .replace(/id="discardAnimToggle"/g,        'id="discardAnimToggleHdr"')
+      .replace(/id="discardModeSelectLabel"/g,   'id="discardModeSelectLabelHdr"')
+      .replace(/id="discardModeOneClickLabel"/g, 'id="discardModeOneClickLabelHdr"');
+
+    dst.innerHTML = h;
+  })();
+
+  // ─── Rules タブ ───
+  (function(){
+    const src = document.getElementById('titleTabContentRules');
+    const dst = document.getElementById('igTabContentRules');
+    if(!src || !dst) return;
+    dst.innerHTML = src.innerHTML;
+  })();
+
+  // ─── Yaku タブ ───
+  (function(){
+    const src = document.getElementById('titleTabContentYaku');
+    const dst = document.getElementById('igTabContentYaku');
+    if(!src || !dst) return;
+    dst.innerHTML = src.innerHTML;
+  })();
+}
+
+document.addEventListener('DOMContentLoaded', _syncSettingsPanels);
+
 document.addEventListener('DOMContentLoaded',()=>{
   const m = document.getElementById('giftModal');
   if(m) m.addEventListener('click', e=>{ if(e.target===m) closeGiftModal(); });
@@ -20599,15 +21092,7 @@ async function claimGift(giftId, btn){
       else { PROFILE.abilities=PROFILE.abilities||[]; if(!PROFILE.abilities.includes(d.abilityKey)) PROFILE.abilities.push(d.abilityKey); }
     } else if(d.type==='icon'){
       if(d.gachaIcons) PROFILE.gachaIcons = d.gachaIcons;
-      if(d.gachaIconCounts) PROFILE.gachaIconCounts = d.gachaIconCounts;
-      else {
-        // フォールバック（サーバーがcountsを返さない場合）
-        PROFILE.gachaIconCounts = PROFILE.gachaIconCounts||{};
-        PROFILE.gachaIconCounts[d.iconKey] = (PROFILE.gachaIconCounts[d.iconKey]||0)+1;
-        PROFILE.gachaIcons = PROFILE.gachaIcons||[];
-        if(!PROFILE.gachaIcons.includes(d.iconKey)) PROFILE.gachaIcons.push(d.iconKey);
-      }
-      renderIconCollection();
+      else { PROFILE.gachaIcons=PROFILE.gachaIcons||[]; if(!PROFILE.gachaIcons.includes(d.iconKey)) PROFILE.gachaIcons.push(d.iconKey); }
     } else if(d.type==='emote'){
       if(d.ownedEmoteSets) PROFILE.ownedEmoteSets = d.ownedEmoteSets;
       else { PROFILE.ownedEmoteSets=PROFILE.ownedEmoteSets||['01']; if(!PROFILE.ownedEmoteSets.includes(d.emoteKey)) PROFILE.ownedEmoteSets.push(d.emoteKey); }
@@ -20713,11 +21198,7 @@ async function _claimAllAdminGifts(btn){
         else if(cd.type==='ring'){ if(cd.rings) PROFILE.rings=cd.rings; else { PROFILE.rings=PROFILE.rings||{}; PROFILE.rings[cd.ringKey]=(PROFILE.rings[cd.ringKey]||0)+1; } saveProfileSilent(); if(typeof _renderRingBookGrid==='function') _renderRingBookGrid(); }
         else if(cd.type==='bgm'){ if(cd.riichiBgms) PROFILE.riichiBgms=cd.riichiBgms; else { PROFILE.riichiBgms=PROFILE.riichiBgms||{}; PROFILE.riichiBgms[cd.bgmKey]=(PROFILE.riichiBgms[cd.bgmKey]||0)+1; } }
         else if(cd.type==='ability'){ if(cd.abilities) PROFILE.abilities=cd.abilities; else { PROFILE.abilities=PROFILE.abilities||[]; if(!PROFILE.abilities.includes(cd.abilityKey)) PROFILE.abilities.push(cd.abilityKey); } }
-        else if(cd.type==='icon'){
-          if(cd.gachaIcons) PROFILE.gachaIcons=cd.gachaIcons;
-          if(cd.gachaIconCounts) PROFILE.gachaIconCounts=cd.gachaIconCounts;
-          else { PROFILE.gachaIconCounts=PROFILE.gachaIconCounts||{}; PROFILE.gachaIconCounts[cd.iconKey]=(PROFILE.gachaIconCounts[cd.iconKey]||0)+1; PROFILE.gachaIcons=PROFILE.gachaIcons||[]; if(!PROFILE.gachaIcons.includes(cd.iconKey)) PROFILE.gachaIcons.push(cd.iconKey); }
-        }
+        else if(cd.type==='icon'){ if(cd.gachaIcons) PROFILE.gachaIcons=cd.gachaIcons; else { PROFILE.gachaIcons=PROFILE.gachaIcons||[]; if(!PROFILE.gachaIcons.includes(cd.iconKey)) PROFILE.gachaIcons.push(cd.iconKey); } }
         else if(cd.type==='emote'){ if(cd.ownedEmoteSets) PROFILE.ownedEmoteSets=cd.ownedEmoteSets; else { PROFILE.ownedEmoteSets=PROFILE.ownedEmoteSets||['01']; if(!PROFILE.ownedEmoteSets.includes(cd.emoteKey)) PROFILE.ownedEmoteSets.push(cd.emoteKey); } }
         else if(cd.type==='agari'){ if(cd.agariVideos) PROFILE.agariVideos=cd.agariVideos; else { PROFILE.agariVideos=PROFILE.agariVideos||{}; PROFILE.agariVideos[cd.agariKey]=(PROFILE.agariVideos[cd.agariKey]||0)+1; } }
         else if(cd.type==='reach_bgm_ticket'){ PROFILE.reachBgmTickets = cd.reachBgmTickets ?? ((PROFILE.reachBgmTickets||0)+cd.amount); updateGachaTbbDisplay(); }
@@ -20752,7 +21233,6 @@ function saveProfileSilent(){
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       gachaIcons:      PROFILE.gachaIcons||[],
-      gachaIconCounts: PROFILE.gachaIconCounts||{},
       iconId:          PROFILE.iconId||'',
       vcIconId:        PROFILE.vcIconId||'',
       displayIconId:   PROFILE.displayIconId||'',
@@ -22407,6 +22887,10 @@ function doTwitchLogout(){
 
 // Show profile on first load if no name saved
 (function(){
+  // ローカルゲストトークンが残っている場合は削除してログイン画面へ
+  if(localStorage.getItem('jwt_token') === 'local_guest_token'){
+    localStorage.removeItem('jwt_token');
+  }
   const _token = localStorage.getItem('jwt_token');
   if(!_token){
     // 未ログイン → ログイン画面を表示
@@ -22836,6 +23320,68 @@ function plantMineRinshan(ri){
               <div id="igDiscardModeDesc" style="margin-top:4px;"></div>
             </div>
           </div>
+
+          <!-- ゲームパッド設定 -->
+          <div style="border-top:1px solid #1a3a2a;margin-top:14px;padding-top:12px;">
+            <div style="font-size:.65rem;color:#5a7a6a;margin-bottom:10px;letter-spacing:.05em;">🎮 ゲームパッド</div>
+            <!-- コントローラー有効/無効トグル -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🎮 コントローラー</span>
+              <div id="gpActiveToggleHdr" onclick="toggleGpActive()" style="
+                position:relative;width:40px;height:22px;border-radius:11px;
+                background:var(--gold);cursor:pointer;transition:background .25s;flex-shrink:0;
+              ">
+                <div class="gp-toggle-thumb" style="
+                  position:absolute;top:3px;left:calc(100% - 19px);
+                  width:16px;height:16px;border-radius:50%;background:#fff;
+                  transition:left .2s;pointer-events:none;
+                "></div>
+              </div>
+              <span id="gpActiveLabelHdr" style="font-size:.58rem;color:var(--gold);width:80px;">ON</span>
+            </div>
+            <!-- 振動トグル -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span style="font-size:.6rem;color:#5a7a6a;flex:1;">📳 振動</span>
+              <div id="gpRumbleToggleHdr" onclick="toggleGpRumble()" style="
+                position:relative;width:40px;height:22px;border-radius:11px;
+                background:#4a8aff;cursor:pointer;transition:background .25s;flex-shrink:0;
+              ">
+                <div class="gp-toggle-thumb" style="
+                  position:absolute;top:3px;left:calc(100% - 19px);
+                  width:16px;height:16px;border-radius:50%;background:#fff;
+                  transition:left .2s;pointer-events:none;
+                "></div>
+              </div>
+              <span id="gpRumbleLabelHdr" style="font-size:.58rem;color:#4a8aff;width:80px;">ON</span>
+            </div>
+            <!-- 仮想パッドトグル -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ 仮想パッド</span>
+              <div id="gpVpadToggleHdr" onclick="toggleGpVpad()" style="
+                position:relative;width:40px;height:22px;border-radius:11px;
+                background:#1a3a2a;cursor:pointer;transition:background .25s;flex-shrink:0;
+              ">
+                <div class="gp-toggle-thumb" style="
+                  position:absolute;top:3px;left:3px;
+                  width:16px;height:16px;border-radius:50%;background:#fff;
+                  transition:left .2s;pointer-events:none;
+                "></div>
+              </div>
+              <span id="gpVpadLabelHdr" style="font-size:.58rem;color:#4a6a5a;width:80px;">OFF</span>
+            </div>
+            <!-- 接続状態 -->
+            <div id="gpStatusRow" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span id="gpStatusDot" style="width:9px;height:9px;border-radius:50%;background:#2a4a3a;flex-shrink:0;box-shadow:0 0 4px #2a4a3a;transition:background .3s,box-shadow .3s;"></span>
+              <span id="gpStatusText" style="font-size:.6rem;color:#3a5a4a;">未接続（コントローラーを繋いでボタンを押してください）</span>
+            </div>
+            <!-- ボタン割り当てテーブル -->
+            <div id="gpBindTable" style="display:flex;flex-direction:column;gap:5px;"></div>
+            <!-- リセットボタン -->
+            <div style="display:flex;gap:6px;margin-top:10px;">
+              <button onclick="gpRefresh()" style="flex:1;background:#030a10;border:1px solid #1a3a4a;border-radius:6px;color:#4a8aaa;font-size:.6rem;padding:6px;cursor:pointer;">🔄 再検出</button>
+              <button onclick="gpResetBindings()" style="flex:1;background:#030a10;border:1px solid #2a3a2a;border-radius:6px;color:#5a7a6a;font-size:.6rem;padding:6px;cursor:pointer;">↺ リセット</button>
+            </div>
+          </div>
         </div>
 
         <!-- ルールタブ -->
@@ -23245,8 +23791,7 @@ function plantMineRinshan(ri){
   </div>
 </div>
 
-<!-- ===== アイコントレードモーダル ===== -->
-<!-- ===== アイコントレードモーダル ===== -->
+<!-- ===== アイコン交換モーダル ===== -->
 <div id="iconTradeModal" style="
   position:fixed;inset:0;z-index:250;
   display:none;align-items:center;justify-content:center;
@@ -23281,7 +23826,7 @@ function plantMineRinshan(ri){
     <div id="itm-phase-WAIT" style="display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;flex:1;padding:10px 0;">
       <div style="font-size:3rem;animation:spin 1.8s linear infinite;">⏳</div>
       <div style="font-size:.72rem;color:#c9a84c;font-weight:700;letter-spacing:.1em;">マッチング待機中</div>
-      <div style="font-size:.58rem;color:#5a6a5a;text-align:center;line-height:1.6;">
+      <div id="itm-wait-desc" style="font-size:.58rem;color:#5a6a5a;text-align:center;line-height:1.6;">
         相手も「🔄 交換」ボタンを押すと<br>マッチングが成立します
       </div>
       <button onclick="closeIconTradeModal()" style="
@@ -23343,24 +23888,32 @@ function plantMineRinshan(ri){
 
     <!-- ── Phase CONFIRM: 相手の選択待ち ── -->
     <div id="itm-phase-CONFIRM" style="display:none;flex-direction:column;gap:12px;align-items:center;flex:1;justify-content:center;padding:8px 0;">
-      <div style="font-size:2.5rem;animation:spin 2s linear infinite;">⏳</div>
-      <div style="font-size:.7rem;color:#c9a84c;font-weight:700;">相手の選択を待っています</div>
-      <!-- 自分が選んだ内容 -->
+      <div id="itm-conf-spinner" style="font-size:2.5rem;animation:spin 2s linear infinite;">⏳</div>
+      <div id="itm-conf-title" style="font-size:.7rem;color:#c9a84c;font-weight:700;">相手の承認を待っています</div>
+      <!-- 交換内容プレビュー -->
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="text-align:center;">
-          <div style="font-size:.46rem;color:#88ccff;margin-bottom:4px;">欲しいもの</div>
+          <div id="itm-conf-want-label" style="font-size:.46rem;color:#88ccff;margin-bottom:4px;">あなたが受け取る</div>
           <div id="itm-conf-wantIcon" style="width:64px;height:64px;border-radius:10px;border:2px solid #2a5a7a;background:#040810;margin:0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
         </div>
         <div style="font-size:1.3rem;color:#c9a84c;">⇄</div>
         <div style="text-align:center;">
-          <div style="font-size:.46rem;color:#c9a84c;margin-bottom:4px;">渡すもの</div>
+          <div id="itm-conf-offer-label" style="font-size:.46rem;color:#c9a84c;margin-bottom:4px;">あなたが渡す</div>
           <div id="itm-conf-offerIcon" style="width:64px;height:64px;border-radius:10px;border:2px solid #3a2a10;background:#0a0800;margin:0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
         </div>
       </div>
-      <div style="font-size:.54rem;color:#5a6a5a;text-align:center;">相手も選択を完了すると自動で交換されます</div>
+      <!-- 承認者(to)用ボタン（提案者には非表示） -->
+      <div id="itm-conf-accept-area" style="display:flex;gap:10px;margin-top:4px;">
+        <button id="itm-conf-acceptBtn" onclick="itmAcceptTrade()" style="display:none;
+          padding:9px 22px;background:linear-gradient(135deg,#050e00,#0a1a00);border:1.5px solid #44aa44;border-radius:9px;
+          color:#88ee66;font-size:.68rem;font-weight:700;cursor:pointer;">✓ 承認する</button>
+        <button id="itm-conf-rejectBtn" onclick="itmRejectTrade()" style="display:none;
+          padding:9px 22px;background:#0a0500;border:1.5px solid #5a1a1a;border-radius:9px;
+          color:#ff7777;font-size:.68rem;cursor:pointer;">✕ 断る</button>
+      </div>
       <button onclick="closeIconTradeModal()" style="
         padding:8px 20px;background:#0a0500;border:1.5px solid #5a3a1a;border-radius:9px;
-        color:#aa7a3a;font-size:.65rem;cursor:pointer;margin-top:4px;
+        color:#aa7a3a;font-size:.65rem;cursor:pointer;margin-top:2px;
       ">キャンセル</button>
     </div>
 
@@ -23385,9 +23938,6 @@ function plantMineRinshan(ri){
         color:#88ee66;font-size:.74rem;font-weight:700;cursor:pointer;
       ">✓ 閉じる</button>
     </div>
-
-  </div>
-</div>
 
 <!-- ===== NEW演出スポットライトモーダル ===== -->
 <div id="gachaNewSpotlight" onclick="gnsOnOverlayClick()">
@@ -24010,3 +24560,1838 @@ if(_origOpenProfile){
 </script>
 </body>
 </html>
+<script>
+// ══════════════════════════════════════════════════════════════════
+// 🎮 ゲームパッドサポート for 手にビじゃん  (v3 – ボタン割り当て)
+// postMessage方式: 親ウィンドウでgetGamepads()→iframeへ転送
+// ══════════════════════════════════════════════════════════════════
+(function(){
+
+  // ─────────── アクション定義 ───────────
+  // key: 内部アクション名, label: 表示名
+  const ACTIONS = [
+    { key:'left',         label:'← カーソル左' },
+    { key:'right',        label:'→ カーソル右' },
+    { key:'up',           label:'↑ 手牌エリアへ' },
+    { key:'down',         label:'↓ アクションボタンへ' },
+    { key:'select_tile',  label:'決定 / 捨てる' },
+    { key:'skip',         label:'キャンセル / スキップ' },
+    { key:'focus_corner', label:'L/R 左下ボタン⇔手牌 切替' },
+    { key:'toggle_pull',    label:'引くボタン ON/OFF' },
+    { key:'toggle_ability', label:'能力ボタン ON/OFF' },
+  ];
+
+  const DEFAULT_BINDINGS = {
+    'stickL':  'left',
+    'stickR':  'right',
+    '14':      'left',
+    '15':      'right',
+    '12':      'up',
+    '13':      'down',
+    '0':       'select_tile',
+    '1':       'skip',
+    '2':       'toggle_ability', // X (□)
+    '3':       'toggle_pull',    // Y (△)
+    '4':       'focus_corner', // LB(L1)
+    '5':       'focus_corner', // RB(R1)
+  };
+
+  // 物理ボタン表示名
+  const BTN_LABELS = {
+    '0':'A (×)', '1':'B (○)', '2':'X (□)', '3':'Y (△)',
+    '4':'LB (L1)', '5':'RB (R1)', '6':'LT (L2)', '7':'RT (R2)',
+    '8':'Select / View', '9':'Start / Menu',
+    '10':'L3', '11':'R3',
+    '12':'↑', '13':'↓', '14':'←', '15':'→',
+    'stickL':'左スティック←', 'stickR':'左スティック→',
+  };
+
+  // バインディング: physicalKey → actionKey  (nullで無効)
+  let _bindings = Object.assign({}, DEFAULT_BINDINGS);
+
+  // ─────────── 外部公開 API ───────────
+  window.gpGetBindings  = ()=> Object.assign({}, _bindings);
+  window.gpLoadBindings = (b)=>{ _bindings = Object.assign({}, DEFAULT_BINDINGS, b); _renderBindTable(); };
+  window.gpResetBindings= ()=>{ _bindings = Object.assign({}, DEFAULT_BINDINGS); _renderBindTable(); if(typeof saveSettings==='function') saveSettings(); };
+
+  // ─────────── 状態 ───────────
+  let _gpCursor  = 0;
+  let _gpActIdx  = 0;
+  let _gpWallIdx = 0;
+  let _gpFocus   = 'hand';  // 'hand'|'action'|'wall'|'corner'|'emote'|'settings'|'automenu'
+  // ── ズーム画面カーソル ──
+  let _dzPlayerIdx = 0; // 捨て牌拡大: 現在のプレイヤー行インデックス
+  let _dzTileIdx   = 0; // 捨て牌拡大: 現在のプレイヤー内の捨て牌インデックス
+  let _gpCornerIdx   = 0;
+  let _gpEmoteIdx    = 0;
+  let _gpAutoMenuIdx = 0;
+  // settings用
+  const _SETTING_TABS = ['audio','operation','rules','yaku'];
+  let _gpSettingsTabIdx = 0;   // 現在のタブインデックス
+  let _gpSettingsRowIdx = 0;   // タブ内のインタラクティブ要素インデックス（-1=タブ行）
+  let _gpVisible = false;
+  let _gpOverlay = null;
+  let _listening = null;
+
+  // ─────────── HUD ───────────
+  function _createOverlay(){
+    if(_gpOverlay) return;
+    const d = document.createElement('div');
+    d.id = 'gpHud';
+    d.style.cssText = 'display:none;'; // HUD非表示
+    document.body.appendChild(d);
+    _gpOverlay = d;
+  }
+  function _hud(msg){ /* HUD非表示 */ }
+
+  // ─────────── 接続状態ドット更新 ───────────
+  function _updateStatusUI(connected, id){
+    ['gpStatusDot','gpStatusDotTitle'].forEach(dotId=>{
+      const dot = document.getElementById(dotId);
+      if(dot){
+        dot.style.background = connected ? '#44cc88' : '#2a4a3a';
+        dot.style.boxShadow  = connected ? '0 0 6px #44cc88' : '0 0 4px #2a4a3a';
+      }
+    });
+    ['gpStatusText','gpStatusTextTitle'].forEach(textId=>{
+      const text = document.getElementById(textId);
+      if(text){
+        text.style.color = connected ? '#44cc88' : '#3a5a4a';
+        text.textContent = connected
+          ? '✅ 接続中: ' + (id||'').slice(0,32)
+          : '未接続（コントローラーを繋いでボタンを押してください）';
+      }
+    });
+  }
+
+  // ─────────── バインドテーブル描画 ───────────
+  function _renderBindTable(){
+    ['gpBindTable','gpBindTableTitle'].forEach(tblId=>{
+      const tbl = document.getElementById(tblId);
+      if(!tbl) return;
+
+      // 逆引きマップ: actionKey → [physicalKeys]
+      const rev = {};
+      Object.entries(_bindings).forEach(([phys, act])=>{
+        if(act){ if(!rev[act]) rev[act]=[]; rev[act].push(phys); }
+      });
+
+      tbl.innerHTML = '';
+      ACTIONS.forEach(({key, label})=>{
+        const physKeys = rev[key] || [];
+        // 重複除去（stickL/stickR + 十字キーが両方登録されている場合）
+        const display = physKeys.map(p=> BTN_LABELS[p]||String(p)).join(' / ') || '─';
+
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+        // アクション名
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'font-size:.58rem;color:#5a7a6a;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        lbl.textContent = label;
+
+        // 現在のボタン表示
+        const cur = document.createElement('span');
+        cur.style.cssText = 'font-size:.58rem;color:var(--gold);background:#050d14;border:1px solid #1a3a2a;border-radius:4px;padding:2px 7px;min-width:70px;text-align:center;white-space:nowrap;flex-shrink:0;';
+        cur.textContent = display;
+
+        // 変更ボタン
+        const btn = document.createElement('button');
+        btn.style.cssText = 'font-size:.55rem;padding:3px 8px;background:#030a10;border:1px solid #1a3a2a;border-radius:4px;color:#4a7a6a;cursor:pointer;flex-shrink:0;';
+        const isListening = (_listening === key);
+        btn.textContent = isListening ? 'キャンセル' : '変更';
+        btn.style.color = isListening ? '#ff9944' : '#4a7a6a';
+        btn.style.borderColor = isListening ? '#ff9944' : '#1a3a2a';
+        if(isListening){
+          cur.textContent = '▶ ボタンを押して…';
+          cur.style.color = '#ff9944';
+          cur.style.borderColor = '#ff9944';
+        }
+        btn.onclick = ()=> _startListening(key);
+
+        row.appendChild(lbl);
+        row.appendChild(cur);
+        row.appendChild(btn);
+        tbl.appendChild(row);
+      });
+    });
+  }
+
+  // ─────────── 割り当て待ち開始 ───────────
+  function _startListening(actionKey){
+    if(_listening === actionKey){
+      // 再クリックでキャンセル
+      _listening = null;
+      _renderBindTable();
+      _hud('キャンセルしました');
+      return;
+    }
+    _listening = actionKey;
+    _renderBindTable();  // ← listening状態を反映してから描画
+    _hud('割り当てたいボタンを押してください（キャンセル→変更ボタン再押し）');
+  }
+
+  // ─────────── バインドテーブル描画（listening状態も反映） ───────────
+  // ※ _renderBindTable はすでに上で定義済み。listening状態の視覚反映はそちらで行う。
+
+  // ─────────── 物理入力を受信してバインド更新 ───────────
+  function _applyBinding(physKey){
+    if(!_listening) return false;
+    const actionKey = _listening;
+    // 既存の同じアクションへの割り当てをすべて解除
+    Object.keys(_bindings).forEach(p=>{ if(_bindings[p]===actionKey) delete _bindings[p]; });
+    // 新しい物理キーに割り当て
+    _bindings[physKey] = actionKey;
+    const prevAction = _bindings[physKey]; // 上書き前に別アクションが入っていた場合は消える（意図的）
+    _listening = null;
+    _renderBindTable();
+    if(typeof saveSettings==='function') saveSettings();
+    const physLabel = BTN_LABELS[physKey] || physKey;
+    const actLabel  = (ACTIONS.find(a=>a.key===actionKey)||{label:actionKey}).label;
+    _hud('✅ ' + physLabel + ' → ' + actLabel);
+    return true;
+  }
+
+  // ─────────── 手牌タイル取得 ───────────
+  function _tiles(){
+    const hw = document.querySelector('.seat-bottom .hand-wrap');
+    return hw ? Array.from(hw.querySelectorAll('.tile:not(.back)')) : [];
+  }
+  function _actBtns(){
+    const a = document.getElementById('actionArea');
+    return a ? Array.from(a.querySelectorAll('button')) : [];
+  }
+  // ─────────── 左下コーナーボタン取得 ───────────
+  function _cornerBtns(){
+    const cl = document.getElementById('tableCornerLeft');
+    if(!cl) return [];
+    return Array.from(cl.querySelectorAll('button')).filter(b=>{
+      const s = window.getComputedStyle(b);
+      return s.display !== 'none' && s.visibility !== 'hidden' && !b.disabled;
+    });
+  }
+  // ─────────── エモートパネルのボタン取得 ───────────
+  function _emotePanelBtns(){
+    const p = document.getElementById('emotePanel');
+    if(!p || p.style.display==='none') return [];
+    return Array.from(p.querySelectorAll('button.emote-pick-btn')).filter(b=>b.style.pointerEvents!=='none');
+  }
+  // ─────────── autoMenuPanelのボタン取得 ───────────
+  function _autoMenuBtns(){
+    const p = document.getElementById('autoMenuPanel');
+    if(!p || p.style.display==='none') return [];
+    return Array.from(p.querySelectorAll('button')).filter(b=>{
+      return window.getComputedStyle(b).display !== 'none' && !b.disabled;
+    });
+  }
+  // ─────────── 設定パネル: 現在タブのインタラクティブ要素取得 ───────────
+  function _settingsTabName(){ return _SETTING_TABS[_gpSettingsTabIdx] || 'audio'; }
+  function _settingsContentEl(){
+    const t = _settingsTabName();
+    return document.getElementById('igTabContent' + t.charAt(0).toUpperCase() + t.slice(1));
+  }
+  function _settingsInteractives(){
+    const el = _settingsContentEl();
+    if(!el) return [];
+    return Array.from(el.querySelectorAll('button, input[type=range], input[type=checkbox], select')).filter(b=>{
+      return window.getComputedStyle(b).display !== 'none' && !b.disabled;
+    });
+  }
+  // 設定パネルのタブボタン取得
+  function _settingsTabBtns(){
+    return _SETTING_TABS.map(t => document.getElementById('igTab' + t.charAt(0).toUpperCase() + t.slice(1))).filter(Boolean);
+  }
+  // 設定パネルのタブをコントローラーで切替
+  function _gpSwitchSettingsTab(delta){
+    _gpSettingsTabIdx = (_gpSettingsTabIdx + delta + _SETTING_TABS.length) % _SETTING_TABS.length;
+    _gpSettingsRowIdx = -1; // タブ行に戻る
+    if(typeof showInGameTab === 'function') showInGameTab(_settingsTabName());
+    _highlight();
+    _hud('設定タブ: ' + (_settingsTabBtns()[_gpSettingsTabIdx]||{textContent:''}).textContent + '  ↓で項目へ、←→でタブ切替、Bで閉じる');
+  }
+
+  // ─────────── カーソルハイライト ───────────
+  // ── 捨て牌拡大カーソル補助 ──────────────────────────────
+  function _dzSections(){
+    return Array.from(document.querySelectorAll('#discardZoomContent > div'));
+  }
+  function _dzTilesOf(secEl){
+    // 各プレイヤーセクション内のタイルrow > .tile要素
+    const row = secEl && secEl.children[1];
+    if(!row) return [];
+    return Array.from(row.querySelectorAll('.tile'));
+  }
+  function _dzInitCursor(){
+    _dzPlayerIdx = 0;
+    _dzTileIdx   = 0;
+    // 最初の有効タイルを探す
+    const secs = _dzSections();
+    for(let pi=0;pi<secs.length;pi++){
+      if(_dzTilesOf(secs[pi]).length>0){ _dzPlayerIdx=pi; _dzTileIdx=0; break; }
+    }
+    _dzHighlight();
+  }
+  window._dzInitCursor = _dzInitCursor;
+  window._gpWallIdxInit = function(idx){ _gpWallIdx = idx; };
+  function _dzHighlight(){
+    const secs = _dzSections();
+    secs.forEach((sec, pi)=>{
+      _dzTilesOf(sec).forEach((t, ti)=>{
+        const active = pi===_dzPlayerIdx && ti===_dzTileIdx;
+        t.style.outline       = active ? '3px solid #f0d47a' : '';
+        t.style.outlineOffset = active ? '2px' : '';
+        t.style.transform     = active ? 'translateY(-6px) scale(1.08)' : '';
+        t.style.zIndex        = active ? '2' : '';
+      });
+    });
+    // カーソルタイルをスクロール表示
+    const sec = secs[_dzPlayerIdx];
+    if(sec){
+      const tiles = _dzTilesOf(sec);
+      const t = tiles[_dzTileIdx];
+      if(t) t.scrollIntoView({block:'nearest',inline:'nearest'});
+    }
+  }
+  function _dzClickCurrent(){
+    const secs = _dzSections();
+    const sec = secs[_dzPlayerIdx];
+    if(!sec) return;
+    const tiles = _dzTilesOf(sec);
+    const t = tiles[_dzTileIdx];
+    if(!t) return;
+    // onclickがあれば実行
+    const fn = t.getAttribute('onclick');
+    if(fn){ try{ eval(fn); }catch(e){} }
+    else t.click();
+  }
+
+  function _highlight(){
+    const inHand     = _gpFocus === 'hand';
+    const inAction   = _gpFocus === 'action';
+    const inWall     = _gpFocus === 'wall';
+    const inCorner   = _gpFocus === 'corner';
+    const inEmote    = _gpFocus === 'emote';
+    const inAutoMenu = _gpFocus === 'automenu';
+    const inSettings = _gpFocus === 'settings';
+    const acts    = _actBtns();
+    const corners = _cornerBtns();
+
+    _tiles().forEach((t,i)=>{
+      const active = inHand && i===_gpCursor;
+      t.style.outline      = active ? '3px solid #f0d47a' : '';
+      t.style.outlineOffset= active ? '2px' : '';
+      t.style.transform    = active ? 'translateY(-6px)' : '';
+    });
+    acts.forEach((b,i)=>{
+      const active = inAction && i===_gpActIdx;
+      b.style.outline      = active ? '3px solid #f0d47a' : '';
+      b.style.outlineOffset= active ? '2px' : '';
+      b.style.transform    = active ? 'translateY(-3px) scale(1.06)' : '';
+    });
+    corners.forEach((b,i)=>{
+      const active = inCorner && i===_gpCornerIdx;
+      b.style.outline      = active ? '3px solid #88ccff' : '';
+      b.style.outlineOffset= active ? '2px' : '';
+      b.style.transform    = active ? 'scale(1.12)' : '';
+    });
+    // エモートスロット
+    _emotePanelBtns().forEach((b,i)=>{
+      const active = inEmote && i===_gpEmoteIdx;
+      b.style.outline      = active ? '3px solid #88ffcc' : '';
+      b.style.outlineOffset= active ? '2px' : '';
+      b.style.transform    = active ? 'scale(1.15)' : '';
+    });
+    // autoMenu
+    _autoMenuBtns().forEach((b,i)=>{
+      const active = inAutoMenu && i===_gpAutoMenuIdx;
+      b.style.outline   = active ? '3px solid #88ccff' : '';
+      b.style.outlineOffset = active ? '2px' : '';
+      b.style.background = active ? '#0a1a28' : '';
+    });
+    // 設定パネル: タブハイライト + コンテンツ内要素ハイライト
+    if(inSettings){
+      _settingsTabBtns().forEach((b,i)=>{
+        b.style.outline      = i===_gpSettingsTabIdx ? '3px solid #88ccff' : '';
+        b.style.outlineOffset= i===_gpSettingsTabIdx ? '2px' : '';
+      });
+      _settingsInteractives().forEach((b,i)=>{
+        const active = _gpSettingsRowIdx >= 0 && i===_gpSettingsRowIdx;
+        b.style.outline      = active ? '3px solid #f0d47a' : '';
+        b.style.outlineOffset= active ? '2px' : '';
+      });
+    } else {
+      // フォーカスが外れたらリセット
+      _settingsTabBtns().forEach(b=>{ b.style.outline=''; b.style.outlineOffset=''; });
+      _settingsInteractives().forEach(b=>{ b.style.outline=''; b.style.outlineOffset=''; });
+    }
+    // 山牌カーソル
+    _drawWallCursor(inWall ? _gpWallIdx : -1);
+  }
+
+  function _drawWallCursor(slotIdx){
+    // 山牌拡大が開いているときはそちらのキャンバスを優先
+    const _wallExpandEl = document.getElementById('wallExpandOverlay');
+    const _wallOpen = _wallExpandEl && _wallExpandEl.classList.contains('show');
+    const canvasId  = _wallOpen ? 'wallExpandCanvas' : 'wallCanvas';
+
+    let ov = document.getElementById('gpWallCursor');
+    if(slotIdx < 0){
+      if(ov) ov.style.display = 'none';
+      return;
+    }
+    if(typeof _wallTileRect !== 'function' || !G || !G.deckSlots) return;
+    const wc = document.getElementById(canvasId);
+    if(!wc) return;
+    const rect = wc.getBoundingClientRect();
+    const tr   = _wallTileRect(slotIdx);
+    const scaleX = rect.width  / wc.width;
+    const scaleY = rect.height / wc.height;
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'gpWallCursor';
+      ov.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;border:3px solid #f0d47a;border-radius:3px;box-shadow:0 0 8px #f0d47a88;transition:left .08s,top .08s,width .08s,height .08s;';
+      document.body.appendChild(ov);
+    }
+    ov.style.display  = 'block';
+    ov.style.left     = (rect.left + tr.x * scaleX) + 'px';
+    ov.style.top      = (rect.top  + tr.y * scaleY) + 'px';
+    ov.style.width    = (tr.w * scaleX) + 'px';
+    ov.style.height   = (tr.h * scaleY) + 'px';
+  }
+  window._drawWallCursor = _drawWallCursor;
+
+  // ─────────── タイトル（ロビー）画面コントローラーサポート ───────────
+  // 横画面: 3ゾーン方式
+  //   topゾーン : #llTopBar 内の表示中ボタン（設定・Twitch・フレンド・ログアウト等）
+  //   mainゾーン: 2×2グリッド [rank=0][online=1]/[solo=2][bomb=3]
+  //   barゾーン : #llModeBar 内の表示中ボタン（ガチャ・ショップ・プロフィール等）
+  const _LL_MODES = ['rank','online','solo','bomb'];
+  // 縦画面: #lobbyMode .pcnt-btn の順（グリッド順）
+  const _PT_MODES = ['solo','online','rank','bomb','gacha','shop','profile','record','daily'];
+
+  let _subFocus    = 0;     // サブパネル内フォーカスインデックス
+  let _subWasOpen  = false; // 前フレームでサブパネルが開いていたか（開いた瞬間のリセット用）
+  let _profFocus   = 0;     // プロフィール画面フォーカスインデックス
+  let _profIn      = false; // プロフィール画面操作モード中フラグ
+  let _dailyFocus  = 0;     // デイリー画面フォーカスインデックス
+  let _dailyIn     = false; // デイリー画面操作モード中フラグ
+
+  // ── 追加画面 コントローラーサポート用状態 ──
+  let _shopFocus      = 0; let _shopIn      = false;
+  let _gachaFocus     = 0; let _gachaIn     = false;
+  let _cpuFocus       = 0; let _cpuIn       = false;
+  let _roomFocus      = 0; let _roomIn      = false;
+  let _recordFocus    = 0; let _recordIn    = false;
+  let _friendFocus    = 0; let _friendIn    = false;
+  let _matFocus       = 0; let _matIn       = false;
+  let _abilityBkFocus = 0; let _abilityBkIn = false;
+  let _iconFocus      = 0; let _iconIn      = false;
+  let _skinFocus      = 0; let _skinIn      = false;
+  let _ringFocus      = 0; let _ringIn      = false;
+  let _bgmFocus       = 0; let _bgmIn       = false;
+  let _agariFocus     = 0; let _agariIn     = false;
+  let _titleBgFocus   = 0; let _titleBgIn   = false;
+  let _titleBkFocus   = 0; let _titleBkIn   = false;
+
+  // デイリーページが表示中か
+  function _isDailyVisible(){
+    const d = document.getElementById('lobbyDaily');
+    return d && getComputedStyle(d).display !== 'none';
+  }
+  // デイリーページの操作対象ボタン一覧
+  function _dailyItems(){
+    const items = [];
+    const loginBtn = document.getElementById('loginBonusBtn');
+    if(loginBtn) items.push(loginBtn);
+    document.querySelectorAll('#dailyMissionList button').forEach(b => {
+      if(getComputedStyle(b).display !== 'none') items.push(b);
+    });
+    return items;
+  }
+  // デイリーページハイライト
+  function _dailyHighlight(){
+    _dailyItems().forEach((el, i) => {
+      el.style.outline   = (i === _dailyFocus && _dailyIn) ? '3px solid #f0d47a' : '';
+      el.style.boxShadow = (i === _dailyFocus && _dailyIn) ? '0 0 18px #c9a84c88' : '';
+    });
+  }
+
+  // ── 汎用ハイライトヘルパー ──
+  function _gpHighlightList(items, focus, active){
+    items.forEach((el,i)=>{
+      el.style.outline   = (i===focus && active) ? '3px solid #f0d47a' : '';
+      el.style.boxShadow = (i===focus && active) ? '0 0 18px #c9a84c88' : '';
+    });
+  }
+  // 汎用画面サポートマクロ: getFocus/setFocus/getIn/setIn はすべて関数で渡す
+  function _gpScreenAction(actionKey, isVisible, getItems, getFocus, setFocus, getIn, setIn, _closeKey, closeFn){
+    const visible = isVisible();
+    if(!visible){
+      if(getIn()){ setIn(false); getItems().forEach(e=>{e.style.outline='';e.style.boxShadow='';}); }
+      return false;
+    }
+    if(!getIn()){
+      if(actionKey==='up'||actionKey==='down'||actionKey==='left'||actionKey==='right'){
+        setIn(true); setFocus(0); _gpHighlightList(getItems(),0,true);
+      }
+      return true;
+    }
+    const items = getItems();
+    const focus = getFocus();
+    if(actionKey==='up'||actionKey==='left'){
+      const nf = focus>0?focus-1:items.length-1; setFocus(nf); _gpHighlightList(items,nf,true);
+    } else if(actionKey==='down'||actionKey==='right'){
+      const nf = focus<items.length-1?focus+1:0; setFocus(nf); _gpHighlightList(items,nf,true);
+    } else if(actionKey==='select_tile'){
+      const el=items[focus]; if(el){_playBotanSe();el.click();setTimeout(()=>_gpHighlightList(getItems(),getFocus(),true),100);}
+    } else if(actionKey==='skip'){
+      setIn(false); _gpHighlightList(items,focus,false); if(closeFn)closeFn();
+    }
+    return true;
+  }
+
+  // ── ショップ ──
+  function _isShopVisible(){ const s=document.getElementById('shopScreen'); return s&&s.classList.contains('active'); }
+  function _shopItems(){ return Array.from(document.querySelectorAll('#shopScreen button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
+
+  // ── ガチャ ──
+  function _isGachaVisible(){ const s=document.getElementById('gachaScreen'); return s&&s.classList.contains('active'); }
+  function _gachaItems(){
+    const items=[];
+    ['gachaTabStd','gachaTabTbb','gachaTabCollab'].forEach(id=>{const b=document.getElementById(id);if(b&&getComputedStyle(b).display!=='none')items.push(b);});
+    document.querySelectorAll('#gachaScreen .gacha-pull-btn, #gachaScreen button').forEach(b=>{
+      if(getComputedStyle(b).display!=='none'&&!b.disabled&&!items.includes(b))items.push(b);
+    });
+    return items;
+  }
+
+  // ── CPU選択 ──
+  function _isCpuSelectVisible(){ const s=document.getElementById('cpuSelectScreen'); return s&&s.classList.contains('active'); }
+  function _cpuItems(){ return Array.from(document.querySelectorAll('#cpuSelectGrid button, #cpuSelectScreen button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
+
+  // ── ルームロビー ──
+  function _isRoomLobbyVisible(){ const s=document.getElementById('roomLobbyScreen'); return s&&s.classList.contains('active'); }
+  function _roomItems(){ return Array.from(document.querySelectorAll('#roomLobbyScreen button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
+
+  // ── 戦績 ──
+  function _isRecordVisible(){ const s=document.getElementById('recordScreen'); return s&&s.style.display==='flex'; }
+  function _recordItems(){ return Array.from(document.querySelectorAll('#recordScreen button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
+
+  // ── フレンド ──
+  function _isFriendVisible(){ const s=document.getElementById('friendScreen'); return s&&s.classList.contains('active'); }
+  function _friendItems(){ return Array.from(document.querySelectorAll('#friendScreen button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
+
+  // ── 図鑑系共通: 操作可能なアイテムを取得（div[onclick]もbutton も対象）──
+  // onclick属性が存在して空でない もしくは button で disabled でない ものを取得
+  // pointer-events:none (CSSクラス含む) は除外
+  function _bookGridItems(gridId, extraSelectorIds){
+    const items = [];
+    if(extraSelectorIds){
+      extraSelectorIds.forEach(id=>{
+        const el=document.getElementById(id);
+        if(el && getComputedStyle(el).display!=='none') items.push(el);
+      });
+    }
+    const grid = document.getElementById(gridId);
+    if(!grid) return items;
+    grid.querySelectorAll(':scope > div, :scope > button').forEach(el=>{
+      const cs = getComputedStyle(el);
+      if(cs.display==='none') return;
+      if(cs.pointerEvents==='none') return;   // locked-card など pointer-events:none を除外
+      if(el.tagName==='BUTTON'){
+        if(!el.disabled && !items.includes(el)) items.push(el);
+        return;
+      }
+      // div: onclick属性（HTML属性）またはonclickプロパティ（JS設定）が存在するもの
+      const onc = el.getAttribute('onclick');
+      const hasOnclick = (onc && onc.trim() !== '') || typeof el.onclick === 'function';
+      if(hasOnclick && !items.includes(el)) items.push(el);
+    });
+    return items;
+  }
+
+  // ── グリッド対応 _gpScreenAction（列数を指定して2次元移動）──
+  function _gpGridScreenAction(actionKey, isVisible, getItems, getFocus, setFocus, getIn, setIn, cols, closeFn){
+    const visible = isVisible();
+    if(!visible){
+      if(getIn()){ setIn(false); getItems().forEach(e=>{e.style.outline='';e.style.boxShadow='';}); }
+      return false;
+    }
+    if(!getIn()){
+      if(actionKey==='up'||actionKey==='down'||actionKey==='left'||actionKey==='right'){
+        setIn(true); setFocus(0); _gpHighlightList(getItems(),0,true);
+        // フォーカスが見えるようスクロール
+        const el=getItems()[0]; if(el) el.scrollIntoView({block:'nearest'});
+      }
+      return true;
+    }
+    const items = getItems();
+    const n = items.length;
+    if(!n) return true;
+    const focus = getFocus();
+    let nf = focus;
+    if(actionKey==='left'){
+      nf = focus % cols > 0 ? focus-1 : focus+cols-1 < n ? focus+cols-1 : n-1;
+    } else if(actionKey==='right'){
+      nf = focus % cols < cols-1 && focus+1 < n ? focus+1 : focus-focus%cols;
+    } else if(actionKey==='up'){
+      nf = focus-cols >= 0 ? focus-cols : focus; // 先頭行では移動しない
+    } else if(actionKey==='down'){
+      nf = focus+cols < n ? focus+cols : focus; // 末尾行では移動しない
+    } else if(actionKey==='select_tile'){
+      const el=items[focus];
+      if(el){ _playBotanSe(); el.click(); setTimeout(()=>_gpHighlightList(getItems(),getFocus(),true),150); }
+      return true;
+    } else if(actionKey==='skip'){
+      setIn(false); _gpHighlightList(items,focus,false); if(closeFn)closeFn();
+      return true;
+    }
+    if(nf!==focus){ setFocus(nf); _gpHighlightList(items,nf,true); const el=items[nf]; if(el) el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+    return true;
+  }
+
+  // ── 卓布図鑑 (グリッドなし、縦1列) ──
+  function _isMatBookVisible(){ const s=document.getElementById('matBookScreen'); return s&&s.classList.contains('active'); }
+  function _matItems(){ return _bookGridItems('matBookGrid'); }
+
+  // ── 能力図鑑 (3列グリッド) ──
+  function _isAbilityBookVisible(){ const s=document.getElementById('abilityBookScreen'); return s&&s.classList.contains('active'); }
+  function _abilityBkItems(){ return _bookGridItems('abilityBookList'); }
+
+  // ── アイコン図鑑 ──
+  function _isIconCollVisible(){ const s=document.getElementById('iconCollectionScreen'); return s&&s.classList.contains('active'); }
+  function _iconItems(){
+    const items=[];
+    ['iconSlotBtnVC','iconSlotBtnDisp'].forEach(id=>{const b=document.getElementById(id);if(b)items.push(b);});
+    const content=document.getElementById('iconCollectionContent');
+    if(content) content.querySelectorAll(':scope > div, button').forEach(el=>{
+      const cs=getComputedStyle(el);
+      if(cs.display!=='none'&&cs.pointerEvents!=='none'&&cs.cursor!=='default'&&!items.includes(el)) items.push(el);
+    });
+    return items;
+  }
+
+  // ── 手牌スキン図鑑 (3列グリッド) ──
+  function _isSkinBookVisible(){ const s=document.getElementById('skinBookScreen'); return s&&s.style.display==='flex'; }
+  function _skinItems(){ return _bookGridItems('skinBookGrid'); }
+
+  // ── 指輪図鑑 (4列グリッド + なしボタン) ──
+  function _isRingBookVisible(){ const s=document.getElementById('ringBookScreen'); return s&&s.style.display==='flex'; }
+  function _ringItems(){ return _bookGridItems('ringBookGrid', ['ringBookNoneBtn']); }
+
+  // ── リーチBGM図鑑 (2列グリッド + なしボタン) ──
+  function _isBgmBookVisible(){ const s=document.getElementById('riichiBgmBookScreen'); return s&&s.style.display==='flex'; }
+  function _bgmItems(){ return _bookGridItems('riichiBgmBookGrid', ['riichiBgmBookNoneBtn']); }
+
+  // ── 上がり演出図鑑 (3列グリッド) ──
+  function _isAgariBookVisible(){ const s=document.getElementById('agariBookScreen'); return s&&s.style.display==='flex'; }
+  function _agariItems(){ return _bookGridItems('agariBookGrid'); }
+
+  // ── タイトル背景オーバーレイ ──
+  function _isTitleBgVisible(){ const s=document.getElementById('titleBgOverlay'); return s&&s.style.display==='flex'; }
+  function _titleBgItems(){ return _bookGridItems('titleBgOverlayGrid'); }
+
+  // ── 称号図鑑オーバーレイ (2列グリッド) ──
+  function _isTitleBookVisible(){ const s=document.getElementById('titleBookOverlay'); return s&&s.style.display==='flex'; }
+  function _titleBkItems(){ return _bookGridItems('titleBookList'); }
+
+  // プロフィール画面が表示中か
+  function _isProfileVisible(){
+    const ps = document.getElementById('profileScreen');
+    return ps && ps.classList.contains('active');
+  }
+  // プロフィール画面の操作対象要素リスト
+  function _profItems(){
+    const selectors = [
+      '#profileName',
+      '#equippedTitleDisplay',
+      '#abilityDisplay',
+      '#matSelectWrap',
+      '#iconDisplayVC',
+      '#iconDisplay',
+      '#emoteEquippedPreview',
+      '#handSkinDisplay',
+      '#ringDisplay',
+      '#riichiBgmBookDisplay',
+      '#agariBookDisplay',
+      '#titleBgGrid > div',
+      '#profileScreen .start-btn',
+    ];
+    return selectors.map(s => document.querySelector(s)).filter(Boolean);
+  }
+  // プロフィール画面ハイライト
+  function _profHighlight(){
+    _profItems().forEach((el, i) => {
+      el.style.outline   = (i === _profFocus && _profIn) ? '3px solid #f0d47a' : '';
+      el.style.boxShadow = (i === _profFocus && _profIn) ? '0 0 18px #c9a84c88' : '';
+    });
+  }
+
+  // サブパネル内の操作可能なボタン一覧
+  function _llSubBtns(){
+    return Array.from(document.querySelectorAll('#llSubPanelInner button'))
+      .filter(el => getComputedStyle(el).display !== 'none' && !el.disabled);
+  }
+  // サブパネルハイライト
+  function _llSubHighlight(){
+    const btns = _llSubBtns();
+    btns.forEach((b, i) => {
+      b.style.outline   = i === _subFocus ? '3px solid #f0d47a' : '';
+      b.style.boxShadow = i === _subFocus ? '0 0 18px #c9a84c88' : '';
+    });
+  }
+  // サブパネルハイライトを全解除
+  function _llSubClearHighlight(){
+    document.querySelectorAll('#llSubPanelInner button').forEach(b => {
+      b.style.outline = ''; b.style.boxShadow = '';
+    });
+  }
+  let _lobbyFocus = 0;      // 現在フォーカス中のインデックス
+  let _lobbyIn    = false;  // ロビー操作モード中フラグ
+
+  // ── ゾーン別ボタンリスト取得 ──
+  function _llMainBtns(){
+    return _LL_MODES.map(m=>document.getElementById('llModeBtn-'+m)).filter(Boolean);
+  }
+  function _llBarBtns(){
+    return Array.from(document.querySelectorAll('#llModeBar .ll-mode-btn'))
+      .filter(el=>getComputedStyle(el).display!=='none');
+  }
+  function _llTopBtns(){
+    // プロフィールdiv + 右上ボタン群
+    const items = [];
+    const prof = document.getElementById('llProfileBtn');
+    if(prof && getComputedStyle(prof).display!=='none') items.push(prof);
+    document.querySelectorAll('#llTopRightBtns .ll-trb').forEach(el=>{
+      if(getComputedStyle(el).display!=='none') items.push(el);
+    });
+    return items;
+  }
+  function _llZoneBtns(zone){ return zone==='main'?_llMainBtns():zone==='bar'?_llBarBtns():_llTopBtns(); }
+
+  // サブパネルが開いているか
+  function _llSubOpen(){
+    const sp = document.getElementById('llSubPanel');
+    return sp && sp.classList.contains('open');
+  }
+  // ロビーが表示されているか
+  function _isLobbyVisible(){
+    const lobby = document.getElementById('lobby');
+    return lobby && lobby.style.display !== 'none' && !document.getElementById('gameScreen')?.classList.contains('active');
+  }
+  // 横画面かどうか
+  function _isLandscapeLobby(){
+    const ll = document.getElementById('lobbyLandscape');
+    return ll && getComputedStyle(ll).display !== 'none';
+  }
+
+  // ── ハイライト ──
+  function _lobbyHighlight(){
+    if(_isLandscapeLobby()){
+      // 全ゾーンのハイライトをリセット
+      [..._llMainBtns(),..._llBarBtns(),..._llTopBtns()].forEach(b=>{
+        b.style.outline=''; b.style.boxShadow='';
+      });
+      if(!_lobbyIn) return;
+      const btns = _llZoneBtns(_lobbyZone);
+      const b = btns[Math.min(_lobbyFocus, btns.length-1)];
+      if(b){ b.style.outline='3px solid #f0d47a'; b.style.boxShadow='0 0 18px #c9a84c88'; }
+    } else {
+      // 縦画面: #lobbyMode .pcnt-btn を順番で
+      document.querySelectorAll('#lobbyMode .pcnt-btn').forEach((b,i)=>{
+        b.style.outline = (i===_lobbyFocus && _lobbyIn) ? '3px solid #f0d47a' : '';
+        b.style.boxShadow = (i===_lobbyFocus && _lobbyIn) ? '0 0 18px #c9a84c88' : '';
+      });
+    }
+  }
+
+  // ── ロビーフォーカス終了 ──
+  function _lobbyExit(){
+    _lobbyIn = false;
+    _lobbyHighlight();
+  }
+
+  // ── 決定 ──
+  function _lobbySelect(){
+    if(_isLandscapeLobby()){
+      const btns = _llZoneBtns(_lobbyZone);
+      const b = btns[Math.min(_lobbyFocus, btns.length-1)];
+      if(b){ _playBotanSe(); b.click(); }
+    } else {
+      const b = document.querySelectorAll('#lobbyMode .pcnt-btn')[_lobbyFocus];
+      if(b){ _playBotanSe(); b.click(); }
+    }
+  }
+
+  // ── ゾーン移動ヘルパー ──
+  function _llSwitchZone(toZone, preferFocus){
+    _lobbyZone = toZone;
+    const len = _llZoneBtns(toZone).length;
+    _lobbyFocus = Math.max(0, Math.min(preferFocus||0, len-1));
+  }
+
+  // ─────────── アクション実行 ───────────
+  function _execAction(actionKey){
+    const tiles = _tiles();
+    const acts  = _actBtns();
+
+    // ══════════ タイトル背景オーバーレイの操作（最優先・どの画面でも出る）══════════
+    if(_gpGridScreenAction(actionKey, _isTitleBgVisible, _titleBgItems, ()=>_titleBgFocus, v=>{_titleBgFocus=v;}, ()=>_titleBgIn, v=>{_titleBgIn=v;}, 3, typeof closeTitleBgOverlay==='function'?closeTitleBgOverlay:null)) return;
+
+    // ══════════ 称号図鑑オーバーレイの操作（最優先）══════════
+    if(_gpGridScreenAction(actionKey, _isTitleBookVisible, _titleBkItems, ()=>_titleBkFocus, v=>{_titleBkFocus=v;}, ()=>_titleBkIn, v=>{_titleBkIn=v;}, 2, typeof closeTitleBook==='function'?closeTitleBook:null)) return;
+
+    // ══════════ 各図鑑画面の操作（ロビーより前に判定・position:fixedでロビー上に重なるため）══════════
+    if(_gpGridScreenAction(actionKey, _isMatBookVisible, _matItems, ()=>_matFocus, v=>{_matFocus=v;}, ()=>_matIn, v=>{_matIn=v;}, 2, typeof closeMatBook==='function'?closeMatBook:null)) return;
+    if(_gpGridScreenAction(actionKey, _isAbilityBookVisible, _abilityBkItems, ()=>_abilityBkFocus, v=>{_abilityBkFocus=v;}, ()=>_abilityBkIn, v=>{_abilityBkIn=v;}, 3, typeof closeAbilityBook==='function'?closeAbilityBook:null)) return;
+    if(_gpScreenAction(actionKey, _isIconCollVisible, _iconItems, ()=>_iconFocus, v=>{_iconFocus=v;}, ()=>_iconIn, v=>{_iconIn=v;}, 'skip', typeof closeIconCollection==='function'?closeIconCollection:null)) return;
+    if(_gpGridScreenAction(actionKey, _isSkinBookVisible, _skinItems, ()=>_skinFocus, v=>{_skinFocus=v;}, ()=>_skinIn, v=>{_skinIn=v;}, 3, typeof closeSkinBook==='function'?closeSkinBook:null)) return;
+    if(_gpGridScreenAction(actionKey, _isRingBookVisible, _ringItems, ()=>_ringFocus, v=>{_ringFocus=v;}, ()=>_ringIn, v=>{_ringIn=v;}, 4, typeof closeRingBook==='function'?closeRingBook:null)) return;
+    if(_gpGridScreenAction(actionKey, _isBgmBookVisible, _bgmItems, ()=>_bgmFocus, v=>{_bgmFocus=v;}, ()=>_bgmIn, v=>{_bgmIn=v;}, 2, typeof closeRiichiBgmBook==='function'?closeRiichiBgmBook:null)) return;
+    if(_gpGridScreenAction(actionKey, _isAgariBookVisible, _agariItems, ()=>_agariFocus, v=>{_agariFocus=v;}, ()=>_agariIn, v=>{_agariIn=v;}, 3, typeof closeAgariBook==='function'?closeAgariBook:null)) return;
+
+    // ══════════ タイトル（ロビー）画面の操作 ══════════
+    if(_isLobbyVisible()){
+      const landscape = _isLandscapeLobby();
+      const subOpen   = _llSubOpen();
+
+      // サブパネルが新たに開いた瞬間はフォーカスをリセット
+      if(subOpen && !_subWasOpen){ _subFocus = 0; _llSubHighlight(); }
+      _subWasOpen = subOpen;
+
+      // サブパネルが開いている場合: 十字キーで移動・決定・Bで閉じる
+      if(subOpen){
+        const subBtns = _llSubBtns();
+        if(actionKey === 'up' || actionKey === 'left'){
+          _subFocus = _subFocus > 0 ? _subFocus - 1 : subBtns.length - 1;
+          _llSubHighlight();
+        } else if(actionKey === 'down' || actionKey === 'right'){
+          _subFocus = _subFocus < subBtns.length - 1 ? _subFocus + 1 : 0;
+          _llSubHighlight();
+        } else if(actionKey === 'select_tile'){
+          const b = subBtns[_subFocus];
+          if(b){ _playBotanSe(); b.click(); setTimeout(_llSubHighlight, 80); }
+        } else if(actionKey === 'skip'){
+          _playBotanSe();
+          _llSubClearHighlight();
+          if(typeof _llCloseSubPanel==='function') _llCloseSubPanel();
+          _lobbyIn = true;
+          _lobbyHighlight();
+        }
+        return;
+      }
+
+      // まだロビー操作モードに入っていなければ十字キーで入る（入ると同時に移動も行う）
+      if(!_lobbyIn){
+        if(actionKey==='up'||actionKey==='down'||actionKey==='left'||actionKey==='right'){
+          _lobbyIn = true;
+          _lobbyZone = 'main'; _lobbyFocus = 0;
+          // 入った後そのまま下の移動処理へ続ける（returnしない）
+        } else {
+          return;
+        }
+      }
+
+      // ─── ロビー操作モード中 ───
+      // 決定・キャンセルは方向キーより先に処理
+      if(actionKey==='select_tile'){ _lobbySelect(); return; }
+      if(actionKey==='skip'){ _lobbyExit(); return; }
+
+      if(landscape){
+        // 横画面: 3ゾーン方式
+        const mainBtns = _llMainBtns(); // 4個固定
+        const barBtns  = _llBarBtns();
+        const topBtns  = _llTopBtns();
+        // フォーカスが範囲外にならないよう補正
+        const curLen = _llZoneBtns(_lobbyZone).length;
+        if(_lobbyFocus >= curLen) _lobbyFocus = curLen - 1;
+
+        if(_lobbyZone === 'main'){
+          // mainゾーン: 2×2グリッド [rank=0][online=1]/[solo=2][bomb=3]
+          if(actionKey==='left'){
+            // 列内でラップ（0↔1, 2↔3）
+            _lobbyFocus = _lobbyFocus % 2 === 0 ? _lobbyFocus+1 : _lobbyFocus-1;
+          } else if(actionKey==='right'){
+            _lobbyFocus = _lobbyFocus % 2 === 0 ? _lobbyFocus+1 : _lobbyFocus-1;
+          } else if(actionKey==='up'){
+            if(_lobbyFocus >= 2){ _lobbyFocus -= 2; }              // 下行→上行
+            else { _llSwitchZone('top', _lobbyFocus===0?0:topBtns.length-1); } // 上行→topゾーン
+          } else if(actionKey==='down'){
+            if(_lobbyFocus <= 1){ _lobbyFocus += 2; }             // 上行→下行
+            else { _llSwitchZone('bar', _lobbyFocus===2?0:Math.min(1,barBtns.length-1)); } // 下行→barゾーン
+          }
+
+        } else if(_lobbyZone === 'bar'){
+          // barゾーン: 横一列
+          if(actionKey==='left'){
+            _lobbyFocus = _lobbyFocus > 0 ? _lobbyFocus-1 : barBtns.length-1;
+          } else if(actionKey==='right'){
+            _lobbyFocus = _lobbyFocus < barBtns.length-1 ? _lobbyFocus+1 : 0;
+          } else if(actionKey==='up'){
+            // barゾーン→mainゾーン（下行）
+            const half = Math.floor(barBtns.length/2);
+            _llSwitchZone('main', _lobbyFocus < half ? 2 : 3);
+          } else if(actionKey==='down'){
+            // barゾーン→topゾーン（ラップ）
+            _llSwitchZone('top', Math.min(_lobbyFocus, topBtns.length-1));
+          }
+
+        } else { // topゾーン
+          // topゾーン: 横一列
+          if(actionKey==='left'){
+            _lobbyFocus = _lobbyFocus > 0 ? _lobbyFocus-1 : topBtns.length-1;
+          } else if(actionKey==='right'){
+            _lobbyFocus = _lobbyFocus < topBtns.length-1 ? _lobbyFocus+1 : 0;
+          } else if(actionKey==='down'){
+            // topゾーン→mainゾーン（上行）
+            _llSwitchZone('main', _lobbyFocus===0 ? 0 : Math.min(_lobbyFocus-1, 1));
+          } else if(actionKey==='up'){
+            // topゾーン→barゾーン（ラップ）
+            _llSwitchZone('bar', Math.min(_lobbyFocus, barBtns.length-1));
+          }
+        }
+        _lobbyHighlight(); return;
+
+      } else {
+        // 縦画面: 3列グリッド
+        const cols = 3;
+        const total = document.querySelectorAll('#lobbyMode .pcnt-btn').length || _PT_MODES.length;
+        if(actionKey==='left'){
+          if(_lobbyFocus % cols > 0) _lobbyFocus--;
+          else _lobbyFocus = Math.min(_lobbyFocus + cols - 1, total - 1); // 左端→右端（ラップ）
+          _lobbyHighlight(); return;
+        }
+        if(actionKey==='right'){
+          if(_lobbyFocus % cols < cols-1 && _lobbyFocus+1 < total) _lobbyFocus++;
+          else _lobbyFocus = _lobbyFocus - (_lobbyFocus % cols); // 右端→左端（ラップ）
+          _lobbyHighlight(); return;
+        }
+        if(actionKey==='up'){
+          if(_lobbyFocus - cols >= 0){
+            _lobbyFocus -= cols;
+          } else {
+            // 上端→同列の最下行へ（ラップ）
+            const col = _lobbyFocus % cols;
+            const lastRow = Math.floor((total - 1) / cols);
+            const candidate = lastRow * cols + col;
+            _lobbyFocus = candidate < total ? candidate : (lastRow - 1) * cols + col;
+          }
+          _lobbyHighlight(); return;
+        }
+        if(actionKey==='down'){
+          if(_lobbyFocus + cols < total){
+            _lobbyFocus += cols;
+          } else {
+            // 下端→同列の最上行へ（ラップ）
+            _lobbyFocus = _lobbyFocus % cols;
+          }
+          _lobbyHighlight(); return;
+        }
+      }
+
+      return;
+    }
+    // ロビーを離れたらフラグリセット
+    if(_lobbyIn){ _lobbyIn=false; _lobbyHighlight(); }
+
+    // ══════════ プロフィール画面の操作 ══════════
+    if(_isProfileVisible()){
+      if(!_profIn){
+        if(actionKey==='up'||actionKey==='down'||actionKey==='left'||actionKey==='right'){
+          _profIn = true; _profFocus = 0; _profHighlight();
+        }
+        return;
+      }
+      const items = _profItems();
+      if(actionKey === 'up' || actionKey === 'left'){
+        _profFocus = _profFocus > 0 ? _profFocus - 1 : items.length - 1;
+        _profHighlight();
+      } else if(actionKey === 'down' || actionKey === 'right'){
+        _profFocus = _profFocus < items.length - 1 ? _profFocus + 1 : 0;
+        _profHighlight();
+      } else if(actionKey === 'select_tile'){
+        const el = items[_profFocus];
+        if(el){
+          _playBotanSe();
+          if(el.tagName === 'INPUT') el.focus();
+          else el.click();
+        }
+      } else if(actionKey === 'skip'){
+        _profIn = false; _profHighlight();
+      }
+      return;
+    }
+    // プロフィール画面を離れたらフラグリセット
+    if(_profIn){ _profIn = false; _profHighlight(); }
+
+    // ══════════ デイリーページの操作 ══════════
+    if(_isDailyVisible()){
+      if(!_dailyIn){
+        if(actionKey==='up'||actionKey==='down'||actionKey==='left'||actionKey==='right'){
+          _dailyIn = true; _dailyFocus = 0; _dailyHighlight();
+        }
+        return;
+      }
+      const items = _dailyItems();
+      if(actionKey === 'up' || actionKey === 'left'){
+        _dailyFocus = _dailyFocus > 0 ? _dailyFocus - 1 : items.length - 1;
+        _dailyHighlight();
+      } else if(actionKey === 'down' || actionKey === 'right'){
+        _dailyFocus = _dailyFocus < items.length - 1 ? _dailyFocus + 1 : 0;
+        _dailyHighlight();
+      } else if(actionKey === 'select_tile'){
+        const el = items[_dailyFocus];
+        if(el){ _playBotanSe(); el.click(); setTimeout(_dailyHighlight, 100); }
+      } else if(actionKey === 'skip'){
+        _dailyIn = false; _dailyHighlight();
+      }
+      return;
+    }
+    // デイリーを離れたらフラグリセット
+    if(_dailyIn){ _dailyIn = false; _dailyHighlight(); }
+
+    // ══════════ ショップ画面の操作 ══════════
+    if(_gpScreenAction(actionKey, _isShopVisible, _shopItems, ()=>_shopFocus, v=>{_shopFocus=v;}, ()=>_shopIn, v=>{_shopIn=v;}, 'skip', typeof closeShop==='function'?closeShop:null)) return;
+
+    // ══════════ ガチャ画面の操作 ══════════
+    if(_gpScreenAction(actionKey, _isGachaVisible, _gachaItems, ()=>_gachaFocus, v=>{_gachaFocus=v;}, ()=>_gachaIn, v=>{_gachaIn=v;}, 'skip', typeof closeGacha==='function'?closeGacha:null)) return;
+
+    // ══════════ CPU選択画面の操作 ══════════
+    if(_gpScreenAction(actionKey, _isCpuSelectVisible, _cpuItems, ()=>_cpuFocus, v=>{_cpuFocus=v;}, ()=>_cpuIn, v=>{_cpuIn=v;}, 'skip', typeof closeCpuSelectScreen==='function'?closeCpuSelectScreen:null)) return;
+
+    // ══════════ ルームロビー画面の操作 ══════════
+    if(_gpScreenAction(actionKey, _isRoomLobbyVisible, _roomItems, ()=>_roomFocus, v=>{_roomFocus=v;}, ()=>_roomIn, v=>{_roomIn=v;}, 'skip', typeof leaveRoomLobby==='function'?leaveRoomLobby:null)) return;
+
+    // ══════════ 戦績画面の操作 ══════════
+    if(_gpScreenAction(actionKey, _isRecordVisible, _recordItems, ()=>_recordFocus, v=>{_recordFocus=v;}, ()=>_recordIn, v=>{_recordIn=v;}, 'skip', typeof closeRecordScreen==='function'?closeRecordScreen:null)) return;
+
+    // ══════════ フレンド画面の操作 ══════════
+    if(_gpScreenAction(actionKey, _isFriendVisible, _friendItems, ()=>_friendFocus, v=>{_friendFocus=v;}, ()=>_friendIn, v=>{_friendIn=v;}, 'skip', typeof closeFriendScreen==='function'?closeFriendScreen:null)) return;
+
+    // ══════════ 卓布図鑑・各種図鑑の操作はロビーブロック前に移動済み ══════════
+
+    // ══════════ 上がりオーバーレイ（winOverlay）中の操作 ══════════
+    const _winOverlayEl = document.getElementById('winOverlay');
+    if(_winOverlayEl && _winOverlayEl.classList.contains('show')){
+      if(actionKey==='select_tile'){
+        const okBtn = document.getElementById('winOkBtn');
+        if(okBtn && !okBtn.disabled) okBtn.click();
+      }
+      return;
+    }
+
+    // ══════════ リザルトオーバーレイ（resultOverlay）中の操作 ══════════
+    const _resultOverlayEl = document.getElementById('resultOverlay');
+    if(_resultOverlayEl && _resultOverlayEl.classList.contains('show')){
+      if(actionKey==='select_tile' || actionKey==='skip'){
+        const btns = document.querySelectorAll('#resultBtns button');
+        if(actionKey==='select_tile' && btns[0]) btns[0].click();
+        else if(actionKey==='skip' && btns.length > 1) btns[btns.length-1].click();
+        else if(actionKey==='skip' && btns[0]) btns[0].click();
+      }
+      return;
+    }
+
+    // ══════════ 捨て牌拡大 / 山牌拡大 オーバーレイ中の操作 ══════════
+    const _discardZoomEl = document.getElementById('discardZoomOverlay');
+    const _wallExpandEl  = document.getElementById('wallExpandOverlay');
+    const _discardOpen   = _discardZoomEl && _discardZoomEl.style.display === 'flex';
+    const _wallOpen      = _wallExpandEl  && _wallExpandEl.classList.contains('show');
+
+    // ── 捨て牌拡大カーソル操作 ──
+    if(_discardOpen){
+      if(actionKey==='left'){
+        const secs = _dzSections();
+        const tiles = _dzTilesOf(secs[_dzPlayerIdx]||null);
+        if(tiles.length){
+          if(_dzTileIdx > 0){ _dzTileIdx--; }
+          else {
+            // 前のプレイヤーへ
+            let prev = _dzPlayerIdx - 1;
+            while(prev >= 0 && _dzTilesOf(secs[prev]).length === 0) prev--;
+            if(prev >= 0){ _dzPlayerIdx = prev; _dzTileIdx = _dzTilesOf(secs[prev]).length - 1; }
+          }
+        }
+        _dzHighlight(); _hud('捨て牌 ←'); return;
+      }
+      if(actionKey==='right'){
+        const secs = _dzSections();
+        const tiles = _dzTilesOf(secs[_dzPlayerIdx]||null);
+        if(tiles.length){
+          if(_dzTileIdx < tiles.length - 1){ _dzTileIdx++; }
+          else {
+            // 次のプレイヤーへ
+            let next = _dzPlayerIdx + 1;
+            while(next < secs.length && _dzTilesOf(secs[next]).length === 0) next++;
+            if(next < secs.length){ _dzPlayerIdx = next; _dzTileIdx = 0; }
+          }
+        }
+        _dzHighlight(); _hud('捨て牌 →'); return;
+      }
+      if(actionKey==='up'){
+        const secs = _dzSections();
+        let prev = _dzPlayerIdx - 1;
+        while(prev >= 0 && _dzTilesOf(secs[prev]).length === 0) prev--;
+        if(prev >= 0){
+          _dzPlayerIdx = prev;
+          _dzTileIdx = Math.min(_dzTileIdx, _dzTilesOf(secs[prev]).length - 1);
+        }
+        _dzHighlight(); _hud('捨て牌 ↑'); return;
+      }
+      if(actionKey==='down'){
+        const secs = _dzSections();
+        let next = _dzPlayerIdx + 1;
+        while(next < secs.length && _dzTilesOf(secs[next]).length === 0) next++;
+        if(next < secs.length){
+          _dzPlayerIdx = next;
+          _dzTileIdx = Math.min(_dzTileIdx, _dzTilesOf(secs[next]).length - 1);
+        }
+        _dzHighlight(); _hud('捨て牌 ↓'); return;
+      }
+      if(actionKey==='select_tile'){
+        _dzClickCurrent(); return;
+      }
+      if(actionKey==='skip'||actionKey==='focus_corner'){
+        if(typeof closeDiscardZoom==='function'){ closeDiscardZoom(); _hud('捨て牌拡大 閉じる'); }
+        return;
+      }
+      return; // 他キーはブロック
+    }
+
+    // ── 山牌拡大カーソル操作 ──
+    if(_wallOpen){
+      if(!G || !G.deckSlots){ return; }
+      const total = G.deckSlots.length;
+      const _nextValid = (idx, dir) => {
+        let ni = idx + dir;
+        while(ni >= 0 && ni < total && G.deckSlots[ni] === null) ni += dir;
+        return (ni >= 0 && ni < total) ? ni : idx;
+      };
+      if(actionKey==='left'){
+        _gpWallIdx = _nextValid(_gpWallIdx, -1);
+        _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ←'); return;
+      }
+      if(actionKey==='right'){
+        _gpWallIdx = _nextValid(_gpWallIdx, 1);
+        _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 →'); return;
+      }
+      if(actionKey==='up'){
+        let ni = _gpWallIdx - W_COLS;
+        while(ni >= 0 && G.deckSlots[ni] === null) ni--;
+        if(ni >= 0){ _gpWallIdx = ni; _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ↑'); }
+        return;
+      }
+      if(actionKey==='down'){
+        let ni = _gpWallIdx + W_COLS;
+        while(ni < total && G.deckSlots[ni] === null) ni++;
+        if(ni < total){ _gpWallIdx = ni; _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ↓'); }
+        return;
+      }
+      if(actionKey==='select_tile'){
+        // 山牌拡大でのツモ（ドローモード中のみ）
+        if(typeof humanPickWall === 'function' && G.phase==='draw_wait' && G.current===NET.myIdx){
+          humanPickWall(_gpWallIdx);
+          if(typeof closeWallExpand==='function') closeWallExpand();
+        } else {
+          // クリックイベントをcanvasに発火
+          const ec = document.getElementById('wallExpandCanvas');
+          if(ec && typeof _wallTileRect==='function'){
+            const tr = _wallTileRect(_gpWallIdx);
+            const rect = ec.getBoundingClientRect();
+            const scaleX = rect.width / ec.width;
+            const scaleY = rect.height / ec.height;
+            const cx = rect.left + (tr.x + tr.w/2) * scaleX;
+            const cy = rect.top  + (tr.y + tr.h/2) * scaleY;
+            ec.dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true, clientX:cx, clientY:cy}));
+          }
+        }
+        return;
+      }
+      if(actionKey==='skip'||actionKey==='focus_corner'){
+        if(typeof closeWallExpand==='function'){ closeWallExpand(); _hud('山牌拡大 閉じる'); }
+        return;
+      }
+      return; // 他キーはブロック
+    }
+
+    switch(actionKey){
+
+      // ══════════ UP ══════════
+      case 'up':
+        if(_gpFocus==='action'){ _gpFocus='hand'; _highlight(); break; }
+        if(_gpFocus==='hand'){
+          if(typeof G!=='undefined' && G.phase==='draw_wait' && G.current===NET.myIdx){
+            _gpFocus='wall';
+            if(G.deckSlots){ const fi=G.deckSlots.findIndex(s=>s!==null); if(fi>=0) _gpWallIdx=fi; }
+            _highlight();
+          }
+          break;
+        }
+        if(_gpFocus==='wall'){
+          if(typeof G!=='undefined' && G.deckSlots){
+            const W=15; let ni=_gpWallIdx-W;
+            if(ni<0){ _gpFocus='hand'; _highlight(); break; }
+            while(ni>=0 && G.deckSlots[ni]===null) ni--;
+            if(ni>=0){ _gpWallIdx=ni; _highlight(); }
+          }
+          break;
+        }
+        if(_gpFocus==='corner'){
+          const c=_cornerBtns();
+          if(c.length){ _gpCornerIdx=(_gpCornerIdx-1+c.length)%c.length; _highlight(); }
+          break;
+        }
+        if(_gpFocus==='emote'){
+          const btns=_emotePanelBtns();
+          if(btns.length){ _gpEmoteIdx=(_gpEmoteIdx-1+btns.length)%btns.length; _highlight(); }
+          break;
+        }
+        if(_gpFocus==='automenu'){
+          const btns=_autoMenuBtns();
+          if(btns.length){ _gpAutoMenuIdx=(_gpAutoMenuIdx-1+btns.length)%btns.length; _highlight(); }
+          break;
+        }
+        if(_gpFocus==='settings'){
+          const items=_settingsInteractives();
+          if(_gpSettingsRowIdx<0){
+            // タブ行→何もしない（上端）
+          } else if(_gpSettingsRowIdx===0){
+            _gpSettingsRowIdx=-1; // タブ行へ戻る
+            _highlight();
+            _hud('タブ行 ←→でタブ切替、↓で項目へ');
+          } else {
+            _gpSettingsRowIdx--;
+            _highlight();
+            _settingsScrollToRow(items[_gpSettingsRowIdx]);
+          }
+          break;
+        }
+        break;
+
+      // ══════════ DOWN ══════════
+      case 'down':
+        if(_gpFocus==='hand' && acts.length>0){ _gpFocus='action'; _gpActIdx=0; _highlight(); break; }
+        if(_gpFocus==='wall'){
+          if(typeof G!=='undefined' && G.deckSlots){
+            const W=15, total=G.deckSlots.length; let ni=_gpWallIdx+W;
+            if(ni>=total){ _gpFocus='hand'; _highlight(); break; }
+            while(ni<total && G.deckSlots[ni]===null) ni++;
+            if(ni<total){ _gpWallIdx=ni; _highlight(); }
+            else { _gpFocus='hand'; _highlight(); }
+          }
+          break;
+        }
+        if(_gpFocus==='corner'){
+          const c=_cornerBtns();
+          if(c.length){ _gpCornerIdx=(_gpCornerIdx+1)%c.length; _highlight(); }
+          break;
+        }
+        if(_gpFocus==='emote'){
+          const btns=_emotePanelBtns();
+          if(btns.length){ _gpEmoteIdx=(_gpEmoteIdx+1)%btns.length; _highlight(); }
+          break;
+        }
+        if(_gpFocus==='automenu'){
+          const btns=_autoMenuBtns();
+          if(btns.length){ _gpAutoMenuIdx=(_gpAutoMenuIdx+1)%btns.length; _highlight(); }
+          break;
+        }
+        if(_gpFocus==='settings'){
+          const items=_settingsInteractives();
+          if(_gpSettingsRowIdx < items.length-1){
+            _gpSettingsRowIdx++;
+            _highlight();
+            _settingsScrollToRow(items[_gpSettingsRowIdx]);
+          }
+          break;
+        }
+        break;
+
+      // ══════════ LEFT ══════════
+      case 'left':
+        if(_gpFocus==='hand'){
+          if(tiles.length){ _gpCursor=(_gpCursor-1+tiles.length)%tiles.length; _highlight(); }
+        } else if(_gpFocus==='action'){
+          if(acts.length){ _gpActIdx=(_gpActIdx-1+acts.length)%acts.length; _highlight(); }
+        } else if(_gpFocus==='wall'){
+          if(typeof G!=='undefined' && G.deckSlots){
+            let ni=_gpWallIdx-1;
+            while(ni>=0 && G.deckSlots[ni]===null) ni--;
+            if(ni>=0){ _gpWallIdx=ni; _highlight(); }
+          }
+        } else if(_gpFocus==='corner'){
+          const c=_cornerBtns();
+          if(c.length){ _gpCornerIdx=(_gpCornerIdx-1+c.length)%c.length; _highlight(); }
+        } else if(_gpFocus==='settings'){
+          // タブ行またはコンテンツ内: タブを前へ
+          if(_gpSettingsRowIdx<0){
+            _gpSwitchSettingsTab(-1);
+          } else {
+            // range/selectなら値変更
+            const items=_settingsInteractives();
+            _settingsAdjust(items[_gpSettingsRowIdx], -1);
+          }
+        }
+        break;
+
+      // ══════════ RIGHT ══════════
+      case 'right':
+        if(_gpFocus==='hand'){
+          if(tiles.length){ _gpCursor=(_gpCursor+1)%tiles.length; _highlight(); }
+        } else if(_gpFocus==='action'){
+          if(acts.length){ _gpActIdx=(_gpActIdx+1)%acts.length; _highlight(); }
+        } else if(_gpFocus==='wall'){
+          if(typeof G!=='undefined' && G.deckSlots){
+            const total=G.deckSlots.length; let ni=_gpWallIdx+1;
+            while(ni<total && G.deckSlots[ni]===null) ni++;
+            if(ni<total){ _gpWallIdx=ni; _highlight(); }
+          }
+        } else if(_gpFocus==='corner'){
+          const c=_cornerBtns();
+          if(c.length){ _gpCornerIdx=(_gpCornerIdx+1)%c.length; _highlight(); }
+        } else if(_gpFocus==='settings'){
+          if(_gpSettingsRowIdx<0){
+            _gpSwitchSettingsTab(+1);
+          } else {
+            const items=_settingsInteractives();
+            _settingsAdjust(items[_gpSettingsRowIdx], +1);
+          }
+        }
+        break;
+
+      // ══════════ SELECT ══════════
+      case 'select_tile': {
+        if(_gpFocus==='action'){
+          if(acts[_gpActIdx]) acts[_gpActIdx].click(); break;
+        }
+        if(_gpFocus==='wall'){
+          if(typeof humanPickWall==='function') humanPickWall(_gpWallIdx);
+          _gpFocus='hand'; _highlight(); break;
+        }
+        if(_gpFocus==='corner'){
+          const corners=_cornerBtns();
+          const btn=corners[_gpCornerIdx];
+          if(!btn) break;
+          btn.click();
+          setTimeout(()=>{
+            const ep=document.getElementById('emotePanel');
+            const sp=document.getElementById('settingsPanel');
+            const ap=document.getElementById('autoMenuPanel');
+            if(ep && ep.style.display==='flex'){
+              _gpFocus='emote'; _gpEmoteIdx=0; _highlight();
+              _hud('エモート ↑↓で選択、Aで送信、Bで戻る');
+            } else if(sp && sp.style.display==='flex'){
+              _gpFocus='settings';
+              // 現在アクティブなタブを検出して同期
+              _gpSettingsTabIdx = _SETTING_TABS.findIndex(t=>{
+                const el=document.getElementById('igTabContent'+t.charAt(0).toUpperCase()+t.slice(1));
+                return el && el.style.display!=='none';
+              });
+              if(_gpSettingsTabIdx<0) _gpSettingsTabIdx=0;
+              _gpSettingsRowIdx=-1;
+              _highlight();
+              _hud('設定 ←→でタブ、↓で項目へ、Aで決定/変更、Bで閉じる');
+            } else if(ap && ap.style.display==='flex'){
+              _gpFocus='automenu'; _gpAutoMenuIdx=0; _highlight();
+              _hud('▽メニュー ↑↓で移動、Aで決定、Bで戻る');
+            }
+          }, 80);
+          break;
+        }
+        if(_gpFocus==='emote'){
+          const btns=_emotePanelBtns();
+          if(btns[_gpEmoteIdx]) btns[_gpEmoteIdx].click();
+          setTimeout(()=>{ _gpFocus='hand'; _highlight(); }, 120);
+          break;
+        }
+        if(_gpFocus==='automenu'){
+          const btns=_autoMenuBtns();
+          if(btns[_gpAutoMenuIdx]) btns[_gpAutoMenuIdx].click();
+          setTimeout(()=>{
+            const ap=document.getElementById('autoMenuPanel');
+            if(!ap||ap.style.display==='none'){ _gpFocus='corner'; _highlight(); }
+          }, 80);
+          break;
+        }
+        if(_gpFocus==='settings'){
+          // タブ行: そのタブをクリック
+          if(_gpSettingsRowIdx<0){
+            const tabs=_settingsTabBtns();
+            if(tabs[_gpSettingsTabIdx]) tabs[_gpSettingsTabIdx].click();
+            _gpSettingsRowIdx=0; _highlight();
+            _hud('設定項目 ↑↓で移動、←→で値変更、Bでタブ行/閉じる');
+          } else {
+            // コンテンツ内: ボタンならクリック、rangeなら何もしない（←→で操作）
+            const items=_settingsInteractives();
+            const el=items[_gpSettingsRowIdx];
+            if(el && (el.tagName==='BUTTON' || el.tagName==='SELECT')) el.click();
+          }
+          break;
+        }
+        // 手牌
+        const tile=tiles[_gpCursor];
+        if(!tile) break;
+        const idx=parseInt(tile.dataset.idx,10);
+        if(isNaN(idx)) break;
+        if(typeof selIdx!=='undefined'){
+          if(selIdx===idx){ if(typeof humanDiscard==='function') humanDiscard(); }
+          else { selIdx=idx; if(typeof renderAll==='function') renderAll(); }
+        }
+        break;
+      }
+
+      // ══════════ SKIP ══════════
+      case 'skip': {
+        if(_gpFocus==='emote'){
+          const ep=document.getElementById('emotePanel');
+          if(ep) ep.style.display='none';
+          _gpFocus='corner'; _highlight(); break;
+        }
+        if(_gpFocus==='settings'){
+          if(_gpSettingsRowIdx>=0){
+            // コンテンツ内→タブ行に戻る
+            _gpSettingsRowIdx=-1; _highlight();
+            _hud('設定タブ ←→でタブ切替、↓で項目へ、Bで設定を閉じる');
+          } else {
+            // タブ行→設定を閉じる
+            if(typeof toggleSettingsPanel==='function') toggleSettingsPanel();
+            _gpFocus='corner'; _highlight();
+          }
+          break;
+        }
+        if(_gpFocus==='automenu'){
+          const ap=document.getElementById('autoMenuPanel');
+          if(ap) ap.style.display='none';
+          _gpFocus='corner'; _highlight(); break;
+        }
+        if(_gpFocus==='corner'){ _gpFocus='hand'; _highlight(); break; }
+        if(_gpFocus==='action'){ _gpFocus='hand'; _highlight(); break; }
+        if(_gpFocus==='wall'){  _gpFocus='hand'; _highlight(); break; }
+        const skipBtn=acts.find(b=>/スキップ|キャンセル|パス/.test(b.textContent));
+        if(skipBtn){ skipBtn.click(); break; }
+        if(typeof humanCancelRiichi==='function'&&typeof G!=='undefined'&&G.pendingRiichi) humanCancelRiichi();
+        break;
+      }
+
+      // ══════════ FOCUS_CORNER ══════════
+      case 'focus_corner': {
+        if(['corner','emote','settings','automenu'].includes(_gpFocus)){
+          const ep=document.getElementById('emotePanel');
+          const sp=document.getElementById('settingsPanel');
+          const ap=document.getElementById('autoMenuPanel');
+          if(ep && ep.style.display==='flex') ep.style.display='none';
+          if(sp && sp.style.display==='flex' && typeof toggleSettingsPanel==='function') toggleSettingsPanel();
+          if(ap && ap.style.display==='flex') ap.style.display='none';
+          _gpFocus='hand'; _highlight(); _hud('手牌');
+        } else {
+          const corners=_cornerBtns();
+          if(corners.length){
+            _gpFocus='corner';
+            if(_gpCornerIdx>=corners.length) _gpCornerIdx=0;
+            _highlight();
+            _hud('左下ボタン ←→で選択、Aで決定、Bで手牌に戻る');
+          }
+        }
+        break;
+      }
+
+      // ══════════ TOGGLE_PULL (Y) ══════════
+      case 'toggle_pull': {
+        const pullBtn = document.getElementById('autoDrawBtn');
+        if(pullBtn && pullBtn.style.display !== 'none'){
+          _playBotanSe();
+          if(typeof pullBtn.onclick === 'function') pullBtn.onclick(new MouseEvent('click'));
+          else pullBtn.dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true}));
+          _hud('引く: トグル');
+        }
+        break;
+      }
+
+      // ══════════ TOGGLE_ABILITY (X) ══════════
+      case 'toggle_ability': {
+        // ドキュメント全体から能力ボタンを検索
+        const abilityBtn = document.querySelector('.corner-ability-btn');
+        if(abilityBtn){
+          _playBotanSe();
+          if(typeof abilityBtn.onclick === 'function') abilityBtn.onclick();
+          else abilityBtn.dispatchEvent(new MouseEvent('click', {bubbles:true}));
+          _hud('能力ボタン: 使用 [' + abilityBtn.textContent.trim().slice(0,8) + ']');
+        } else {
+          // フォールバック: ペンボタン（ペン能力）
+          const penBtn = document.getElementById('penToggleBtn');
+          if(penBtn && penBtn.style.display !== 'none'){
+            _playBotanSe();
+            penBtn.click();
+            _hud('ペン: トグル');
+          } else {
+            // デバッグ情報
+            const allBtns = Array.from(document.querySelectorAll('#tableCornerRight button')).map(b=>b.id||b.className.split(' ')[0]).join(',');
+            _hud('能力: なし [' + allBtns + ']');
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  // ─────────── 設定パネル: 値調整ヘルパー ───────────
+  function _settingsAdjust(el, dir){
+    if(!el) return;
+    if(el.tagName==='INPUT' && el.type==='range'){
+      const step = parseFloat(el.step)||0.01;
+      const val  = Math.min(parseFloat(el.max), Math.max(parseFloat(el.min), parseFloat(el.value)+step*dir));
+      el.value = val;
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+    } else if(el.tagName==='SELECT'){
+      const i=el.selectedIndex+dir;
+      if(i>=0 && i<el.options.length){ el.selectedIndex=i; el.dispatchEvent(new Event('change',{bubbles:true})); }
+    }
+  }
+  // ─────────── 設定パネル: 対象要素が見えるようスクロール ───────────
+  function _settingsScrollToRow(el){
+    if(!el) return;
+    const sp=document.getElementById('settingsPanel');
+    if(!sp) return;
+    const spR=sp.getBoundingClientRect();
+    const elR=el.getBoundingClientRect();
+    if(elR.top < spR.top+8) sp.scrollTop -= (spR.top+8-elR.top);
+    else if(elR.bottom > spR.bottom-8) sp.scrollTop += (elR.bottom-spR.bottom+8);
+  }
+
+  // ─────────── postMessage受信 ───────────
+  window.addEventListener('message', e=>{
+    const d = e.data;
+    if(!d||typeof d!=='object') return;
+    if(d.type==='__gpConnected__'){
+      if(!_gpVisible){ _gpVisible=true; _createOverlay(); }
+      _hud('接続中 — 歯車⚙️からボタン割り当てを変更できます');
+      _updateStatusUI(true, d.id);
+      _renderBindTable();
+    } else if(d.type==='__gpDisconnected__'){
+      _hud('切断'); _gpVisible=false;
+      _updateStatusUI(false);
+      if(_gpOverlay){_gpOverlay.remove();_gpOverlay=null;}
+    } else if(d.type==='__gpBtn__'){
+      const phys = String(d.phys !== undefined ? d.phys : d.btn);
+      // 割り当て待ち中：どのボタンでも割り当てに使う（ゲーム操作は無視）
+      if(_listening){
+        _applyBinding(phys);
+        return;
+      }
+      // 通常時：バインディングからアクションを引いて実行
+      const actionKey = _bindings[phys];
+      if(actionKey) _execAction(actionKey);
+    }
+  });
+
+  // ─────────── 環境判定 ───────────
+  // iframeの中にいる場合は getGamepads() が Permissions Policy で禁止されている。
+  // その場合は親ウィンドウへブリッジを注入して postMessage で受け取る。
+  // トップレベル（ローカル直接開き）の場合は自前でポーリングする。
+  const _isIframe = (function(){
+    try { return window.self !== window.top; } catch(e){ return true; }
+  })();
+
+  // ─────────── 入力ディスパッチ（モード共通） ───────────
+  function _dispatchPhys(phys){
+    if(!_gpActive) return; // コントローラー無効時は入力を無視
+    if(_listening){ _applyBinding(phys); return; }
+    const actionKey = _bindings[phys];
+    if(actionKey) _execAction(actionKey);
+  }
+
+  // ─────────── ローカルモード：自前ポーリング ───────────
+  const DEAD   = 0.4;
+  const REPEAT = 180;
+  const _prev  = {};
+  const _rptTm = {};
+  let   _rafRunning = false;
+
+  function _sendPhysRepeat(phys){
+    _dispatchPhys(phys);
+    clearTimeout(_rptTm[phys]);
+    _rptTm[phys] = setTimeout(function fire(){
+      if(_prev[phys]){ _dispatchPhys(phys); _rptTm[phys]=setTimeout(fire, REPEAT); }
+    }, REPEAT * 2);
+  }
+
+  function _pollLoop(){
+    let pads;
+    try { pads = navigator.getGamepads(); } catch(e){ _rafRunning=false; return; }
+    for(let pi=0; pi<pads.length; pi++){
+      const gp = pads[pi]; if(!gp) continue;
+      gp.buttons.forEach((btn, bi)=>{
+        const phys    = String(bi);
+        const pressed = btn.pressed || btn.value > 0.5;
+        if(pressed && !_prev[phys]){
+          if(bi===12||bi===13||bi===14||bi===15) _sendPhysRepeat(phys);
+          else _dispatchPhys(phys);
+        }
+        _prev[phys] = pressed;
+      });
+      const ax = gp.axes[0] || 0;
+      if(ax < -DEAD && !_prev['stickL']){ _prev['stickL']=true;  _sendPhysRepeat('stickL'); }
+      else if(ax >= -DEAD){ if(_prev['stickL']){ _prev['stickL']=false; clearTimeout(_rptTm['stickL']); } }
+      if(ax >  DEAD && !_prev['stickR']){ _prev['stickR']=true;  _sendPhysRepeat('stickR'); }
+      else if(ax <=  DEAD){ if(_prev['stickR']){ _prev['stickR']=false; clearTimeout(_rptTm['stickR']); } }
+    }
+    requestAnimationFrame(_pollLoop);
+  }
+
+  function _startPolling(){
+    if(_rafRunning || _isIframe) return;  // iframe内では絶対起動しない
+    _rafRunning = true;
+    _pollLoop();
+  }
+
+  function _onConnected(id){
+    if(!_gpVisible){ _gpVisible=true; _createOverlay(); }
+    _hud('接続中 — 歯車⚙️からボタン割り当てを変更できます');
+    _updateStatusUI(true, id);
+    _renderBindTable();
+  }
+  function _onDisconnected(){
+    _hud('切断'); _gpVisible=false;
+    _updateStatusUI(false);
+    if(_gpOverlay){ _gpOverlay.remove(); _gpOverlay=null; }
+  }
+
+  // ─────────── ローカルモードのイベント ───────────
+  if(!_isIframe){
+    window.addEventListener('gamepadconnected', e=>{
+      _onConnected(e.gamepad.id);
+      _startPolling();
+    });
+    window.addEventListener('gamepaddisconnected', _onDisconnected);
+  }
+
+  function _checkExistingPads(){
+    if(_isIframe) return false;  // iframe内では呼ばない
+    let pads;
+    try { pads = navigator.getGamepads(); } catch(e){ return false; }
+    const found = Array.from(pads).find(p=>p);
+    if(found){ _onConnected(found.id); _startPolling(); return true; }
+    return false;
+  }
+
+  window.gpRefresh = function(){
+    if(_isIframe){
+      _hud('ローカルファイルで開いてください（iframeでは動作しません）');
+      return;
+    }
+    if(!_checkExistingPads()){
+      _updateStatusUI(false);
+      _hud('コントローラーが見つかりません。接続後にボタンを押してください');
+    }
+  };
+
+  // ─────────── iframeモード：postMessage受信 ───────────
+  window.addEventListener('message', e=>{
+    const d = e.data;
+    if(!d||typeof d!=='object') return;
+    if(d.type==='__gpConnected__'){
+      _onConnected(d.id);
+      // ポーリングは親側が行うのでここでは起動しない
+    } else if(d.type==='__gpDisconnected__'){
+      _onDisconnected();
+    } else if(d.type==='__gpBtn__'){
+      const phys = String(d.phys !== undefined ? d.phys : d.btn);
+      _dispatchPhys(phys);
+    }
+  });
+
+  // ─────────── iframeモード：親ウィンドウへブリッジ注入 ───────────
+  function _injectParentBridge(){
+    if(!_isIframe) return;  // ローカルでは不要
+    const target = window.parent !== window ? window.parent : window.top;
+    if(!target || target === window) return;
+    try {
+      if(target.__gpBridgeInjected__) return;
+      target.__gpBridgeInjected__ = true;
+      const code = (function(){
+        if(window.__gpBridgeRunning__) return;
+        window.__gpBridgeRunning__ = true;
+        const DEAD=0.4, REPEAT=180, prev={}, rpt={};
+        function frames(){ return Array.from(document.querySelectorAll('iframe')); }
+        function post(m){ frames().forEach(f=>{try{f.contentWindow.postMessage(m,'*');}catch(e){}}); }
+        function send(phys){ post({type:'__gpBtn__',phys:phys}); }
+        function sendRep(phys){
+          send(phys);
+          clearTimeout(rpt[phys]);
+          rpt[phys]=setTimeout(function f(){ if(prev[phys]){send(phys);rpt[phys]=setTimeout(f,REPEAT);} },REPEAT*2);
+        }
+        function loop(){
+          var pads=navigator.getGamepads?navigator.getGamepads():[];
+          for(var i=0;i<pads.length;i++){
+            var gp=pads[i];if(!gp)continue;
+            gp.buttons.forEach(function(b,bi){
+              var p=String(bi),pressed=b.pressed||b.value>.5;
+              if(pressed&&!prev[p]){ if(bi===12||bi===13||bi===14||bi===15)sendRep(p);else send(p); }
+              prev[p]=pressed;
+            });
+            var ax=gp.axes[0]||0;
+            if(ax<-DEAD&&!prev.sL){prev.sL=true;sendRep('stickL');}
+            else if(ax>=-DEAD&&prev.sL){prev.sL=false;clearTimeout(rpt.stickL);}
+            if(ax>DEAD&&!prev.sR){prev.sR=true;sendRep('stickR');}
+            else if(ax<=DEAD&&prev.sR){prev.sR=false;clearTimeout(rpt.stickR);}
+          }
+          requestAnimationFrame(loop);
+        }
+        window.addEventListener('gamepadconnected',function(e){
+          post({type:'__gpConnected__',id:e.gamepad.id});requestAnimationFrame(loop);
+        });
+        window.addEventListener('gamepaddisconnected',function(){post({type:'__gpDisconnected__'});});
+        setTimeout(function(){
+          var pads=navigator.getGamepads?navigator.getGamepads():[];
+          var f=Array.from(pads).find(function(p){return !!p;});
+          if(f){post({type:'__gpConnected__',id:f.id});requestAnimationFrame(loop);}
+        },500);
+      }).toString();
+      target.eval('('+code+')()');
+    } catch(e){}
+  }
+
+  // ─────────── 初期化 ───────────
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', ()=>{
+      _injectParentBridge();
+      if(!_isIframe) setTimeout(_checkExistingPads, 800);
+    });
+  } else {
+    _injectParentBridge();
+    if(!_isIframe) setTimeout(_checkExistingPads, 800);
+  }
+
+  // ─────────── コントローラー有効/無効・振動ON/OFF ───────────
+  let _gpActive  = true;  // コントローラー有効フラグ（false=入力を無視）
+  let _gpRumbleOn = true; // 振動ONフラグ
+  // 外部から参照できるよう公開
+  window.gpGetActive    = ()=> _gpActive;
+  window.gpSetActive    = (v)=>{ _gpActive = !!v; };
+  window.gpGetRumbleOn  = ()=> _gpRumbleOn;
+  window.gpSetRumbleOn  = (v)=>{ _gpRumbleOn = !!v; };
+  // 仮想パッド用：アクションキーを直接 _execAction へ渡す
+  window.__vpadDispatch = (actionKey)=>{ if(_gpActive) _execAction(actionKey); };
+  // 仮想パッドON/OFF（状態はDOMで管理）
+  window.gpGetVpadOn = ()=> { const el=document.getElementById('vpadOverlay'); return el ? el.style.display!=='none' : false; };
+  window.gpSetVpadOn = (v)=>{ const el=document.getElementById('vpadOverlay'); if(el) el.style.display = v ? 'block' : 'none'; };
+
+  // ─────────── コントローラー振動 ───────────
+  function _rumble(strongMs, weakMs, strongMag, weakMag){
+    if(!_gpRumbleOn) return; // 振動OFFなら何もしない
+    let pads;
+    try { pads = navigator.getGamepads(); } catch(e){ return; }
+    for(let i=0;i<pads.length;i++){
+      const gp = pads[i]; if(!gp) continue;
+      const act = gp.vibrationActuator;
+      if(!act) continue;
+      try {
+        if(typeof act.playEffect === 'function'){
+          act.playEffect('dual-rumble', {
+            startDelay: 0,
+            duration: Math.max(strongMs, weakMs),
+            weakMagnitude:   weakMag   !== undefined ? weakMag   : 0.4,
+            strongMagnitude: strongMag !== undefined ? strongMag : 0.6,
+          });
+        }
+      } catch(e){}
+    }
+  }
+  // 自分のターン: 強めに1回
+  window.gpRumbleMyTurn = function(){
+    _rumble(300, 300, 1.0, 0.8);
+  };
+  // 汎用（外部から呼べるよう公開）
+  window.gpRumble = _rumble;
+
+  // ─────────── ツモ牌カーソル自動追従 ───────────
+  // humanPickWall / drawTile の直後に末尾カーソルを設定する
+  function _moveCursorToDrawnTile(){
+    // 少し待ってDOM更新後に手牌末尾へ
+    setTimeout(()=>{
+      const t = _tiles();
+      if(!t.length) return;
+      _gpCursor = t.length - 1;
+      _gpFocus  = 'hand';
+      _highlight();
+    }, 80);
+  }
+
+  // renderAll ラップ: カーソル補正 + バインドテーブル再描画
+  setTimeout(()=>{
+    const orig = window.renderAll;
+    if(typeof orig==='function'){
+      window.renderAll = function(){
+        orig.apply(this, arguments);
+        setTimeout(()=>{
+          const t=_tiles();
+          const a=_actBtns();
+          const phase = typeof G!=='undefined' ? G.phase : '';
+          const isMyTurn = typeof NET!=='undefined' && typeof G!=='undefined' && G.current===NET.myIdx;
+
+          // カーソルが範囲外なら補正
+          if(t.length && _gpCursor >= t.length) _gpCursor = t.length - 1;
+
+          // アクションボタンが出たら自動的にアクションへフォーカス（パネル操作中は維持）
+          const _panelFocused = ['corner','emote','settings','automenu'].includes(_gpFocus);
+          if(a.length>0 && _gpFocus==='hand'){
+            _gpFocus='action'; _gpActIdx=0;
+          } else if(a.length===0 && _gpFocus==='action'){
+            _gpFocus='hand';
+          }
+          // draw_waitになったら手牌に戻す（山牌フォーカス中の場合も）
+          if(_gpFocus==='wall' && !(phase==='draw_wait' && isMyTurn)){
+            _gpFocus='hand';
+          }
+          _highlight();
+        },50);
+      };
+    }
+    // humanPickWall ラップ：山牌を引いた直後にカーソルをツモ牌へ
+    const _origPickWall = window.humanPickWall;
+    if(typeof _origPickWall === 'function'){
+      window.humanPickWall = function(){
+        _origPickWall.apply(this, arguments);
+        _moveCursorToDrawnTile();
+      };
+    }
+    // drawTile ラップ：CPUターン経由でなく自分がdrawTileを呼ぶ場合も対応
+    const _origDrawTile = window.drawTile;
+    if(typeof _origDrawTile === 'function'){
+      window.drawTile = function(pidx){
+        const result = _origDrawTile.apply(this, arguments);
+        const myIdx = typeof NET !== 'undefined' ? NET.myIdx : 0;
+        if(pidx === myIdx) _moveCursorToDrawnTile();
+        return result;
+      };
+    }
+
+    // 設定パネルが開かれたときにテーブルを描画
+    const sp = document.getElementById('settingsPanel');
+    if(sp){
+      new MutationObserver(()=>{
+        if(sp.style.display!=='none'){
+          _renderBindTable();
+          _applyGpActiveUI();
+          _applyGpRumbleUI();
+          _applyGpVpadUI();
+        }
+      }).observe(sp, {attributes:true, attributeFilter:['style']});
+    }
+
+    // タイトル設定パネルの操作タブが開かれたときにテーブルを描画
+    const tsp = document.getElementById('titleTabContentOperation');
+    if(tsp){
+      new MutationObserver(()=>{
+        if(tsp.style.display !== 'none'){
+          _renderBindTable();
+          _applyGpActiveUI();
+          _applyGpRumbleUI();
+          _applyGpVpadUI();
+        }
+      }).observe(tsp, {attributes:true, attributeFilter:['style']});
+    }
+  }, 2000);
+
+})();
+</script>

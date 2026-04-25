@@ -20136,18 +20136,23 @@ function refreshGiftBadge(){
 // ============================================================
 // アイコン交換機能
 // ============================================================
-// ── アイコン交換 マッチング方式 ─────────────────────────────────
+// ── アイコン交換 マッチング方式（両者選択・相互確認フロー）─────────────────
+// フロー: 両者がjoin → 両者それぞれがアイコンを選択 → 両者に「交換しますか？」確認 → 両者「はい」で完了
 const _itm = {
   friendId: null, friendName: null,
   offerId: null,
   myIcons: [],
   theirIcons: [],
-  selectedWant:  null,
-  selectedOffer: null,
-  iam: null,
+  selectedWant:  null,  // 欲しいアイコン
+  selectedOffer: null,  // 渡すアイコン
+  iam: null,            // 'from' | 'to'
   pollTimer: null,
-  phase: 'WAIT', // WAIT=マッチング待機 / SELECT=選択中 / CONFIRM=確認待ち / DONE=完了
+  phase: 'WAIT',        // WAIT / SELECT / CONFIRM / DONE
+  iConfirmed: false,    // 自分が「はい」を押したか
 };
+
+// エモート送信履歴（重複防止）
+const _itmEmoteCooldowns = {};
 
 // ─ フェーズ切り替え
 function _itmShowPhase(p) {
@@ -20177,8 +20182,8 @@ async function startIconTradeMatch(friendId, friendName) {
   _itm.iam = null;
   _itm.myIcons = [];
   _itm.theirIcons = [];
+  _itm.iConfirmed = false;
 
-  // ボタンを「申込中」表示に
   const btn = document.getElementById('tradeBtn-' + friendId);
   if (btn) { btn.textContent = '⏳ 申込中…'; btn.style.opacity = '.6'; btn.style.pointerEvents = 'none'; }
 
@@ -20201,7 +20206,6 @@ async function startIconTradeMatch(friendId, friendName) {
       _itm.iam     = data.iam;
       await _itmLoadIconsAndEnterSelect();
     } else {
-      // 相手待ち → ポーリング
       _itmSetBanner('相手の参加を待っています…\n相手も「🔄 交換」ボタンを押してください', '#88ccaa');
       if (_itm.pollTimer) clearInterval(_itm.pollTimer);
       _itm.pollTimer = setInterval(_itmPollQueue, 2000);
@@ -20222,7 +20226,6 @@ async function _itmPollQueue() {
       clearInterval(_itm.pollTimer); _itm.pollTimer = null;
       _itm.offerId = data.offerId;
       _itm.iam     = data.iam;
-      // マッチング成功演出
       _itmSetBanner('🎯 マッチング成功！', '#55ee88');
       await new Promise(r => setTimeout(r, 800));
       await _itmLoadIconsAndEnterSelect();
@@ -20230,7 +20233,7 @@ async function _itmPollQueue() {
   } catch(e) {}
 }
 
-// ─ アイコン読み込み → 役割に応じたフェーズへ
+// ─ アイコン読み込み → 両者SELECT フェーズへ
 async function _itmLoadIconsAndEnterSelect() {
   _itmSetBanner('アイコンを読み込み中…', '#88ccaa');
   try {
@@ -20248,18 +20251,11 @@ async function _itmLoadIconsAndEnterSelect() {
       _itm.myIcons = (meData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
     _itm.theirIcons = theirData.legendIcons || [];
 
-    if (_itm.iam === 'from') {
-      // 提案者: アイコン選択画面へ
-      _itmShowPhase('SELECT');
-      _itmRenderSelectGrids();
-      _itmSetBanner('💡 相手に渡すアイコンと、欲しいアイコンを選んでください', '#88ccaa');
-    } else {
-      // 承認者: 相手が選択するまで待機
-      _itmShowPhase('WAIT');
-      _itmSetBanner('相手が交換内容を選んでいます…\nしばらくお待ちください', '#88ccaa');
-    }
+    // ★ 両者同時にSELECTフェーズへ
+    _itmShowPhase('SELECT');
+    _itmRenderSelectGrids();
+    _itmSetBanner('💡 渡すアイコンと欲しいアイコンをそれぞれ選んでください', '#88ccaa');
 
-    // セッションステータスポーリング開始
     if (_itm.pollTimer) clearInterval(_itm.pollTimer);
     _itm.pollTimer = setInterval(_itmPollSession, 2000);
   } catch(e) {
@@ -20269,6 +20265,7 @@ async function _itmLoadIconsAndEnterSelect() {
 
 // ─ SELECT グリッド描画
 function _itmRenderSelectGrids() {
+  // 相手のアイコン（欲しいものを選ぶ）
   const tg = document.getElementById('itm-sel-theirGrid');
   tg.innerHTML = _itm.theirIcons.length
     ? _itm.theirIcons.map(id => `
@@ -20280,12 +20277,13 @@ function _itmRenderSelectGrids() {
           <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
           <div id="itm-th-tag-${id}" style="
             position:absolute;bottom:0;left:0;right:0;
-            background:rgba(0,120,255,.75);color:#fff;font-size:.4rem;text-align:center;
-            padding:1px 0;display:none;
-          ">🙏 欲しい</div>
+            background:rgba(0,120,255,.8);color:#fff;font-size:.38rem;text-align:center;
+            padding:2px 0;display:none;font-weight:700;
+          ">🙏 欲しい！</div>
         </div>`).join('')
     : '<div style="grid-column:1/-1;font-size:.52rem;color:#3a5a7a;text-align:center;padding:10px 0;">レジェンドアイコンなし</div>';
 
+  // 自分のアイコン（渡すものを選ぶ）
   const mg = document.getElementById('itm-sel-myGrid');
   mg.innerHTML = _itm.myIcons.length
     ? _itm.myIcons.map(id => `
@@ -20297,13 +20295,118 @@ function _itmRenderSelectGrids() {
           <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
           <div id="itm-my-tag-${id}" style="
             position:absolute;bottom:0;left:0;right:0;
-            background:rgba(180,140,0,.8);color:#fff;font-size:.4rem;text-align:center;
-            padding:1px 0;display:none;
+            background:rgba(180,140,0,.85);color:#fff;font-size:.38rem;text-align:center;
+            padding:2px 0;display:none;font-weight:700;
           ">💎 渡す</div>
         </div>`).join('')
     : '<div style="grid-column:1/-1;font-size:.52rem;color:#5a4a2a;text-align:center;padding:10px 0;">レジェンドアイコンなし</div>';
 
+  // 「欲しい！」「欲しい？」エモートボタン描画
+  _itmRenderEmoteButtons();
   _itmUpdateSelectBtn();
+}
+
+// ─ 「欲しい！」「欲しい？」エモートボタン（選択中のアイコンで送れる）
+function _itmRenderEmoteButtons() {
+  const area = document.getElementById('itm-emote-area');
+  if (!area) return;
+  area.innerHTML = `
+    <div style="font-size:.46rem;color:#7a8a6a;margin-bottom:5px;text-align:center;letter-spacing:.05em;">
+      ✨ アイコンで気持ちを伝えよう
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;align-items:center;">
+      <button onclick="itmSendEmote('want')" style="
+        display:flex;flex-direction:column;align-items:center;gap:3px;
+        padding:6px 14px;background:linear-gradient(135deg,#050a1a,#0a1025);
+        border:1.5px solid #2a5aaa;border-radius:10px;cursor:pointer;
+        color:#88aaff;font-size:.58rem;font-weight:700;transition:all .15s;
+        min-width:80px;
+      " id="itm-emote-want-btn">
+        <span id="itm-emote-want-icon" style="font-size:1.4rem;line-height:1;">🙏</span>
+        <span>欲しい！</span>
+      </button>
+      <button onclick="itmSendEmote('question')" style="
+        display:flex;flex-direction:column;align-items:center;gap:3px;
+        padding:6px 14px;background:linear-gradient(135deg,#1a0a05,#25100a);
+        border:1.5px solid #aa5a2a;border-radius:10px;cursor:pointer;
+        color:#ffaa66;font-size:.58rem;font-weight:700;transition:all .15s;
+        min-width:80px;
+      " id="itm-emote-question-btn">
+        <span id="itm-emote-question-icon" style="font-size:1.4rem;line-height:1;">🤔</span>
+        <span>欲しい？</span>
+      </button>
+    </div>
+    <div id="itm-emote-recv" style="
+      min-height:36px;display:flex;align-items:center;justify-content:center;
+      font-size:.6rem;color:#c9a84c;text-align:center;margin-top:4px;
+      background:#0a0800;border-radius:8px;padding:4px 8px;
+      border:1px solid #2a2a1a;
+    "></div>
+  `;
+  _itmUpdateEmoteIcons();
+}
+
+// エモートボタンに選択中アイコンを反映
+function _itmUpdateEmoteIcons() {
+  const wantIconEl     = document.getElementById('itm-emote-want-icon');
+  const questionIconEl = document.getElementById('itm-emote-question-icon');
+  if (!wantIconEl) return;
+
+  if (_itm.selectedWant) {
+    // 欲しいアイコンが選ばれていれば「欲しい！」ボタンに表示
+    wantIconEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedWant)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;">`;
+  } else {
+    wantIconEl.textContent = '🙏';
+  }
+  if (_itm.selectedOffer) {
+    // 渡すアイコンが選ばれていれば「欲しい？」ボタンに表示
+    questionIconEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedOffer)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;">`;
+  } else {
+    questionIconEl.textContent = '🤔';
+  }
+}
+
+// エモート送信（emoteType: 'want' | 'question'）
+async function itmSendEmote(emoteType) {
+  const now = Date.now();
+  const coolKey = emoteType;
+  if (_itmEmoteCooldowns[coolKey] && now - _itmEmoteCooldowns[coolKey] < 3000) return;
+  _itmEmoteCooldowns[coolKey] = now;
+
+  if (!_itm.offerId) return;
+  const iconId = emoteType === 'want' ? _itm.selectedWant : _itm.selectedOffer;
+
+  // ボタンアニメーション
+  const btn = document.getElementById('itm-emote-' + emoteType + '-btn');
+  if (btn) {
+    btn.style.transform = 'scale(1.12)';
+    btn.style.opacity = '.7';
+    setTimeout(() => { btn.style.transform = ''; btn.style.opacity = ''; }, 400);
+  }
+
+  // エモートをサーバーに送信（セッションのフラグとして保存）
+  try {
+    await authFetch('/api/icon-trade/emote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offerId: _itm.offerId, emoteType, iconId: iconId || null }),
+    });
+  } catch(e) {}
+}
+
+// 受信エモート表示
+function _itmShowReceivedEmote(emoteType, iconId) {
+  const el = document.getElementById('itm-emote-recv');
+  if (!el) return;
+  const label = emoteType === 'want' ? '欲しい！' : '欲しい？';
+  const emoji  = emoteType === 'want' ? '🙏' : '🤔';
+  let iconHtml = '';
+  if (iconId) {
+    iconHtml = `<img src="${gachaIconUrl(iconId)}" style="width:24px;height:24px;object-fit:contain;border-radius:4px;vertical-align:middle;margin:0 4px;">`;
+  }
+  el.innerHTML = `<span style="animation:_itmEmotePop .4s ease-out;">${_itm.friendName} が送信: ${iconHtml}${emoji} <b>${label}</b></span>`;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.innerHTML = ''; }, 4000);
 }
 
 function itmToggleWant(id) {
@@ -20328,6 +20431,7 @@ function itmToggleWant(id) {
     if (tag) tag.style.display = 'none';
   }
   _itmUpdateSelectBtn();
+  _itmUpdateEmoteIcons();
 }
 
 function itmToggleOffer(id) {
@@ -20352,6 +20456,7 @@ function itmToggleOffer(id) {
     if (tag) tag.style.display = 'none';
   }
   _itmUpdateSelectBtn();
+  _itmUpdateEmoteIcons();
 }
 
 function _itmUpdateSelectBtn() {
@@ -20361,7 +20466,6 @@ function _itmUpdateSelectBtn() {
   btn.style.opacity     = hasBoth ? '1' : '.4';
   btn.style.pointerEvents = hasBoth ? '' : 'none';
 
-  // プレビュー更新
   const wp = document.getElementById('itm-sel-wantPreview');
   if (wp) {
     wp.innerHTML = _itm.selectedWant
@@ -20378,7 +20482,7 @@ function _itmUpdateSelectBtn() {
   }
 }
 
-// ─ 提案者(from)が選択を確定 → 承認者(to)の確認待ちへ
+// ─ 選択確定 → サーバーに送信してCONFIRM待ちへ
 async function itmConfirmSelect() {
   if (!_itm.selectedWant || !_itm.selectedOffer) return;
   const btn = document.getElementById('itm-sel-confirmBtn');
@@ -20400,10 +20504,8 @@ async function itmConfirmSelect() {
       if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
       return;
     }
-    // CONFIRM フェーズへ（提案者は相手の承認待ち表示）
-    _itmShowPhase('CONFIRM');
-    _itmRenderFromConfirmView();
-    _itmSetBanner('相手の承認を待っています…', '#88ccaa');
+    // 相手の選択を待つ（ポーリングで両者選択完了を検知）
+    _itmSetBanner('✅ 選択完了！相手の選択を待っています…', '#88ccaa');
     if (_itm.pollTimer) clearInterval(_itm.pollTimer);
     _itm.pollTimer = setInterval(_itmPollSession, 2000);
   } catch(e) {
@@ -20412,84 +20514,95 @@ async function itmConfirmSelect() {
   }
 }
 
-// ─ 提案者(from)のCONFIRM表示（自分が選んだ内容を確認）
-function _itmRenderFromConfirmView() {
-  const wEl = document.getElementById('itm-conf-wantIcon');
-  const oEl = document.getElementById('itm-conf-offerIcon');
-  if (wEl && _itm.selectedWant)
-    wEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedWant)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
-  if (oEl && _itm.selectedOffer)
-    oEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedOffer)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
-  // 承認/拒否ボタンを非表示
-  const acceptBtn = document.getElementById('itm-conf-acceptBtn');
-  const rejectBtn = document.getElementById('itm-conf-rejectBtn');
-  if (acceptBtn) acceptBtn.style.display = 'none';
-  if (rejectBtn) rejectBtn.style.display = 'none';
+// ─ CONFIRM フェーズ表示（両者の選択が揃ったら交換内容を表示）
+function _itmShowConfirmPhase(t) {
+  _itmShowPhase('CONFIRM');
+  _itm.iConfirmed = false;
+
+  // 自分が受け取るアイコン・渡すアイコンを表示
+  // iam=from: fromOfferIconを渡し、toOfferIconを受け取る
+  // iam=to:   toOfferIconを渡し、fromOfferIconを受け取る
+  const myOffer  = _itm.iam === 'from' ? t.fromOfferIcon : t.toOfferIcon;
+  const myGet    = _itm.iam === 'from' ? t.toOfferIcon   : t.fromOfferIcon;
+
+  const getEl  = document.getElementById('itm-conf-getIcon');
+  const giveEl = document.getElementById('itm-conf-giveIcon');
+  if (getEl && myGet)   getEl.innerHTML  = `<img src="${gachaIconUrl(myGet)}"  style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
+  if (giveEl && myOffer) giveEl.innerHTML = `<img src="${gachaIconUrl(myOffer)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
+
+  _itmSetBanner('🤝 交換しますか？', '#f0d080');
+  _itmUpdateConfirmButtons(t);
 }
 
-// ─ 承認者(to)のCONFIRM表示（fromの提案内容を見て承認/拒否）
-function _itmRenderToConfirmView(t) {
-  // fromが「欲しい(=toが渡す)」と「渡す(=toが受け取る)」を表示
-  const wEl = document.getElementById('itm-conf-wantIcon');   // 自分(to)が渡すもの
-  const oEl = document.getElementById('itm-conf-offerIcon');  // 自分(to)が受け取るもの
-  if (wEl && t.wantIcon)
-    wEl.innerHTML = `<img src="${gachaIconUrl(t.wantIcon)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
-  if (oEl && t.offerIcon)
-    oEl.innerHTML = `<img src="${gachaIconUrl(t.offerIcon)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
-  // 承認/拒否ボタンを表示
-  const acceptBtn = document.getElementById('itm-conf-acceptBtn');
-  const rejectBtn = document.getElementById('itm-conf-rejectBtn');
-  if (acceptBtn) acceptBtn.style.display = '';
-  if (rejectBtn) rejectBtn.style.display = '';
-  _itmSetBanner('📋 交換内容を確認してください', '#88ccaa');
+function _itmUpdateConfirmButtons(t) {
+  const yesBtn = document.getElementById('itm-conf-yesBtn');
+  const noBtn  = document.getElementById('itm-conf-noBtn');
+  const myYes  = _itm.iam === 'from' ? t.fromConfirmed : t.toConfirmed;
+  const theirYes = _itm.iam === 'from' ? t.toConfirmed  : t.fromConfirmed;
+
+  if (yesBtn) {
+    if (myYes) {
+      yesBtn.textContent = '✅ はい（済）';
+      yesBtn.style.opacity = '.6';
+      yesBtn.style.pointerEvents = 'none';
+    } else {
+      yesBtn.textContent = '✅ はい！交換する';
+      yesBtn.style.opacity = '1';
+      yesBtn.style.pointerEvents = '';
+    }
+  }
+  // 相手の状態表示
+  const statusEl = document.getElementById('itm-conf-theirStatus');
+  if (statusEl) {
+    statusEl.textContent = theirYes
+      ? `${_itm.friendName} も「はい」と回答しました ✅`
+      : `${_itm.friendName} の回答を待っています…`;
+    statusEl.style.color = theirYes ? '#88ee66' : '#6a8a6a';
+  }
 }
 
-// ─ 承認者(to)が承認ボタンを押す
-async function itmAcceptTrade() {
-  const btn = document.getElementById('itm-conf-acceptBtn');
-  const rej = document.getElementById('itm-conf-rejectBtn');
-  if (btn) { btn.style.opacity = '.5'; btn.style.pointerEvents = 'none'; }
-  if (rej) { rej.style.opacity = '.5'; rej.style.pointerEvents = 'none'; }
-  _itmSetBanner('承認中…', '#88ccaa');
+// ─ 「はい」ボタンを押す
+async function itmConfirmYes() {
+  if (_itm.iConfirmed) return;
+  const yesBtn = document.getElementById('itm-conf-yesBtn');
+  if (yesBtn) { yesBtn.style.opacity = '.5'; yesBtn.style.pointerEvents = 'none'; }
+  _itmSetBanner('送信中…', '#88ccaa');
   try {
-    const res = await authFetch('/api/icon-trade/accept', {
+    const res = await authFetch('/api/icon-trade/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ offerId: _itm.offerId }),
+      body: JSON.stringify({ offerId: _itm.offerId, answer: 'yes' }),
     });
     const data = await res.json();
     if (!data.ok) {
       _itmSetBanner(data.error || 'エラー', '#cc6666');
-      if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
-      if (rej) { rej.style.opacity = '1'; rej.style.pointerEvents = ''; }
+      if (yesBtn) { yesBtn.style.opacity = '1'; yesBtn.style.pointerEvents = ''; }
       return;
     }
-    _itmSetBanner('✅ 承認しました！交換中…', '#55ee88');
-    if (btn) btn.style.display = 'none';
-    if (rej) rej.style.display = 'none';
-    // ポーリングで完了を検知
+    _itm.iConfirmed = true;
+    if (yesBtn) { yesBtn.textContent = '✅ はい（済）'; yesBtn.style.opacity = '.6'; yesBtn.style.pointerEvents = 'none'; }
+    _itmSetBanner('✅ 回答しました！相手を待っています…', '#55ee88');
     if (_itm.pollTimer) clearInterval(_itm.pollTimer);
     _itm.pollTimer = setInterval(_itmPollSession, 1500);
   } catch(e) {
     _itmSetBanner('エラーが発生しました', '#cc6666');
-    if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = ''; }
-    if (rej) { rej.style.opacity = '1'; rej.style.pointerEvents = ''; }
+    if (yesBtn) { yesBtn.style.opacity = '1'; yesBtn.style.pointerEvents = ''; }
   }
 }
 
-// ─ 承認者(to)が拒否ボタンを押す
-async function itmRejectTrade() {
-  _itmSetBanner('拒否中…', '#cc9944');
+// ─ 「いいえ」ボタンを押す
+async function itmConfirmNo() {
+  _itmSetBanner('キャンセル中…', '#cc9944');
   try {
-    await authFetch('/api/icon-trade/reject', {
+    await authFetch('/api/icon-trade/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ offerId: _itm.offerId }),
+      body: JSON.stringify({ offerId: _itm.offerId, answer: 'no' }),
     });
   } catch(e) {}
   if (_itm.pollTimer) { clearInterval(_itm.pollTimer); _itm.pollTimer = null; }
   _itm.offerId = null;
-  _itmSetBanner('交換を断りました', '#cc9944');
+  _itmSetBanner('交換をキャンセルしました', '#cc9944');
   _itmShowPhase('WAIT');
 }
 
@@ -20509,7 +20622,7 @@ async function _itmPollSession() {
     }
     if (t.cancelled) {
       if (_itm.pollTimer) clearInterval(_itm.pollTimer);
-      _itmSetBanner('⚠️ 交換が断られました', '#cc9944');
+      _itmSetBanner('⚠️ 交換がキャンセルされました', '#cc9944');
       _itmShowPhase('WAIT');
       return;
     }
@@ -20519,41 +20632,60 @@ async function _itmPollSession() {
       return;
     }
 
-    // ── 承認者(to)側: fromが選択完了したら提案内容を表示 ──
-    if (_itm.iam === 'to' && t.fromReady && !t.toReady && _itm.phase !== 'CONFIRM') {
-      _itmShowPhase('CONFIRM');
-      _itmRenderToConfirmView(t);
+    // エモート受信チェック
+    if (t.pendingEmote && t.pendingEmote.fromId !== undefined) {
+      // 相手からのエモートが届いていたら表示
+      if (t.pendingEmote.for === (_itm.iam === 'from' ? t.toId : t.fromId)) {
+        // 自分宛てのエモートを表示
+      }
+    }
+    if (t.emote) {
+      _itmShowReceivedEmote(t.emote.type, t.emote.iconId);
+    }
+
+    // ★ 両者選択完了 → CONFIRMフェーズ
+    if (t.fromSelected && t.toSelected && _itm.phase === 'SELECT') {
+      if (_itm.pollTimer) clearInterval(_itm.pollTimer);
+      _itmShowConfirmPhase(t);
+      _itm.pollTimer = setInterval(_itmPollSession, 1500);
       return;
     }
 
-    // ── 両者準備完了 → 交換実行 ──
-    if (t.fromReady && t.toReady) {
-      if (_itm.pollTimer) { clearInterval(_itm.pollTimer); _itm.pollTimer = null; }
-      _itmSetBanner('🔄 交換実行中…', '#f0d080');
-      try {
-        const er = await authFetch('/api/icon-trade/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ offerId: _itm.offerId }),
-        });
-        const ed = await er.json();
-        if (ed.ok && ed.completed) {
-          _itmShowComplete({ ...t, gotIcon: ed.gotIcon, gaveIcon: ed.gaveIcon });
-        } else if (ed.pending) {
-          // 相手が先に実行中、少し待って再ポーリング
-          if (!_itm.pollTimer) _itm.pollTimer = setInterval(_itmPollSession, 1500);
-        } else {
-          _itmSetBanner(ed.error || '交換に失敗しました', '#cc6666');
-          // エラー後も再試行できるようポーリング再開
-          if (!_itm.pollTimer) _itm.pollTimer = setInterval(_itmPollSession, 2000);
-        }
-      } catch(e) { _itmSetBanner('交換エラー', '#cc6666'); }
-      return;
+    // CONFIRMフェーズ中: 相手の状態更新
+    if (_itm.phase === 'CONFIRM') {
+      _itmUpdateConfirmButtons(t);
+
+      // 両者「はい」→ 交換実行
+      if (t.fromConfirmed && t.toConfirmed) {
+        if (_itm.pollTimer) { clearInterval(_itm.pollTimer); _itm.pollTimer = null; }
+        _itmSetBanner('🔄 交換実行中…', '#f0d080');
+        try {
+          const er = await authFetch('/api/icon-trade/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ offerId: _itm.offerId }),
+          });
+          const ed = await er.json();
+          if (ed.ok && ed.completed) {
+            _itmShowComplete({ ...t, gotIcon: ed.gotIcon, gaveIcon: ed.gaveIcon });
+          } else if (ed.pending) {
+            if (!_itm.pollTimer) _itm.pollTimer = setInterval(_itmPollSession, 1500);
+          } else {
+            _itmSetBanner(ed.error || '交換に失敗しました', '#cc6666');
+            if (!_itm.pollTimer) _itm.pollTimer = setInterval(_itmPollSession, 2000);
+          }
+        } catch(e) { _itmSetBanner('交換エラー', '#cc6666'); }
+        return;
+      }
     }
 
-    // ── 提案者(from)がCONFIRMフェーズ中: 相手の承認待ちバナー更新 ──
-    if (_itm.iam === 'from' && _itm.phase === 'CONFIRM') {
-      _itmSetBanner('相手の承認を待っています…', '#88ccaa');
+    // SELECTフェーズ中: 自分が選択済みなら待機バナー更新
+    if (_itm.phase === 'SELECT') {
+      const iSelected = _itm.iam === 'from' ? t.fromSelected : t.toSelected;
+      const theySelected = _itm.iam === 'from' ? t.toSelected : t.fromSelected;
+      if (iSelected && !theySelected) {
+        _itmSetBanner('✅ 選択完了！相手の選択を待っています…', '#88ccaa');
+      }
     }
   } catch(e) {}
 }
@@ -20563,14 +20695,13 @@ function _itmShowComplete(t) {
   if (_itm.pollTimer) { clearInterval(_itm.pollTimer); _itm.pollTimer = null; }
   _itmShowPhase('DONE');
   _itmSetBanner('🎉 交換完了！', '#88ee66');
-  const gotId  = t?.gotIcon  || (t?.iam === 'from' ? t?.wantIcon  : t?.offerIcon) || _itm.selectedWant  || null;
-  const gaveId = t?.gaveIcon || (t?.iam === 'from' ? t?.offerIcon : t?.wantIcon)  || _itm.selectedOffer || null;
+  const gotId  = t?.gotIcon  || null;
+  const gaveId = t?.gaveIcon || null;
   const gotEl  = document.getElementById('itm-d-gotIcon');
   const gaveEl = document.getElementById('itm-d-gaveIcon');
   if (gotEl  && gotId)  gotEl.innerHTML  = `<img src="${gachaIconUrl(gotId)}"  style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
   if (gaveEl && gaveId) gaveEl.innerHTML = `<img src="${gachaIconUrl(gaveId)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
   _itm.offerId = null;
-  // ボタンを元に戻す
   const btn = document.getElementById('tradeBtn-' + _itm.friendId);
   if (btn) { btn.textContent = '🔄 交換'; btn.style.opacity = ''; btn.style.pointerEvents = ''; }
 }
@@ -20578,17 +20709,14 @@ function _itmShowComplete(t) {
 // ─ モーダルを閉じる
 function closeIconTradeModal() {
   if (_itm.pollTimer) { clearInterval(_itm.pollTimer); _itm.pollTimer = null; }
-  // キュー段階ならキャンセル
   if (_itm.phase === 'WAIT' && !_itm.offerId && _itm.friendId) {
     authFetch('/api/icon-trade/queue?friendId=' + encodeURIComponent(_itm.friendId), { method: 'DELETE' }).catch(() => {});
   }
-  // セッション段階ならキャンセル
   if (_itm.offerId && _itm.phase !== 'DONE') {
     authFetch('/api/icon-trade/' + encodeURIComponent(_itm.offerId), { method: 'DELETE' }).catch(() => {});
     _itm.offerId = null;
   }
   document.getElementById('iconTradeModal').style.display = 'none';
-  // ボタンを元に戻す
   if (_itm.friendId) {
     const btn = document.getElementById('tradeBtn-' + _itm.friendId);
     if (btn) { btn.textContent = '🔄 交換'; btn.style.opacity = ''; btn.style.pointerEvents = ''; }
@@ -23792,6 +23920,10 @@ function plantMineRinshan(ri){
 </div>
 
 <!-- ===== アイコン交換モーダル ===== -->
+<style>
+@keyframes _itmEmotePop { 0%{transform:scale(.7);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+@keyframes _itmConfirmPulse { 0%,100%{box-shadow:0 0 0 0 #f0d08055} 50%{box-shadow:0 0 0 8px #f0d08000} }
+</style>
 <div id="iconTradeModal" style="
   position:fixed;inset:0;z-index:250;
   display:none;align-items:center;justify-content:center;
@@ -23835,10 +23967,10 @@ function plantMineRinshan(ri){
       ">キャンセル</button>
     </div>
 
-    <!-- ── Phase SELECT: アイコン選択 ── -->
+    <!-- ── Phase SELECT: アイコン選択（両者同時） ── -->
     <div id="itm-phase-SELECT" style="display:none;flex-direction:column;gap:8px;overflow-y:auto;flex:1;">
 
-      <!-- 選択プレビュー（上部に固定） -->
+      <!-- 選択プレビュー（上部固定） -->
       <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;
         background:#0a0e08;border:1px solid #2a2a1a;border-radius:10px;padding:8px 12px;">
         <div style="text-align:center;flex:1;">
@@ -23857,6 +23989,9 @@ function plantMineRinshan(ri){
           "><span style="font-size:.44rem;color:#5a4a2a;">未選択</span></div>
         </div>
       </div>
+
+      <!-- 「欲しい！」「欲しい？」エモートエリア -->
+      <div id="itm-emote-area" style="flex-shrink:0;"></div>
 
       <!-- 相手のアイコン -->
       <div>
@@ -23883,38 +24018,44 @@ function plantMineRinshan(ri){
         border:1.5px solid #c9a84c;border-radius:9px;
         color:#f0d080;font-size:.76rem;font-weight:700;cursor:pointer;
         opacity:.4;pointer-events:none;transition:all .2s;
-      ">✓ この内容で交換する</button>
+      ">✓ この内容で決定する</button>
     </div>
 
-    <!-- ── Phase CONFIRM: 相手の選択待ち ── -->
-    <div id="itm-phase-CONFIRM" style="display:none;flex-direction:column;gap:12px;align-items:center;flex:1;justify-content:center;padding:8px 0;">
-      <div id="itm-conf-spinner" style="font-size:2.5rem;animation:spin 2s linear infinite;">⏳</div>
-      <div id="itm-conf-title" style="font-size:.7rem;color:#c9a84c;font-weight:700;">相手の承認を待っています</div>
+    <!-- ── Phase CONFIRM: 両者に「交換しますか？」確認 ── -->
+    <div id="itm-phase-CONFIRM" style="display:none;flex-direction:column;gap:14px;align-items:center;flex:1;justify-content:center;padding:8px 0;">
       <!-- 交換内容プレビュー -->
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div style="font-size:.72rem;color:#f0d080;font-weight:900;letter-spacing:.08em;text-shadow:0 0 16px #c9a84c88;">🤝 交換しますか？</div>
+      <div style="display:flex;align-items:center;gap:14px;background:#0a0e08;border:1px solid #3a3a1a;border-radius:12px;padding:14px 18px;">
         <div style="text-align:center;">
-          <div id="itm-conf-want-label" style="font-size:.46rem;color:#88ccff;margin-bottom:4px;">あなたが受け取る</div>
-          <div id="itm-conf-wantIcon" style="width:64px;height:64px;border-radius:10px;border:2px solid #2a5a7a;background:#040810;margin:0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
+          <div style="font-size:.44rem;color:#88ee66;margin-bottom:5px;">もらえるもの 🎊</div>
+          <div id="itm-conf-getIcon" style="width:68px;height:68px;border-radius:10px;border:2px solid #44aa44;background:#040a04;margin:0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
         </div>
-        <div style="font-size:1.3rem;color:#c9a84c;">⇄</div>
         <div style="text-align:center;">
-          <div id="itm-conf-offer-label" style="font-size:.46rem;color:#c9a84c;margin-bottom:4px;">あなたが渡す</div>
-          <div id="itm-conf-offerIcon" style="width:64px;height:64px;border-radius:10px;border:2px solid #3a2a10;background:#0a0800;margin:0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
+          <div style="font-size:1.6rem;color:#c9a84c;">⇄</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:.44rem;color:#c9a84c;margin-bottom:5px;">渡すもの 💎</div>
+          <div id="itm-conf-giveIcon" style="width:68px;height:68px;border-radius:10px;border:2px solid #7a5a22;background:#0a0800;margin:0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
         </div>
       </div>
-      <!-- 承認者(to)用ボタン（提案者には非表示） -->
-      <div id="itm-conf-accept-area" style="display:flex;gap:10px;margin-top:4px;">
-        <button id="itm-conf-acceptBtn" onclick="itmAcceptTrade()" style="display:none;
-          padding:9px 22px;background:linear-gradient(135deg,#050e00,#0a1a00);border:1.5px solid #44aa44;border-radius:9px;
-          color:#88ee66;font-size:.68rem;font-weight:700;cursor:pointer;">✓ 承認する</button>
-        <button id="itm-conf-rejectBtn" onclick="itmRejectTrade()" style="display:none;
-          padding:9px 22px;background:#0a0500;border:1.5px solid #5a1a1a;border-radius:9px;
-          color:#ff7777;font-size:.68rem;cursor:pointer;">✕ 断る</button>
+      <!-- 相手の状態 -->
+      <div id="itm-conf-theirStatus" style="font-size:.58rem;color:#6a8a6a;text-align:center;"></div>
+      <!-- はい/いいえボタン -->
+      <div style="display:flex;gap:12px;width:100%;max-width:280px;">
+        <button id="itm-conf-yesBtn" onclick="itmConfirmYes()" style="
+          flex:1;padding:12px 0;
+          background:linear-gradient(135deg,#050e00,#0d2200);
+          border:2px solid #44cc44;border-radius:10px;
+          color:#88ee66;font-size:.78rem;font-weight:900;cursor:pointer;
+          transition:all .15s;animation:_itmConfirmPulse 2s ease-in-out infinite;
+        ">✅ はい！交換する</button>
+        <button id="itm-conf-noBtn" onclick="itmConfirmNo()" style="
+          flex:1;padding:12px 0;
+          background:#0a0500;border:2px solid #5a1a1a;border-radius:10px;
+          color:#ff7777;font-size:.78rem;font-weight:700;cursor:pointer;
+          transition:all .15s;
+        ">✕ やめる</button>
       </div>
-      <button onclick="closeIconTradeModal()" style="
-        padding:8px 20px;background:#0a0500;border:1.5px solid #5a3a1a;border-radius:9px;
-        color:#aa7a3a;font-size:.65rem;cursor:pointer;margin-top:2px;
-      ">キャンセル</button>
     </div>
 
     <!-- ── Phase DONE: 完了 ── -->

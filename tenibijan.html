@@ -3589,7 +3589,14 @@ body{
           </div>
           <span id="gpVpadLabelTitleSetting" style="font-size:.58rem;color:#4a6a5a;width:120px;">OFF</span>
         </div>
-        <!-- 接続状態 -->
+        <!-- 仮想パッド位置（下方向オフセット） -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ 仮想パッド位置</span>
+          <input id="gpVpadOffsetSliderTitle" type="range" min="0" max="300" step="10" value="0"
+            style="width:80px;accent-color:#aa66ff;"
+            oninput="if(typeof window.gpSetVpadOffsetY==='function'){window.gpSetVpadOffsetY(+this.value);} document.getElementById('gpVpadOffsetValTitle').textContent=this.value+'px'; document.getElementById('gpVpadOffsetSliderHdr') && (document.getElementById('gpVpadOffsetSliderHdr').value=this.value); document.getElementById('gpVpadOffsetValHdr') && (document.getElementById('gpVpadOffsetValHdr').textContent=this.value+'px'); if(typeof saveSettings==='function') saveSettings();">
+          <span id="gpVpadOffsetValTitle" style="font-size:.58rem;color:#aa66ff;width:36px;text-align:right;">0px</span>
+        </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
           <span id="gpStatusDotTitle" style="width:9px;height:9px;border-radius:50%;background:#2a4a3a;flex-shrink:0;box-shadow:0 0 4px #2a4a3a;transition:background .3s,box-shadow .3s;"></span>
           <span id="gpStatusTextTitle" style="font-size:.6rem;color:#3a5a4a;">未接続（コントローラーを繋いでボタンを押してください）</span>
@@ -4925,6 +4932,7 @@ function saveSettings(){
       gpActive: typeof window.gpGetActive === 'function' ? window.gpGetActive() : true,
       gpRumbleOn: typeof window.gpGetRumbleOn === 'function' ? window.gpGetRumbleOn() : true,
       gpVpadOn: typeof window.gpGetVpadOn === 'function' ? window.gpGetVpadOn() : false,
+      gpVpadOffsetY: typeof window.gpGetVpadOffsetY === 'function' ? window.gpGetVpadOffsetY() : 0,
       iconVoiceScale: Object.assign({}, iconVoiceScale),
       seScale: Object.fromEntries(
         ['draw','discard','ron','tsumo','riichi','pon','kan','kita','yakuman','light','yami','haku','steal','mine','myTurn','countdown','voice']
@@ -5065,6 +5073,11 @@ function loadSettings(){
       window.gpSetVpadOn(data.gpVpadOn);
       _applyGpVpadUI();
     }
+    // 仮想パッド位置オフセット
+    if(data.gpVpadOffsetY != null && typeof window.gpSetVpadOffsetY === 'function'){
+      window.gpSetVpadOffsetY(+data.gpVpadOffsetY);
+      _applyGpVpadOffsetUI();
+    }
     // レジェンドアイコン個別ボイス音量
     if(data.iconVoiceScale){
       Object.keys(data.iconVoiceScale).forEach(id=>{
@@ -5154,7 +5167,21 @@ function _applyGpVpadUI(){
   });
 }
 
-// タイトル画面とゲームヘッダーのスライダーを相互同期する
+// 仮想パッド位置オフセットをUIとDOMに反映
+function _applyGpVpadOffsetUI(){
+  const v = typeof window.gpGetVpadOffsetY === 'function' ? window.gpGetVpadOffsetY() : 0;
+  // スライダーを同期
+  ['gpVpadOffsetSliderTitle','gpVpadOffsetSliderHdr'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value=v;
+  });
+  ['gpVpadOffsetValTitle','gpVpadOffsetValHdr'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent=v+'px';
+  });
+  // DOMに反映（gpSetVpadOffsetYが内部でやるが念のため）
+  if(typeof window.gpSetVpadOffsetY==='function') window.gpSetVpadOffsetY(v);
+}
+
+
 function _syncSliders(type, val){
   if(type==='se'){
     const el=document.getElementById('sliderSE'); if(el) el.value=val;
@@ -23497,7 +23524,14 @@ function plantMineRinshan(ri){
               </div>
               <span id="gpVpadLabelHdr" style="font-size:.58rem;color:#4a6a5a;width:80px;">OFF</span>
             </div>
-            <!-- 接続状態 -->
+            <!-- 仮想パッド位置（下方向オフセット） -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ 仮想パッド位置</span>
+              <input id="gpVpadOffsetSliderHdr" type="range" min="0" max="300" step="10" value="0"
+                style="width:80px;accent-color:#aa66ff;"
+                oninput="if(typeof window.gpSetVpadOffsetY==='function'){window.gpSetVpadOffsetY(+this.value);} document.getElementById('gpVpadOffsetValHdr').textContent=this.value+'px'; document.getElementById('gpVpadOffsetSliderTitle') && (document.getElementById('gpVpadOffsetSliderTitle').value=this.value); document.getElementById('gpVpadOffsetValTitle') && (document.getElementById('gpVpadOffsetValTitle').textContent=this.value+'px'); if(typeof saveSettings==='function') saveSettings();">
+              <span id="gpVpadOffsetValHdr" style="font-size:.58rem;color:#aa66ff;width:36px;text-align:right;">0px</span>
+            </div>
             <div id="gpStatusRow" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
               <span id="gpStatusDot" style="width:9px;height:9px;border-radius:50%;background:#2a4a3a;flex-shrink:0;box-shadow:0 0 4px #2a4a3a;transition:background .3s,box-shadow .3s;"></span>
               <span id="gpStatusText" style="font-size:.6rem;color:#3a5a4a;">未接続（コントローラーを繋いでボタンを押してください）</span>
@@ -26428,6 +26462,18 @@ if(_origOpenProfile){
   window.gpGetVpadOn = ()=> { const el=document.getElementById('vpadOverlay'); return el ? el.style.display!=='none' : false; };
   window.gpSetVpadOn = (v)=>{ const el=document.getElementById('vpadOverlay'); if(el) el.style.display = v ? 'block' : 'none'; };
 
+  // 仮想パッド位置オフセット（下方向 px）
+  let _vpadOffsetY = 0;
+  window.gpGetVpadOffsetY = ()=> _vpadOffsetY;
+  window.gpSetVpadOffsetY = (v)=>{
+    _vpadOffsetY = Math.max(0, Math.min(300, +v || 0));
+    const dpad = document.getElementById('vpadDpad');
+    const rbtn = document.querySelector('#vpadOverlay > div:nth-child(2)');
+    const off = _vpadOffsetY;
+    if(dpad) dpad.style.bottom = (24 - off) + 'px';
+    if(rbtn) rbtn.style.bottom = (24 - off) + 'px';
+  };
+
   // ─────────── コントローラー振動 ───────────
   function _rumble(strongMs, weakMs, strongMag, weakMag){
     if(!_gpRumbleOn) return; // 振動OFFなら何もしない
@@ -26544,6 +26590,45 @@ if(_origOpenProfile){
       }).observe(tsp, {attributes:true, attributeFilter:['style']});
     }
   }, 2000);
+
+  // ─────────── ゲームパッド初期化完了後に設定を復元 ───────────
+  // loadSettings() はログイン時に呼ばれるが、その時点ではまだ
+  // gpSetActive / gpSetRumbleOn / gpSetVpadOn / gpLoadBindings が
+  // 未定義のため、コントローラー設定の復元がスキップされる。
+  // IIFE 完了直後にここで改めて localStorage から読み直して適用する。
+  (function _restoreGpSettings(){
+    try {
+      const SETTINGS_KEY = 'mjSettings'; // saveSettings() と同じキー
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+
+      // ボタン割り当て
+      if (data.gpBindings && typeof gpLoadBindings === 'function') {
+        gpLoadBindings(data.gpBindings);
+      }
+      // コントローラー有効/無効
+      if (data.gpActive != null && typeof window.gpSetActive === 'function') {
+        window.gpSetActive(data.gpActive);
+        if (typeof _applyGpActiveUI === 'function') _applyGpActiveUI();
+      }
+      // 振動ON/OFF
+      if (data.gpRumbleOn != null && typeof window.gpSetRumbleOn === 'function') {
+        window.gpSetRumbleOn(data.gpRumbleOn);
+        if (typeof _applyGpRumbleUI === 'function') _applyGpRumbleUI();
+      }
+      // 仮想パッドON/OFF
+      if (data.gpVpadOn != null && typeof window.gpSetVpadOn === 'function') {
+        window.gpSetVpadOn(data.gpVpadOn);
+        if (typeof _applyGpVpadUI === 'function') _applyGpVpadUI();
+      }
+      // 仮想パッド位置オフセット
+      if (data.gpVpadOffsetY != null && typeof window.gpSetVpadOffsetY === 'function') {
+        window.gpSetVpadOffsetY(+data.gpVpadOffsetY);
+        if (typeof _applyGpVpadOffsetUI === 'function') _applyGpVpadOffsetUI();
+      }
+    } catch(e) {}
+  })();
 
 })();
 </script>

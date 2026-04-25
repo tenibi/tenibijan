@@ -25007,6 +25007,17 @@ if(_origOpenProfile){
   }
 
   function _highlight(){
+    if(!_gpActive){
+      _tiles().forEach(t=>{ t.style.outline=''; t.style.outlineOffset=''; t.style.transform=''; });
+      _actBtns().forEach(b=>{ b.style.outline=''; b.style.outlineOffset=''; b.style.transform=''; });
+      _cornerBtns().forEach(b=>{ b.style.outline=''; b.style.outlineOffset=''; b.style.transform=''; });
+      _emotePanelBtns().forEach(b=>{ b.style.outline=''; b.style.outlineOffset=''; b.style.transform=''; });
+      _autoMenuBtns().forEach(b=>{ b.style.outline=''; b.style.outlineOffset=''; b.style.background=''; });
+      _settingsTabBtns().forEach(b=>{ b.style.outline=''; b.style.outlineOffset=''; });
+      _settingsInteractives().forEach(b=>{ b.style.outline=''; b.style.outlineOffset=''; });
+      _drawWallCursor(-1);
+      return;
+    }
     const inHand     = _gpFocus === 'hand';
     const inAction   = _gpFocus === 'action';
     const inWall     = _gpFocus === 'wall';
@@ -26408,7 +26419,7 @@ if(_origOpenProfile){
   let _gpRumbleOn = true; // 振動ONフラグ
   // 外部から参照できるよう公開
   window.gpGetActive    = ()=> _gpActive;
-  window.gpSetActive    = (v)=>{ _gpActive = !!v; };
+  window.gpSetActive    = (v)=>{ _gpActive = !!v; _highlight(); };
   window.gpGetRumbleOn  = ()=> _gpRumbleOn;
   window.gpSetRumbleOn  = (v)=>{ _gpRumbleOn = !!v; };
   // 仮想パッド用：アクションキーを直接 _execAction へ渡す

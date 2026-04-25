@@ -1157,12 +1157,15 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
       <div class="ctrl-row" style="flex-wrap:wrap;gap:6px;justify-content:flex-start;">
         <button id="test-atari01-btn" style="background:rgba(220,38,38,0.3);border-color:rgba(239,68,68,0.7);color:#fca5a5;">🎰 当たり01</button>
         <button id="test-atari02-btn" style="background:rgba(217,119,6,0.3);border-color:rgba(251,191,36,0.7);color:#fde68a;">🎰 当たり02</button>
-        <button id="test-reach01-btn" style="background:rgba(30,64,175,0.3);border-color:rgba(96,165,250,0.7);color:#93c5fd;">🎯 リーチ01</button>
-        <button id="test-reach02-btn" style="background:rgba(6,78,59,0.3);border-color:rgba(52,211,153,0.7);color:#6ee7b7;">🎯 リーチ02</button>
         <button id="test-reach-normal-btn" style="background:rgba(120,53,15,0.3);border-color:rgba(251,191,36,0.7);color:#fde68a;">💥 弱リーチ</button>
+        <button id="test-hazure-normal-btn" style="background:rgba(55,65,81,0.3);border-color:rgba(156,163,175,0.7);color:#d1d5db;">💨 弱ハズレ</button>
+        <button id="test-hazure-riti01-btn" style="background:rgba(29,78,216,0.3);border-color:rgba(96,165,250,0.7);color:#93c5fd;">💨 中ハズレ</button>
+        <button id="test-hazure-riti02-btn" style="background:rgba(6,78,59,0.3);border-color:rgba(52,211,153,0.7);color:#6ee7b7;">💨 強ハズレ</button>
         <button id="test-rush-bonus-btn" style="background:rgba(124,58,237,0.4);border-color:rgba(167,139,250,0.9);color:#fbbf24;font-weight:700;letter-spacing:1px;">⚡ BONUS</button>
         <button id="test-zenkaiten-btn" style="background:rgba(190,18,60,0.35);border-color:rgba(244,114,182,0.9);color:#fbcfe8;font-weight:700;letter-spacing:1px;">🌀 全回転</button>
         <button id="test-kanecorn-btn" style="background:rgba(234,179,8,0.35);border-color:rgba(253,224,71,0.9);color:#fef08a;font-weight:700;letter-spacing:1px;">🌽 カネコーン</button>
+        <button id="test-noreach-win-btn" style="background:rgba(15,118,110,0.35);border-color:rgba(45,212,191,0.9);color:#99f6e4;font-weight:700;letter-spacing:1px;">⚡ リーチなし当たり</button>
+        <button id="test-fukkatsu-btn" style="background:rgba(126,34,206,0.35);border-color:rgba(192,132,252,0.9);color:#e9d5ff;font-weight:700;letter-spacing:1px;">👻 復活</button>
         <span style="color:rgba(167,139,250,0.5);font-size:11px;font-family:sans-serif;">TEST</span>
       </div>
     </div>
@@ -2159,6 +2162,7 @@ let currentWakuColor = null; // 現在再生中のワク動画の色（_beginRou
 let currentConsumedResult = false;  // 消費中の保留玉の内部当否（true=当たり）
 let currentConsumedZenkaiten = false; // 消費中の保留玉が全回転当たりか
 let currentConsumedKanecorn = false;  // 消費中の保留玉がカネコーン当たりか
+let currentConsumedForcedReach = null; // 消費中の保留玉の強制リーチ種別（'normal'|'riti01'|'riti02'|null）
 
 // ─── 保留データ生成（色＋内部当否をセットで決定） ───────────
 // 内部確率1/319で当否を先に決め、その後「示唆」として色を選ぶ。
@@ -2516,6 +2520,7 @@ function consumeHold(callback) {
   currentConsumedResult = holdData.isWin;  // 内部当否（保留追加時に決定済み）
   currentConsumedZenkaiten = !!holdData.isZenkaiten; // 全回転当たりフラグ
   currentConsumedKanecorn = !!holdData.isKanecorn;   // カネコーン当たりフラグ
+  currentConsumedForcedReach = holdData.forcedReachType || null; // 強制リーチ種別
 
   // 保留消費時：displayColor に対応するワク動画を透過再生
   playWakuVideo(holdData.displayColor || holdData.color);
@@ -3768,11 +3773,38 @@ function _beginRoulette() {
   // ── Step 1: 内部当否（保留追加時に決定済み） ─────────────────
   const _isWinFinal = currentConsumedResult;
 
+  // ── テスト用：winType指定がある当たりスピンのみリーチ種別を強制上書き ──
+  let _forcedReachType = null;
+  let _forcedNoReachWin = false;
+  if (_testHoldWinType && _isWinFinal) {
+    switch (_testHoldWinType) {
+      case 'atari01':
+      case 'riti01':    _forcedReachType = 'riti01'; break;
+      case 'atari02':
+      case 'riti02':    _forcedReachType = 'riti02'; break;
+      case 'fukkatsu':  _forcedReachType = 'riti02'; window._testForceFukkatsu = true; break;
+      case 'normal':    _forcedReachType = 'normal'; break;
+      case 'noreach':
+      case 'zenkaiten':
+      case 'kanecorn':  _forcedNoReachWin = true; break;
+    }
+    _testHoldWinType = null;
+  }
+  // 保留データに強制リーチ種別が設定されている場合（ハズレリーチテスト用）
+  if (!_forcedReachType && currentConsumedForcedReach) {
+    _forcedReachType = currentConsumedForcedReach;
+    currentConsumedForcedReach = null;
+  }
+
   // ── Step 2: リーチ発生抽選 ──────────────────────────────────
   // 当たり時：10%の確率でリーチ無し当たり（直接ゾロ目停止）
   // ハズレ時：1/15でリーチ演出
-  const _isNoReachWin = _isWinFinal && (Math.random() < 0.10); // 10%リーチ無し当たり
-  const _hasReach = _isNoReachWin ? false : (_isWinFinal ? true : (Math.random() < REACH_PROBABILITY));
+  // currentConsumedKanecorn/Zenkaiten は保留追加時に決定済みなので、テスト/通常どちらでも使える
+  if (!_forcedNoReachWin && (currentConsumedKanecorn || currentConsumedZenkaiten) && _isWinFinal) {
+    _forcedNoReachWin = true;
+  }
+  const _isNoReachWin = _forcedNoReachWin || (!_forcedReachType && _isWinFinal && (Math.random() < 0.10));
+  const _hasReach = _isNoReachWin ? false : (_forcedReachType ? true : (_isWinFinal ? true : (Math.random() < REACH_PROBABILITY)));
 
   // ── Step 3: 演出選択（当否に連動した示唆比率） ──────────────
   //   当たり時（リーチ有り）：通常(1) 中(3) 強(6)
@@ -3846,6 +3878,14 @@ function _beginRoulette() {
     _chosenReachType = null;
   }
 
+  // テスト用winType指定があれば最終的にリーチ種別を上書き
+  if (_forcedReachType) _chosenReachType = _forcedReachType;
+
+  // カネコーン当たり：digit1=7, digit2=4, digit3=7 に強制
+  if (currentConsumedKanecorn && _isNoReachWin) {
+    rouletteResult = [7, 4, 7];
+  }
+
   rouletteResult._reachType = _chosenReachType;
   rouletteResult._isNoReachWin = _isNoReachWin;
   reachType = _chosenReachType;
@@ -3892,16 +3932,23 @@ function updateRoulette() {
         d1StopTimeout = setTimeout(() => {
           d1StopTimeout = null;
           const c = d1.querySelector('.d1-circle');
-          if (!c) return;
-          c.style.animation = 'none';
-          c.style.transform = `rotate(${targetAngle}deg)`;
-          c.querySelectorAll('.d1-item img').forEach(img => {
-            img.style.animation = 'none';
-            img.style.transform = `rotate(${-targetAngle}deg)`;
-          });
-          playStopSound();
-          d3CanStart = true; // ← digit1視覚停止でdigit3開始トリガー
+          if (c) {
+            c.style.animation = 'none';
+            c.style.transform = `rotate(${targetAngle}deg)`;
+            c.querySelectorAll('.d1-item img').forEach(img => {
+              img.style.animation = 'none';
+              img.style.transform = `rotate(${-targetAngle}deg)`;
+            });
+            playStopSound();
+          }
+          d3CanStart = true; // ← digit1視覚停止でdigit3開始トリガー（circleがなくても必ず実行）
         }, remainingMs);
+      } else {
+        // .d1-circle が存在しない場合（テストボタン押下直後など）でも digit3 を必ず開始させる
+        d1StopTimeout = setTimeout(() => {
+          d1StopTimeout = null;
+          d3CanStart = true;
+        }, window._rushSpeedMode ? 80 : 100);
       }
       d1.classList.add('d1-result');
       d1.classList.remove('spinning');
@@ -3932,19 +3979,20 @@ function updateRoulette() {
           d3StopTimeout = setTimeout(() => {
             d3StopTimeout = null;
             const c = d3.querySelector('.d3-circle');
-            if (!c) return;
-            c.style.animation = 'none';
-            c.style.transform = `rotate(${targetAngle}deg)`;
-            c.querySelectorAll('.d3-item img').forEach(img => {
-              img.style.animation = 'none';
-              img.style.transform = `rotate(${-targetAngle}deg)`;
-            });
-            playStopSound();
-            d2CanStart = true; // ← digit3視覚停止でdigit2開始トリガー
+            if (c) {
+              c.style.animation = 'none';
+              c.style.transform = `rotate(${targetAngle}deg)`;
+              c.querySelectorAll('.d3-item img').forEach(img => {
+                img.style.animation = 'none';
+                img.style.transform = `rotate(${-targetAngle}deg)`;
+              });
+              playStopSound();
+            }
             // 期待度：リーチ時に図柄フェーズを上乗せ
             if (rouletteResult[0] === rouletteResult[2]) {
               setExpFigure(rouletteResult[0]);
             }
+            d2CanStart = true; // ← digit3視覚停止でdigit2開始トリガー（circleがなくても必ず実行）
             // リーチ判定（digit3視覚停止後に実行）
             // reachType が null の場合はリーチ非発生（当たりでもゾロ目になるが演出は出さない）
             if (!reachTriggered && rouletteResult[0] === rouletteResult[2] && reachType !== null) {
@@ -4026,7 +4074,7 @@ function updateRoulette() {
                   }
 
                   // 内部当たり時：直接当たり02 か ハズレ02→復活02→当たり02 かをランダムで決定
-                  const goHukatuRoute = isAtari && (Math.random() < 0.2);
+                  const goHukatuRoute = isAtari && (window._testForceFukkatsu ? (window._testForceFukkatsu = false, true) : (Math.random() < 0.2));
 
                   if (isAtari && !goHukatuRoute) {
                     // 内部当たり・直行ルート：当たり02をそのまま再生
@@ -4070,9 +4118,16 @@ function updateRoulette() {
                   });
                 }
               };
+              playVideo(reachVid);
               } // end else (riti01/riti02 video reach)
             } // end if (!reachTriggered ...)
           }, remainingMs);
+        } else {
+          // .d3-circle が存在しない場合（テストボタン押下直後など）でも digit2 を必ず開始させる
+          d3StopTimeout = setTimeout(() => {
+            d3StopTimeout = null;
+            d2CanStart = true;
+          }, window._rushSpeedMode ? 80 : 100);
         }
         d3.classList.add('d3-result');
         d3.classList.remove('spinning');
@@ -4143,7 +4198,9 @@ function updateRoulette() {
     rouletteActive = false;
     rouletteWaiting = true;
 
-    const isAtari = (rouletteResult[0] === rouletteResult[1] && rouletteResult[1] === rouletteResult[2]);
+    // カネコーン当たりは [7,4,7] でゾロ目にならないため別途フラグで判定
+    const isKanecornAtari = currentConsumedKanecorn && rouletteResult._isNoReachWin;
+    const isAtari = isKanecornAtari || (rouletteResult[0] === rouletteResult[1] && rouletteResult[1] === rouletteResult[2]);
 
     // ── RUSHルーレットモードの場合は専用コールバックへ ──
     if (window._rushRouletteCallback) {
@@ -4190,66 +4247,27 @@ function updateRoulette() {
 
     // ── 通常ルート（riti01 / ノーマルリーチ / 非リーチ）──
     if (isAtari && rouletteResult._isNoReachWin) {
-      // リーチ無し当たり：演出動画なし、少し間を置いてframenizi→atarigo
       score += 1000;
-      rouletteEndTimeout = setTimeout(() => {
-        playAtarigoRoute(proceedAfterRoulette);
-      }, 800);
+      if (currentConsumedKanecorn) {
+        // カネコーン当たり：digit2を4で表示してから2秒後に動画スタート
+        // currentConsumedKanecorn のリセットは playAtarigoRoute 内で行う
+        rouletteResult[1] = 4;
+        showDigit2Result(d2, 4);
+        playStopSound();
+        rouletteEndTimeout = setTimeout(() => {
+          playAtarigoRoute(proceedAfterRoulette);
+        }, 2000);
+      } else {
+        // 通常リーチ無し当たり：少し間を置いてframenizi→atarigo
+        rouletteEndTimeout = setTimeout(() => {
+          playAtarigoRoute(proceedAfterRoulette);
+        }, 800);
+      }
       return;
     } else if (isAtari && reachType === 'normal') {
-      // ノーマルリーチ当たり：bonus01+atariSE同時再生 → SE終了でbonus01停止 → atarigo
+      // ノーマルリーチ当たり：_playAtarigoAnimation 内で bonus01+atariSE を再生するため直接移行
       score += 1000;
-
-      const _vidB01 = document.getElementById('vid-bonus01');
-      _vidB01.pause();
-      _vidB01.currentTime = 0;
-      _vidB01.style.display = 'block';
-      _vidB01.play().catch(() => {});
-
-      function _stopB01Normal() {
-        _vidB01.pause();
-        _vidB01.currentTime = 0;
-        _vidB01.style.display = 'none';
-      }
-
-      atariSE.pause();
-      atariSE.currentTime = 0;
-      atariSE.volume = seVolume;
-      atariSE.onended = null;
-
-      let _normalSeFallback = null;
-
-      atariSE.onended = () => {
-        if (_normalSeFallback) { clearTimeout(_normalSeFallback); _normalSeFallback = null; }
-        atariSE.onended = null;
-        _stopB01Normal();
-        playAtarigoRoute(proceedAfterRoulette);
-      };
-
-      const _p = atariSE.play();
-      if (_p !== undefined) {
-        _p.then(() => {
-          const dur = isFinite(atariSE.duration) && atariSE.duration > 0
-            ? (atariSE.duration * 1000 + 500) : 10000;
-          _normalSeFallback = setTimeout(() => {
-            _normalSeFallback = null;
-            atariSE.onended = null;
-            _stopB01Normal();
-            playAtarigoRoute(proceedAfterRoulette);
-          }, dur);
-        }).catch(() => {
-          atariSE.onended = null;
-          _stopB01Normal();
-          playAtarigoRoute(proceedAfterRoulette);
-        });
-      } else {
-        _normalSeFallback = setTimeout(() => {
-          _normalSeFallback = null;
-          atariSE.onended = null;
-          _stopB01Normal();
-          playAtarigoRoute(proceedAfterRoulette);
-        }, 10000);
-      }
+      playAtarigoRoute(proceedAfterRoulette);
       return; // 以降のvideoルートをスキップ
     } else if (isAtari) {
       jackpotTimer = 300;
@@ -5363,96 +5381,48 @@ oseBtn.addEventListener('click', function(e) {
   // this.classList.toggle('active', oseActive); // 色変化なし
 });
 
-// ─── テスト用：当たり演出に直接移行するボタン ─────────────────
-function triggerTestAtari(type) {
-  if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-  rouletteActive = false;
-  rouletteWaiting = false;
-
-  const d1 = document.getElementById('digit1');
-  const d2 = document.getElementById('digit2');
-  const d3 = document.getElementById('digit3');
-  [d1, d2, d3].forEach(d => {
-    d.classList.remove('visible', 'spinning', 'd1-result', 'd2-result', 'd3-result');
-    const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
-    if (c) c.remove();
-    if (d._d2Anim) { cancelAnimationFrame(d._d2Anim); d._d2Anim = null; }
-  });
-
-  const atariNum = Math.floor(Math.random() * 8);
-  rouletteResult = [atariNum, atariNum, atariNum];
-  setDigitImg(d1, atariNum); setDigitImg(d2, atariNum); setDigitImg(d3, atariNum);
-  // d1-result/d3-resultクラスはstill-imgをnoneにするため使わず、
-  // インラインstyleでclip-pathを設定してstill-imgを見えるようにする
-  d1.classList.add('visible');
-  d1.style.clipPath = 'inset(60px -50px 0 0)';
-  d1.style.overflow = 'visible';
-  d3.classList.add('visible');
-  d3.style.clipPath = 'inset(60px -50px 0 0)';
-  d3.style.overflow = 'visible';
-  jackpotTimer = 300;
-  score += 1000;
-
-  function proceedAfterTest() {
-    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); }
-    rouletteEndTimeout = null;
-    rouletteWaiting = false;
-    stopAllVideos();
-    [d1, d2, d3].forEach(d => {
-      d.classList.remove('visible');
-      d.style.clipPath = '';
-      d.style.overflow = '';
-    });
-  }
-
-  if (type === 'atari01') {
-    stopAllVideosNoResume();
-    d2.classList.remove('visible');
-    // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
-    vidAtari.onended = null;
-    vidAtari.onended = () => {
-      vidAtari.onended = null;
-      if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-      startOseSequenceShort(() => {
-        showDigit2Result(d2, rouletteResult[1]);
-        rouletteWaiting = true;
-        playAtarigoRoute(proceedAfterTest);
-      });
-    };
-    playVideo(vidAtari);
-    rouletteEndTimeout = setTimeout(proceedAfterTest, 30000);
+// ─── テスト用共通：3回目当たり保留セットアップ ────────────────
+// winType: 'atari01'|'atari02'|'riti01'|'riti02'|'normal'|'zenkaiten'|'kanecorn'|'noreach'|'fukkatsu'
+// 呼び出し後、holdColors[0/1]=ハズレ白、holdColors[2]=当たり（winTypeに対応）
+let _testHoldWinType = null; // 3回目に使う演出種別を記憶
+window._testForceFukkatsu = false; // 復活ルート強制フラグ
+function _setupTestHolds3(winType) {
+  _testHoldWinType = winType;
+  holdColors = [];
+  holdCount = 0;
+  // 1・2回目：ハズレ白保留
+  holdColors.push({ color: 'white', displayColor: 'white', isWin: false, isZenkaiten: false, isKanecorn: false, willChange: false, willStepChange: false });
+  holdColors.push({ color: 'white', displayColor: 'white', isWin: false, isZenkaiten: false, isKanecorn: false, willChange: false, willStepChange: false });
+  // 3回目：当たり or ハズレ保留（演出種別に応じて決定）
+  const isZenkaiten = winType === 'zenkaiten';
+  const isKanecorn  = winType === 'kanecorn';
+  const isHazureReach = winType === 'hazure-normal' || winType === 'hazure-riti01' || winType === 'hazure-riti02';
+  if (isHazureReach) {
+    // ハズレリーチ：白保留で isWin=false
+    holdColors.push({ color: 'white', displayColor: 'white', isWin: false, isZenkaiten: false, isKanecorn: false, willChange: false, willStepChange: false,
+      forcedReachType: winType === 'hazure-normal' ? 'normal' : winType === 'hazure-riti01' ? 'riti01' : 'riti02' });
   } else {
-    stopAllVideosNoResume();
-    d2.classList.remove('visible');
-    // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
-    vidAtari2.onended = null;
-    vidAtari2.onended = () => {
-      vidAtari2.onended = null;
-      vidAtari2.style.display = 'none';
-      if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-      startOseSequenceShort(() => {
-        showDigit2Result(d2, rouletteResult[1]);
-        rouletteWaiting = true;
-        playAtarigoRoute(proceedAfterTest);
-      });
-    };
-    playVideo(vidAtari2);
-    rouletteEndTimeout = setTimeout(proceedAfterTest, 30000);
+    // 当たり保留の色は通常の抽選ロジックと同じ分布でランダム決定（金固定にしない）
+    const _r = Math.random();
+    const _winColor = _r < 0.3389 ? 'white' : _r < 0.6443 ? 'blue' : _r < 0.8491 ? 'green' : _r < 0.9652 ? 'red' : 'gold';
+    holdColors.push({ color: _winColor, displayColor: _winColor, isWin: true, isZenkaiten, isKanecorn, willChange: false, willStepChange: false });
   }
+  holdCount = 3;
+  updateHoldDisplay();
 }
 
-document.getElementById('test-atari01-btn').addEventListener('click', () => triggerTestAtari('atari01'));
-document.getElementById('test-atari02-btn').addEventListener('click', () => triggerTestAtari('atari02'));
-
-// ─── テスト用：リーチ演出に直接移行するボタン ─────────────────
-function triggerTestReach(type) {
+// テスト用共通：保留1個目からスピン開始（2ハズレ → 3回目当たり）
+function _startTestFromHold1() {
   if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
   stopOseBlink();
   rouletteActive = false;
   rouletteWaiting = false;
   reachTriggered = false;
   reachVideoEnded = false;
-
+  reachType = null;
+  if (window._d2FeverCleanup) window._d2FeverCleanup();
+  stopAllVideos();
+  stopWakuVideo();
   const d1 = document.getElementById('digit1');
   const d2 = document.getElementById('digit2');
   const d3 = document.getElementById('digit3');
@@ -5464,89 +5434,25 @@ function triggerTestReach(type) {
     d.style.clipPath = '';
     d.style.overflow = '';
   });
-
-  // digit1・3をランダム数字で停止表示（リーチ状態）
-  const reachNum = Math.floor(Math.random() * 8);
-  rouletteResult = [reachNum, reachNum, reachNum];
-  setDigitImg(d1, reachNum); setDigitImg(d3, reachNum);
-  d1.classList.add('visible');
-  d1.style.clipPath = 'inset(60px -50px 0 0)';
-  d1.style.overflow = 'visible';
-  d3.classList.add('visible');
-  d3.style.clipPath = 'inset(60px -50px 0 0)';
-  d3.style.overflow = 'visible';
-
-  function proceedAfterReachTest() {
-    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-    rouletteWaiting = false;
-    stopAllVideos();
-    stopOseBlink();
-    [d1, d2, d3].forEach(d => {
-      d.classList.remove('visible');
-      d.style.clipPath = '';
-      d.style.overflow = '';
-    });
-  }
-
-  stopAllVideosNoResume();
-  const reachVid = type === 'riti02' ? vidReach2 : vidReach;
-  playVideo(reachVid);
-  rouletteEndTimeout = setTimeout(proceedAfterReachTest, 60000);
-
-  reachVid.onended = () => {
-    reachVid.onended = null;
-    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-    document.getElementById('wrap').classList.remove('reach-video-playing', 'hazure-video-playing', 'atarigo-video-playing', 'atari02-video-playing');
-
-    if (type === 'riti02') {
-      // riti02: OSE待機 → 当たり01演出へ
-      startOseBlink(() => {
-        rouletteWaiting = true;
-        jackpotTimer = 300;
-        score += 1000;
-        d2.classList.remove('visible');
-        // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
-        vidAtari2.onended = null;
-        vidAtari2.onended = () => {
-          vidAtari2.onended = null;
-          vidAtari2.style.display = 'none';
-          if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-          startOseSequenceShort(() => {
-            showDigit2Result(d2, 7);
-            playAtarigoRoute(proceedAfterReachTest);
-          });
-        };
-        playVideo(vidAtari2);
-        rouletteEndTimeout = setTimeout(proceedAfterReachTest, 30000);
-      });
-    } else {
-      // riti01: OSEシーケンス（ose.mpループ + osevc → OSEボタン押下 → oseend → 次へ）
-      startOseSequence(() => {
-        rouletteWaiting = true;
-        jackpotTimer = 300;
-        score += 1000;
-        showDigit2Result(d2, 7);
-        d2.classList.remove('visible');
-        // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
-        vidAtari.onended = null;
-        vidAtari.onended = () => {
-          vidAtari.onended = null;
-          if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-          startOseSequence(() => {
-            showDigit2Result(d2, 7);
-            playAtarigoRoute(proceedAfterReachTest);
-          });
-        };
-        playVideo(vidAtari);
-        rouletteEndTimeout = setTimeout(proceedAfterReachTest, 30000);
-      });
-    }
-  };
+  totalRotations++;
+  document.getElementById('rotations-disp').innerHTML = `${totalRotations}<span>回</span>`;
+  consumeHold(() => { _beginRoulette(); });
 }
 
-document.getElementById('test-reach01-btn').addEventListener('click', () => triggerTestReach('riti01'));
-document.getElementById('test-reach02-btn').addEventListener('click', () => triggerTestReach('riti02'));
-document.getElementById('test-reach-normal-btn').addEventListener('click', () => triggerTestReachNormal());
+// ─── テスト用：当たり演出に直接移行するボタン ─────────────────
+function triggerTestAtari(type) {
+  _setupTestHolds3(type);
+  _startTestFromHold1();
+}
+
+document.getElementById('test-atari01-btn').addEventListener('click', () => triggerTestAtari('atari01'));
+document.getElementById('test-atari02-btn').addEventListener('click', () => triggerTestAtari('atari02'));
+
+// ─── テスト用：リーチ演出に直接移行するボタン ─────────────────
+document.getElementById('test-reach-normal-btn').addEventListener('click', () => { _setupTestHolds3('normal'); _startTestFromHold1(); });
+document.getElementById('test-hazure-normal-btn').addEventListener('click', () => { _setupTestHolds3('hazure-normal'); _startTestFromHold1(); });
+document.getElementById('test-hazure-riti01-btn').addEventListener('click', () => { _setupTestHolds3('hazure-riti01'); _startTestFromHold1(); });
+document.getElementById('test-hazure-riti02-btn').addEventListener('click', () => { _setupTestHolds3('hazure-riti02'); _startTestFromHold1(); });
 
 // ─── テスト用：BONUSルーレット（RUSH抽選）に直接移行するボタン ──────
 function triggerTestRushBonus() {
@@ -5646,172 +5552,41 @@ document.getElementById('test-rush-bonus-btn').addEventListener('click', trigger
 
 // ─── テスト用：全回転当たり演出に直接移行するボタン ─────────────────
 function triggerTestZenkaiten() {
-  if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-  stopOseBlink();
-  rouletteActive = false;
-  rouletteWaiting = false;
-  reachTriggered = false;
-  reachVideoEnded = false;
-  if (window._d2FeverCleanup) window._d2FeverCleanup();
-
-  const d1 = document.getElementById('digit1');
-  const d2 = document.getElementById('digit2');
-  const d3 = document.getElementById('digit3');
-  [d1, d2, d3].forEach(d => {
-    d.classList.remove('visible', 'spinning', 'd1-result', 'd2-result', 'd3-result');
-    const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
-    if (c) c.remove();
-    if (d._d2Anim) { cancelAnimationFrame(d._d2Anim); d._d2Anim = null; }
-    d.style.clipPath = '';
-    d.style.overflow = '';
-  });
-
-  stopAllVideosNoResume();
-
-  function proceedAfterZenkaitenTest() {
-    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-    rouletteWaiting = false;
-    stopAllVideos();
-    stopOseBlink();
-    [d1, d2, d3].forEach(d => {
-      d.classList.remove('visible');
-      d.style.clipPath = '';
-      d.style.overflow = '';
-    });
-  }
-
-  jackpotTimer = 300;
-  score += 1000;
-  currentConsumedZenkaiten = true;
-  playAtarigoRoute(proceedAfterZenkaitenTest);
+  _setupTestHolds3('zenkaiten');
+  _startTestFromHold1();
 }
 
 document.getElementById('test-zenkaiten-btn').addEventListener('click', triggerTestZenkaiten);
 
 // ─── テスト用：カネコーン当たり演出に直接移行するボタン ─────────────────
 function triggerTestKanecorn() {
-  if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-  stopOseBlink();
-  rouletteActive = false;
-  rouletteWaiting = false;
-  reachTriggered = false;
-  reachVideoEnded = false;
-  if (window._d2FeverCleanup) window._d2FeverCleanup();
-
-  const d1 = document.getElementById('digit1');
-  const d2 = document.getElementById('digit2');
-  const d3 = document.getElementById('digit3');
-  [d1, d2, d3].forEach(d => {
-    d.classList.remove('visible', 'spinning', 'd1-result', 'd2-result', 'd3-result');
-    const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
-    if (c) c.remove();
-    if (d._d2Anim) { cancelAnimationFrame(d._d2Anim); d._d2Anim = null; }
-    d.style.clipPath = '';
-    d.style.overflow = '';
-  });
-
-  stopAllVideosNoResume();
-
-  function proceedAfterKanecornTest() {
-    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-    rouletteWaiting = false;
-    stopAllVideos();
-    stopOseBlink();
-    [d1, d2, d3].forEach(d => {
-      d.classList.remove('visible');
-      d.style.clipPath = '';
-      d.style.overflow = '';
-    });
-  }
-
-  jackpotTimer = 300;
-  score += 1000;
-  currentConsumedKanecorn = true;
-  playAtarigoRoute(proceedAfterKanecornTest);
+  _setupTestHolds3('kanecorn');
+  _startTestFromHold1();
 }
 
 document.getElementById('test-kanecorn-btn').addEventListener('click', triggerTestKanecorn);
 
+// ─── テスト用：リーチなし当たりに直接移行するボタン ─────────────────
+function triggerTestNoReachWin() {
+  _setupTestHolds3('noreach');
+  _startTestFromHold1();
+}
+
+document.getElementById('test-noreach-win-btn').addEventListener('click', triggerTestNoReachWin);
+
+// ─── テスト用：復活ルートに直接移行するボタン ─────────────────
+// riti02リーチ → OSE → ハズレ02 → 復活02 → OSE → atarigo（3回目スピンで発生）
+function triggerTestFukkatsu() {
+  _setupTestHolds3('fukkatsu');
+  _startTestFromHold1();
+}
+
+document.getElementById('test-fukkatsu-btn').addEventListener('click', triggerTestFukkatsu);
+
 // ─── テスト用：弱リーチ演出に直接移行するボタン ─────────────────
 function triggerTestReachNormal() {
-  if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-  stopOseBlink();
-  rouletteActive = false;
-  rouletteWaiting = false;
-  reachTriggered = false;
-  reachVideoEnded = false;
-  reachType = null;
-  if (window._d2FeverCleanup) window._d2FeverCleanup();
-
-  const d1 = document.getElementById('digit1');
-  const d2 = document.getElementById('digit2');
-  const d3 = document.getElementById('digit3');
-  [d1, d2, d3].forEach(d => {
-    d.classList.remove('visible', 'spinning', 'd1-result', 'd2-result', 'd3-result');
-    const c = d.querySelector('.d1-circle, .d2-circle, .d3-circle');
-    if (c) c.remove();
-    if (d._d2Anim) { cancelAnimationFrame(d._d2Anim); d._d2Anim = null; }
-    d.style.clipPath = '';
-    d.style.overflow = '';
-  });
-
-  // digit1・3をランダム数字で停止表示（リーチ状態）
-  const normalReachNum = Math.floor(Math.random() * 9) + 1; // 1〜9
-  rouletteResult = [normalReachNum, normalReachNum, normalReachNum];
-  setDigitImg(d1, normalReachNum); setDigitImg(d3, normalReachNum);
-  d1.classList.add('visible');
-  d1.style.clipPath = 'inset(60px -50px 0 0)';
-  d1.style.overflow = 'visible';
-  d3.classList.add('visible');
-  d3.style.clipPath = 'inset(60px -50px 0 0)';
-  d3.style.overflow = 'visible';
-
-  function proceedAfterNormalReachTest() {
-    if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); rouletteEndTimeout = null; }
-    rouletteWaiting = false;
-    stopAllVideos();
-    stopOseBlink();
-    if (window._d2FeverCleanup) window._d2FeverCleanup();
-    [d1, d2, d3].forEach(d => {
-      d.classList.remove('visible');
-      d.style.clipPath = '';
-      d.style.overflow = '';
-    });
-  }
-
-  stopAllVideosNoResume();
-  setExpReach('normal');
-
-  // SE再生
-  ritiSE = getRandomRitiSE();
-  ritiSE.currentTime = 0;
-  ritiSE.volume = seVolume;
-  ritiSE.play().catch(() => {});
-
-  // digit2 激アツ演出起動
-  startD2FeverEffect();
-
-  // digit1・3は停止済み、digit2だけスピン開始
-  d1Stopped = true;          // digit1は停止済み扱い
-  d3CanStart = true;         // digit3開始フラグ（停止済み）
-  d3Stopped = true;          // digit3は停止済み扱い
-  d3SpinStartFrame = 0;
-  rouletteTimer = 16;        // SPIN_DUR(15)+1 → digit1・3のスピン判定をスキップ
-  rouletteActive = true;
-  rouletteWaiting = false;
-  reachTriggered = true;
-  reachVideoEnded = true;
-  reachType = 'normal';
-  d2CanStart = true;
-  d2Stopped = false;
-  d2StopScheduled = false;
-  if (d2StopTimeout) { clearTimeout(d2StopTimeout); d2StopTimeout = null; }
-  d2.classList.remove('d2-result');
-  startDigitSpin(d2);
-  d2.classList.add('spinning', 'visible');
-  d2SpinStartFrame = rouletteTimer; // この時点からdigit2スピン計測開始
-
-  rouletteEndTimeout = setTimeout(proceedAfterNormalReachTest, 30000);
+  _setupTestHolds3('normal');
+  _startTestFromHold1();
 }
 
 // ─── テスト用：保留変化演出を強制発動 ─────────────────────────────
@@ -6857,5 +6632,4 @@ function _maybeRush(proceedFn) {
   </div>
 </div>
 </body>
-</html>              playVideo(reachVid);
-
+</html>

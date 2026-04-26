@@ -3761,6 +3761,9 @@ body{
     </div>
   </div>
 
+  <!-- 戻るボタン (縦画面でモード選択→各カードに入った時) -->
+  <button id="_backToModeBtn" onclick="_backToMode()" style="display:none;align-self:flex-start;margin-top:-10px;padding:6px 14px;font-size:.65rem;background:#030a10;border:1px solid #2a4a3a;border-radius:7px;color:#5a9a7a;cursor:pointer;font-family:inherit;">← モード選択に戻る</button>
+
   <!-- Solo card -->
   <div class="lobby-card" id="lobbySolo" style="display:none">
     <h3>プレイヤー数</h3>
@@ -3900,9 +3903,8 @@ body{
     <div id="joinPanel">
       <div style="font-size:.6rem;color:#5a7a6a;margin-bottom:6px;text-align:center;">部屋番号を入力して参加</div>
       <div style="display:flex;gap:6px;">
-        <input id="roomInput" type="text" maxlength="6" placeholder="例: 123456"
-          style="flex:1;padding:8px 10px;background:#030a10;border:1.5px solid #1a4a2a;border-radius:7px;color:var(--gold);font-family:inherit;font-size:.9rem;letter-spacing:.2em;text-align:center;"
-          oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)"
+        <input id="roomInput" type="text" maxlength="6" placeholder="例: 123456" readonly
+          style="flex:1;padding:8px 10px;background:#030a10;border:1.5px solid #1a4a2a;border-radius:7px;color:var(--gold);font-family:inherit;font-size:.9rem;letter-spacing:.2em;text-align:center;cursor:default;caret-color:var(--gold);"
           onkeydown="if(event.key==='Enter')joinRoom()">
         <button class="btn btn-primary" onclick="joinRoom()" style="padding:8px 14px;font-size:.8rem;">参加</button>
       </div>
@@ -3921,6 +3923,15 @@ body{
         <button onclick="_roomPadBackspace()" style="grid-column:span 2;padding:10px 0;font-size:1rem;font-weight:700;background:#030a10;border:1.5px solid #2a1a1a;border-radius:8px;color:#8a6a6a;cursor:pointer;font-family:inherit;">⌫</button>
       </div>
       <script>
+      function _backToMode(){
+        // 縦画面: 各サブカードを隠してモード選択に戻る
+        ['lobbySolo','lobbyOnline','lobbyRank','lobbyBomb','lobbyDaily'].forEach(id=>{
+          const el=document.getElementById(id); if(el) el.style.display='none';
+        });
+        const lm=document.getElementById('lobbyMode'); if(lm) lm.style.display='';
+        const bb=document.getElementById('_backToModeBtn'); if(bb) bb.style.display='none';
+        if(typeof cancelRankQueue==='function') cancelRankQueue();
+      }
       function _roomPadTap(d){
         const inp = document.getElementById('roomInput');
         if(!inp) return;
@@ -6525,6 +6536,8 @@ function _setModeActive(id){
   });
 }
 function showSolo(){
+  const _isPort=window.innerWidth<window.innerHeight;if(_isPort){document.getElementById('lobbyMode').style.display='';}
+  const bb = document.getElementById('_backToModeBtn'); if(bb) bb.style.display='none';
   document.getElementById('lobbySolo').style.display='';
   document.getElementById('lobbyOnline').style.display='none';
   document.getElementById('lobbyRank').style.display='none';
@@ -6538,6 +6551,7 @@ function showSolo(){
   _applyCpuGameSettingsUI();
 }
 function showOnline(){
+  const _isPort=window.innerWidth<window.innerHeight;if(_isPort){const _isPort=window.innerWidth<window.innerHeight;if(_isPort){const _isPort=window.innerWidth<window.innerHeight;if(_isPort){const _isPort=window.innerWidth<window.innerHeight;if(_isPort){document.getElementById('lobbyMode').style.display='none';}}}}
   document.getElementById('lobbySolo').style.display='none';
   document.getElementById('lobbyOnline').style.display='';
   document.getElementById('lobbyRank').style.display='none';
@@ -6546,8 +6560,13 @@ function showOnline(){
   cancelRankQueue();
   _setModeActive('modeBtn-online');
   showRejoinPanel();
+  // モード選択に戻るボタンを表示
+  const bb = document.getElementById('_backToModeBtn');
+  if(bb) bb.style.display='';
 }
 function showRank(){
+  document.getElementById('lobbyMode').style.display='none';
+  const bb = document.getElementById('_backToModeBtn'); if(bb) bb.style.display=(window.innerWidth<window.innerHeight?'':'none');
   document.getElementById('lobbySolo').style.display='none';
   document.getElementById('lobbyOnline').style.display='none';
   document.getElementById('lobbyRank').style.display='';
@@ -6558,6 +6577,8 @@ function showRank(){
   _loadMyRating();
 }
 function showBomb(){
+  document.getElementById('lobbyMode').style.display='none';
+  const bb = document.getElementById('_backToModeBtn'); if(bb) bb.style.display=(window.innerWidth<window.innerHeight?'':'none');
   document.getElementById('lobbySolo').style.display='none';
   document.getElementById('lobbyOnline').style.display='none';
   document.getElementById('lobbyRank').style.display='none';
@@ -6569,6 +6590,8 @@ function showBomb(){
   loadBombRanking();
 }
 function showDaily(){
+  document.getElementById('lobbyMode').style.display='none';
+  const bb = document.getElementById('_backToModeBtn'); if(bb) bb.style.display=(window.innerWidth<window.innerHeight?'':'none');
   document.getElementById('lobbySolo').style.display='none';
   document.getElementById('lobbyOnline').style.display='none';
   document.getElementById('lobbyRank').style.display='none';

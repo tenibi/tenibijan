@@ -146,7 +146,8 @@ window.addEventListener('resize', scaleTable);
 
 // ── ブラウザ閉じ・タブ閉じ時にピアを確実に閉じる ──────────
 // ランクマッチ中の切断をサーバーに通知するヘルパー
-// keepalive:true でページが閉じられた後もリクエストを送り続ける
+// pagehide時はsendBeaconを優先し、失敗時はkeepalive:trueのfetchにフォールバック
+// ※ sendBeaconはAuthorizationヘッダーを付けられないため、tokenをbodyに含める
 function _sendRankDisconnectNotify(){
   try{
     if(typeof NET==='undefined' || !NET.isRankMatch || typeof RANK==='undefined') return;
@@ -156,32 +157,34 @@ function _sendRankDisconnectNotify(){
 
     const token = localStorage.getItem('jwt_token') || '';
 
+    function _beaconOrFetch(url, body){
+      const blob = new Blob([JSON.stringify(body)], { type: 'application/json' });
+      if(navigator.sendBeacon && navigator.sendBeacon(url, blob)) return;
+      // sendBeacon失敗時のフォールバック（keepalive fetch）
+      fetch(url, {
+        method:'POST', keepalive:true,
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body: JSON.stringify(body)
+      }).catch(()=>{});
+    }
+
     if(RANK._isCpuFill){
-      // ── CPU戦: matchIdがないのでcpu-resultで最下位送信（ペナルティ相当） ──
-      // _forceStartRankCPUGame()でRANK.matchId=nullにリセットされるため
-      // disconnect-notifyは使えない。cpu-resultで最下位(rank=3/numPlayers=3)を送ることで
-      // 通常のランク低下計算が走りペナルティ代わりになる。
-      fetch(BACKEND+'/rank/cpu-result',{
-        method:'POST', keepalive:true,
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body:JSON.stringify({rank:3, score:-9999, numPlayers:3})
-      }).catch(()=>{});
+      _beaconOrFetch(BACKEND+'/rank/cpu-result',
+        {rank:3, score:-9999, numPlayers:3, token});
     } else if(RANK.matchId){
-      // ── 通常マッチ: matchIdがある場合のみdisconnect-notifyを送信 ──
-      fetch(BACKEND+'/rank/disconnect-notify',{
-        method:'POST', keepalive:true,
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body:JSON.stringify({matchId:RANK.matchId})
-      }).catch(()=>{});
+      _beaconOrFetch(BACKEND+'/rank/disconnect-notify',
+        {matchId:RANK.matchId, token});
     }
   }catch(e){}
 }
-window.addEventListener('pagehide', ()=>{
+window.addEventListener('pagehide', (e)=>{
+  // Safari対策: persisted=true はBFCache（戻る/進む）なので破棄しない
+  if(e.persisted) return;
   _sendRankDisconnectNotify();
   if(NET.peer){
     try{ if(typeof saveRejoinSession==='function') saveRejoinSession(); }catch(e){}
     try{ netBroadcastAll({type:'hostDisconnect'}); }catch(e){}
-    try{ NET.peer.destroy(); }catch(e){}
+    try{ NET.peer.destroy(); }catch(e){} NET.peer=null;
   }
 });
 window.addEventListener('beforeunload', ()=>{
@@ -189,13 +192,44 @@ window.addEventListener('beforeunload', ()=>{
   if(NET.peer){
     try{ if(typeof saveRejoinSession==='function') saveRejoinSession(); }catch(e){}
     try{ netBroadcastAll({type:'hostDisconnect'}); }catch(e){}
-    try{ NET.peer.destroy(); }catch(e){}
+    try{ NET.peer.destroy(); }catch(e){} NET.peer=null;
   }
 });
 </script>
 <script>
 // ── 自宅サーバーURL ───────────────────────────────────────────
 const BACKEND = "https://tenibijan.duckdns.org";
+
+// ── PeerJS: TURN認証情報付きでPeerを生成するヘルパー ──────────
+// /api/turn-credentialsからiceServersを取得し、失敗時はSTUNのみで続行
+async function _createPeer(peerId) {
+  let iceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+  try {
+    const res = await authFetch('/api/turn-credentials', {}, true);
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.iceServers) iceServers = data.iceServers;
+    }
+  } catch(e) {
+    console.warn('[TURN] 認証情報取得失敗、STUNのみで続行:', e);
+  }
+  return new Peer(peerId, {
+    debug: 0,
+    config: { iceServers }
+  });
+}
+
+// ── iOS Safari対策: バックグラウンド復帰時にpeerを再接続 ──────
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && NET && NET.peer) {
+    if (NET.peer.disconnected && !NET.peer.destroyed) {
+      try { NET.peer.reconnect(); } catch(e) {}
+    }
+  }
+});
 
 // ── 認証付きfetchヘルパー ─────────────────────────────────────
 // 401が返ったらセッション切れとみなし、jwt_tokenを削除してGoogleログインへリダイレクト
@@ -4599,6 +4633,8 @@ const SFX = (() => {
     getSeVol()  { return seVol; },
     setSeScale(key, v) { if(key in seScale) seScale[key]=v; },
     getSeScale(key) { return seScale[key]??1; },
+    // iOS Safari: suspended な AudioContext を外部から resume するためのメソッド
+    resumeCtx() { if(ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{}); },
 
     // ── 牌を引く: hiku1〜5 ランダム ─────────────────────
     draw() {
@@ -5393,7 +5429,7 @@ async function attemptRejoin(){
     || 'mj-' + session.code;                      // フォールバック: 元ホスト固定PeerID
 
   if(NET.peer){ try{ NET.peer.destroy(); }catch(e){} NET.peer=null; }
-  NET.peer = new Peer('mj-guest-' + Date.now(), {debug:0});
+  NET.peer = await _createPeer('mj-guest-' + Date.now());
   NET.peer.on('open', ()=>{
     const conn = NET.peer.connect(hostPeerId, {reliable:true});
     NET.conn = conn;
@@ -5528,6 +5564,26 @@ async function attemptRejoin(){
   document.addEventListener('click', _unlock, true);
   document.addEventListener('touchstart', _unlock, true);
 })()
+
+// ── iOS Safari: AudioContext を touchstart/visibilitychange で resume ──
+// Safari はユーザー操作なしの AudioContext を suspended のままにする。
+// バックグラウンド復帰後も suspended になるため両方のタイミングで resume する。
+(function(){
+  function _resumeAudioCtx(){
+    // SFX モジュールの内部 ctx を取得（存在すれば）
+    if(typeof SFX !== 'undefined' && typeof SFX.resumeCtx === 'function'){
+      SFX.resumeCtx();
+    }
+    // BGM 側の AudioContext も念のため resume
+    if(typeof BGM !== 'undefined' && typeof BGM.resumeCtx === 'function'){
+      BGM.resumeCtx();
+    }
+  }
+  document.addEventListener('touchstart', _resumeAudioCtx, { passive: true });
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible') _resumeAudioCtx();
+  });
+})();
 
 // ============================================================
 // TILE SYSTEM
@@ -7048,7 +7104,7 @@ async function joinRankQueue(){
   RANK.peerId = peerId;
   // ★修正: 古いピアが残っていた場合は必ず破棄してから新規作成（二重 open イベント防止）
   if(NET.peer){ try{ NET.peer.destroy(); }catch(e){} NET.peer=null; }
-  NET.peer = new Peer(peerId, {debug:0});
+  NET.peer = await _createPeer(peerId);
 
   NET.peer.on('open', async ()=>{
     try {
@@ -7870,7 +7926,7 @@ async function createRoom(){
   NET.conns = [];
 
   const peerId = 'mj-'+code;
-  NET.peer = new Peer(peerId, {debug:0});
+  NET.peer = await _createPeer(peerId);
   NET.peer.on('open', async ()=>{
     // サーバーに部屋を登録する
     try {
@@ -8326,7 +8382,7 @@ async function joinRoom(){
   }
 
   setOnlineStatus('接続中…');
-  NET.peer = new Peer('mj-guest-'+Date.now(), {debug:0});
+  NET.peer = await _createPeer('mj-guest-'+Date.now());
   NET.peer.on('open', ()=>{
     const conn = NET.peer.connect(hostPeerId, {reliable:true});
     NET.conn = conn;
@@ -13841,7 +13897,7 @@ async function backToRoom(){
         const data = await res.json();
         const hostPeerId = data.peerId;
         setOnlineStatus('再接続中…');
-        NET.peer = new Peer('mj-guest-'+Date.now(), {debug:0});
+        NET.peer = await _createPeer('mj-guest-'+Date.now());
         NET.peer.on('open', ()=>{
           const conn = NET.peer.connect(hostPeerId, {reliable:true});
           NET.conn = conn;
@@ -20340,10 +20396,10 @@ async function _itmLoadIconsAndEnterSelect() {
   _itmSetBanner('アイコンを読み込み中…', '#88ccaa');
   try {
     // 自分のプロフィールと相手のレジェンドアイコンを並行取得
-    // 相手アイコンは専用エンドポイント /api/icon-trade/friend-icons/:friendId を優先使用
+    // 相手アイコンは offerId 経由のエンドポイントを使用（ゲストプレイヤー対応・フレンドチェックなし）
     const [meRes, theirIconsRes] = await Promise.all([
       authFetch('/api/profile'),
-      authFetch('/api/icon-trade/friend-icons/' + encodeURIComponent(_itm.friendId)).catch(() => null),
+      authFetch('/api/icon-trade/offer-icons/' + encodeURIComponent(_itm.offerId)).catch(() => null),
     ]);
     const meData = await meRes.json();
 
@@ -20353,7 +20409,7 @@ async function _itmLoadIconsAndEnterSelect() {
     if (!_itm.myIcons.length)
       _itm.myIcons = (meData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
 
-    // 相手のレジェンドアイコン（専用エンドポイントから）
+    // 相手のレジェンドアイコン（offerId 経由エンドポイントから）
     _itm.theirIcons = [];
     if (theirIconsRes && theirIconsRes.ok) {
       const theirData = await theirIconsRes.json();
@@ -20362,17 +20418,14 @@ async function _itmLoadIconsAndEnterSelect() {
       }
     }
 
-    // フォールバック: 専用エンドポイントで取得できなかった場合は /api/friends/:id/profile を試みる
+    // フォールバック: offerId 経由で取得できなかった場合は friend-icons エンドポイントを試みる（フレンド同士の場合）
     if (!_itm.theirIcons.length) {
       try {
-        const fallbackRes = await authFetch('/api/friends/' + encodeURIComponent(_itm.friendId) + '/profile');
+        const fallbackRes = await authFetch('/api/icon-trade/friend-icons/' + encodeURIComponent(_itm.friendId));
         if (fallbackRes.ok) {
           const fallbackData = await fallbackRes.json();
-          if (fallbackData && fallbackData.ok !== false) {
-            const counts = fallbackData.gachaIconCounts || {};
-            _itm.theirIcons = Object.keys(counts).filter(id => /^L\d{2}$/.test(id) && (counts[id] || 0) >= 1);
-            if (!_itm.theirIcons.length)
-              _itm.theirIcons = (fallbackData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
+          if (fallbackData && fallbackData.ok !== false && Array.isArray(fallbackData.legendIcons)) {
+            _itm.theirIcons = fallbackData.legendIcons;
           }
         }
       } catch(_) {}
@@ -20572,7 +20625,7 @@ function _itmUpdateSelectBtn() {
     btn.style.opacity       = hasOffer ? '1' : '.4';
     btn.style.pointerEvents = hasOffer ? '' : 'none';
     btn.textContent = hasOffer
-      ? (hasWant ? '✓ 決定して交換を待つ（欲しい指定あり）' : '✓ 決定して交換を待つ')
+      ? '✓ 決定して交換を待つ'
       : '✓ 決定して交換を待つ';
   }
 
@@ -25308,6 +25361,7 @@ if(_origOpenProfile){
   let _dailyIn     = false; // デイリー画面操作モード中フラグ
 
   // ── 追加画面 コントローラーサポート用状態 ──
+  let _onlineFocus    = 0; let _onlineIn    = false; // lobbyOnlineカード（数字パッド含む）
   let _shopFocus      = 0; let _shopIn      = false;
   let _gachaFocus     = 0; let _gachaIn     = false;
   let _cpuFocus       = 0; let _cpuIn       = false;
@@ -25399,6 +25453,16 @@ if(_origOpenProfile){
   // ── CPU選択 ──
   function _isCpuSelectVisible(){ const s=document.getElementById('cpuSelectScreen'); return s&&s.classList.contains('active'); }
   function _cpuItems(){ return Array.from(document.querySelectorAll('#cpuSelectGrid button, #cpuSelectScreen button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
+
+  // ── lobbyOnlineカード（ルームマッチ参加パネル・数字パッド）──
+  function _isLobbyOnlineVisible(){ const el=document.getElementById('lobbyOnline'); return el&&getComputedStyle(el).display!=='none'; }
+  function _onlineItems(){ return Array.from(document.querySelectorAll('#lobbyOnline button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
+  function _onlineHighlight(){
+    _onlineItems().forEach((el,i)=>{
+      el.style.outline   = (i===_onlineFocus && _onlineIn) ? '3px solid #f0d47a' : '';
+      el.style.boxShadow = (i===_onlineFocus && _onlineIn) ? '0 0 18px #c9a84c88' : '';
+    });
+  }
 
   // ── ルームロビー ──
   function _isRoomLobbyVisible(){ const s=document.getElementById('roomLobbyScreen'); return s&&s.classList.contains('active'); }
@@ -25680,6 +25744,42 @@ if(_origOpenProfile){
     if(_gpGridScreenAction(actionKey, _isRingBookVisible, _ringItems, ()=>_ringFocus, v=>{_ringFocus=v;}, ()=>_ringIn, v=>{_ringIn=v;}, 4, typeof closeRingBook==='function'?closeRingBook:null)) return;
     if(_gpGridScreenAction(actionKey, _isBgmBookVisible, _bgmItems, ()=>_bgmFocus, v=>{_bgmFocus=v;}, ()=>_bgmIn, v=>{_bgmIn=v;}, 2, typeof closeRiichiBgmBook==='function'?closeRiichiBgmBook:null)) return;
     if(_gpGridScreenAction(actionKey, _isAgariBookVisible, _agariItems, ()=>_agariFocus, v=>{_agariFocus=v;}, ()=>_agariIn, v=>{_agariIn=v;}, 3, typeof closeAgariBook==='function'?closeAgariBook:null)) return;
+
+    // ══════════ lobbyOnlineカード（ルームマッチ参加パネル・数字パッド3列）══════════
+    if(_isLobbyOnlineVisible()){
+      if(!_onlineIn){
+        if(actionKey==='up'||actionKey==='down'||actionKey==='left'||actionKey==='right'){
+          _onlineIn=true; _onlineFocus=0; _onlineHighlight();
+        }
+        return;
+      }
+      const items = _onlineItems();
+      const n = items.length;
+      if(!n){ return; }
+      const f = _onlineFocus < n ? _onlineFocus : 0;
+      const numpad = document.getElementById('roomNumpad');
+      const inNumpad = numpad && numpad.contains(items[f]);
+      const NUMPAD_COLS = 3;
+      if(actionKey==='up'){
+        if(inNumpad){ const ni=f-NUMPAD_COLS; _onlineFocus = ni>=0 ? ni : f; }
+        else { _onlineFocus = f>0 ? f-1 : n-1; }
+        _onlineHighlight();
+      } else if(actionKey==='down'){
+        if(inNumpad){ const ni=f+NUMPAD_COLS; _onlineFocus = ni<n ? ni : f; }
+        else { _onlineFocus = f<n-1 ? f+1 : 0; }
+        _onlineHighlight();
+      } else if(actionKey==='left'){
+        _onlineFocus = f>0 ? f-1 : n-1; _onlineHighlight();
+      } else if(actionKey==='right'){
+        _onlineFocus = f<n-1 ? f+1 : 0; _onlineHighlight();
+      } else if(actionKey==='select_tile'){
+        const el=items[f]; if(el){ _playBotanSe(); el.click(); setTimeout(_onlineHighlight,100); }
+      } else if(actionKey==='skip'){
+        _onlineIn=false; _onlineHighlight();
+      }
+      return;
+    }
+    if(_onlineIn){ _onlineIn=false; _onlineHighlight(); }
 
     // ══════════ タイトル（ロビー）画面の操作 ══════════
     if(_isLobbyVisible()){

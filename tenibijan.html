@@ -20339,33 +20339,47 @@ async function _itmPollQueue() {
 async function _itmLoadIconsAndEnterSelect() {
   _itmSetBanner('アイコンを読み込み中…', '#88ccaa');
   try {
-    // 自分と相手のプロフィールを並行取得
-    const [meRes, theirRes] = await Promise.all([
+    // 自分のプロフィールと相手のレジェンドアイコンを並行取得
+    // 相手アイコンは専用エンドポイント /api/icon-trade/friend-icons/:friendId を優先使用
+    const [meRes, theirIconsRes] = await Promise.all([
       authFetch('/api/profile'),
-      authFetch('/api/friends/' + encodeURIComponent(_itm.friendId) + '/profile').catch(() => null),
+      authFetch('/api/icon-trade/friend-icons/' + encodeURIComponent(_itm.friendId)).catch(() => null),
     ]);
     const meData = await meRes.json();
 
+    // 自分のレジェンドアイコン
     _itm.myIcons = Object.keys(meData.gachaIconCounts || {})
       .filter(id => /^L\d{2}$/.test(id) && (meData.gachaIconCounts[id] || 0) >= 1);
     if (!_itm.myIcons.length)
       _itm.myIcons = (meData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
 
-    // ★ 相手のレジェンドアイコンを取得
+    // 相手のレジェンドアイコン（専用エンドポイントから）
     _itm.theirIcons = [];
-    if (theirRes && theirRes.ok) {
-      const theirData = await theirRes.json();
-      if (theirData && theirData.ok !== false) {
-        const counts = theirData.gachaIconCounts || {};
-        _itm.theirIcons = Object.keys(counts).filter(id => /^L\d{2}$/.test(id) && (counts[id] || 0) >= 1);
-        if (!_itm.theirIcons.length)
-          _itm.theirIcons = (theirData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
+    if (theirIconsRes && theirIconsRes.ok) {
+      const theirData = await theirIconsRes.json();
+      if (theirData && theirData.ok !== false && Array.isArray(theirData.legendIcons)) {
+        _itm.theirIcons = theirData.legendIcons;
       }
     }
 
-    // ★ 両者同時にSELECTフェーズへ
+    // フォールバック: 専用エンドポイントで取得できなかった場合は /api/friends/:id/profile を試みる
+    if (!_itm.theirIcons.length) {
+      try {
+        const fallbackRes = await authFetch('/api/friends/' + encodeURIComponent(_itm.friendId) + '/profile');
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          if (fallbackData && fallbackData.ok !== false) {
+            const counts = fallbackData.gachaIconCounts || {};
+            _itm.theirIcons = Object.keys(counts).filter(id => /^L\d{2}$/.test(id) && (counts[id] || 0) >= 1);
+            if (!_itm.theirIcons.length)
+              _itm.theirIcons = (fallbackData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
+          }
+        }
+      } catch(_) {}
+    }
+
+    // SELECTフェーズへ
     _itmShowPhase('SELECT');
-    // 相手名をグリッドラベルにセット
     const theirNameEl = document.getElementById('itm-sel-theirName');
     if (theirNameEl) theirNameEl.textContent = _itm.friendName || '相手';
     _itmRenderSelectGrids();
@@ -20374,6 +20388,7 @@ async function _itmLoadIconsAndEnterSelect() {
     if (_itm.pollTimer) clearInterval(_itm.pollTimer);
     _itm.pollTimer = setInterval(_itmPollSession, 2000);
   } catch(e) {
+    console.error('[ITM] loadIcons error:', e);
     _itmSetBanner('読み込み失敗', '#cc6666');
   }
 }

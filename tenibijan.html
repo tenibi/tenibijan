@@ -3903,9 +3903,11 @@ body{
     <div id="joinPanel">
       <div style="font-size:.6rem;color:#5a7a6a;margin-bottom:6px;text-align:center;">部屋番号を入力して参加</div>
       <div style="display:flex;gap:6px;">
-        <input id="roomInput" type="text" maxlength="6" placeholder="例: 123456" readonly
-          style="flex:1;padding:8px 10px;background:#030a10;border:1.5px solid #1a4a2a;border-radius:7px;color:var(--gold);font-family:inherit;font-size:.9rem;letter-spacing:.2em;text-align:center;cursor:default;caret-color:var(--gold);"
-          onkeydown="if(event.key==='Enter')joinRoom()">
+        <input id="roomInput" type="tel" inputmode="numeric" maxlength="6" placeholder="例: 123456"
+          style="flex:1;padding:8px 10px;background:#030a10;border:1.5px solid #1a4a2a;border-radius:7px;color:var(--gold);font-family:inherit;font-size:.9rem;letter-spacing:.2em;text-align:center;caret-color:var(--gold);"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)"
+          onkeydown="if(event.key==='Enter')joinRoom()"
+          onpaste="_roomHandlePaste(event)">
         <button class="btn btn-primary" onclick="joinRoom()" style="padding:8px 14px;font-size:.8rem;">参加</button>
       </div>
       <!-- 数字パッド -->
@@ -3935,12 +3937,23 @@ body{
       function _roomPadTap(d){
         const inp = document.getElementById('roomInput');
         if(!inp) return;
-        if(inp.value.length < 6){ inp.value += d; }
+        if(inp.value.length < 6){
+          inp.value += d;
+          inp.dispatchEvent(new Event('input'));
+        }
       }
       function _roomPadBackspace(){
         const inp = document.getElementById('roomInput');
         if(!inp) return;
         inp.value = inp.value.slice(0, -1);
+        inp.dispatchEvent(new Event('input'));
+      }
+      function _roomHandlePaste(e){
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        const digits = text.replace(/[^0-9]/g,'').slice(0,6);
+        const inp = document.getElementById('roomInput');
+        if(inp){ inp.value = digits; inp.dispatchEvent(new Event('input')); }
       }
       </script>
       <div id="guestWaitMsg" style="display:none;font-size:.6rem;color:#4a7a5a;text-align:center;margin-top:8px;">
@@ -20326,19 +20339,37 @@ async function _itmPollQueue() {
 async function _itmLoadIconsAndEnterSelect() {
   _itmSetBanner('アイコンを読み込み中…', '#88ccaa');
   try {
-    const meRes = await authFetch('/api/profile');
+    // 自分と相手のプロフィールを並行取得
+    const [meRes, theirRes] = await Promise.all([
+      authFetch('/api/profile'),
+      authFetch('/api/friends/' + encodeURIComponent(_itm.friendId) + '/profile').catch(() => null),
+    ]);
     const meData = await meRes.json();
 
-    _itm.myIcons    = Object.keys(meData.gachaIconCounts || {})
+    _itm.myIcons = Object.keys(meData.gachaIconCounts || {})
       .filter(id => /^L\d{2}$/.test(id) && (meData.gachaIconCounts[id] || 0) >= 1);
     if (!_itm.myIcons.length)
       _itm.myIcons = (meData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
+
+    // ★ 相手のレジェンドアイコンを取得
     _itm.theirIcons = [];
+    if (theirRes && theirRes.ok) {
+      const theirData = await theirRes.json();
+      if (theirData && theirData.ok !== false) {
+        const counts = theirData.gachaIconCounts || {};
+        _itm.theirIcons = Object.keys(counts).filter(id => /^L\d{2}$/.test(id) && (counts[id] || 0) >= 1);
+        if (!_itm.theirIcons.length)
+          _itm.theirIcons = (theirData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
+      }
+    }
 
     // ★ 両者同時にSELECTフェーズへ
     _itmShowPhase('SELECT');
+    // 相手名をグリッドラベルにセット
+    const theirNameEl = document.getElementById('itm-sel-theirName');
+    if (theirNameEl) theirNameEl.textContent = _itm.friendName || '相手';
     _itmRenderSelectGrids();
-    _itmSetBanner('💡 渡すアイコンを1つ選んでください', '#88ccaa');
+    _itmSetBanner('💡 渡すアイコンと欲しいアイコンを選んでください', '#88ccaa');
 
     if (_itm.pollTimer) clearInterval(_itm.pollTimer);
     _itm.pollTimer = setInterval(_itmPollSession, 2000);
@@ -20349,92 +20380,67 @@ async function _itmLoadIconsAndEnterSelect() {
 
 // ─ SELECT グリッド描画
 function _itmRenderSelectGrids() {
-  // 相手のアイコングリッドは非表示にする（エモート用に selectedWant は残す）
+  // ── 相手エリア ──
   const tg = document.getElementById('itm-sel-theirGrid');
-  if (tg) tg.innerHTML = '';
-  const theirSection = document.getElementById('itm-sel-theirSection');
-  if (theirSection) theirSection.style.display = 'none';
-
-  // 自分のアイコン（渡すものを選ぶ）
-  const mg = document.getElementById('itm-sel-myGrid');
-  mg.innerHTML = _itm.myIcons.length
-    ? _itm.myIcons.map(id => `
-        <div id="itm-my-${id}" onclick="itmToggleOffer('${id}')" style="
-          aspect-ratio:3/4;border-radius:7px;border:2px solid #2a2a1a;background:#0a0800;
-          cursor:pointer;overflow:hidden;position:relative;transition:border-color .15s,transform .1s;
+  if (tg) {
+    if (_itm.theirIcons.length > 0) {
+      tg.innerHTML = _itm.theirIcons.map(id => `
+        <div id="itm-th-${id}" onclick="itmToggleWant('${id}')" style="
+          aspect-ratio:3/4;border-radius:8px;border:2px solid #1a2a4a;background:#04080f;
+          cursor:pointer;overflow:hidden;position:relative;
           display:flex;align-items:center;justify-content:center;
+          transition:transform .12s;
         ">
           <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
-          <div id="itm-my-tag-${id}" style="
+          <div id="itm-th-tag-${id}" style="
             position:absolute;bottom:0;left:0;right:0;
-            background:rgba(180,140,0,.85);color:#fff;font-size:.38rem;text-align:center;
-            padding:2px 0;display:none;font-weight:700;
-          ">💎 渡す</div>
-        </div>`).join('')
-    : '<div style="grid-column:1/-1;font-size:.52rem;color:#5a4a2a;text-align:center;padding:10px 0;">レジェンドアイコンなし</div>';
+            background:rgba(20,80,200,.88);color:#fff;font-size:.36rem;text-align:center;
+            padding:2px 0;display:none;font-weight:900;letter-spacing:.05em;
+          ">🙏 欲しい！</div>
+        </div>`).join('');
+    } else {
+      tg.innerHTML = '<div style="grid-column:1/-1;font-size:.5rem;color:#2a4a7a;text-align:center;padding:14px 0;">レジェンドアイコンなし</div>';
+    }
+  }
 
-  // 「欲しい！」「欲しい？」エモートボタン描画
-  _itmRenderEmoteButtons();
+  // ── 自分エリア ──
+  const mg = document.getElementById('itm-sel-myGrid');
+  if (mg) {
+    mg.innerHTML = _itm.myIcons.length
+      ? _itm.myIcons.map(id => `
+          <div id="itm-my-${id}" onclick="itmToggleOffer('${id}')" style="
+            aspect-ratio:3/4;border-radius:8px;border:2px solid #2a2a1a;background:#0a0800;
+            cursor:pointer;overflow:hidden;position:relative;
+            display:flex;align-items:center;justify-content:center;
+            transition:transform .12s;
+          ">
+            <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
+            <div id="itm-my-tag-${id}" style="
+              position:absolute;bottom:0;left:0;right:0;
+              background:rgba(160,120,0,.9);color:#fff;font-size:.36rem;text-align:center;
+              padding:2px 0;display:none;font-weight:900;letter-spacing:.05em;
+            ">💎 渡す</div>
+          </div>`).join('')
+      : '<div style="grid-column:1/-1;font-size:.5rem;color:#5a4a2a;text-align:center;padding:14px 0;">レジェンドアイコンなし</div>';
+  }
+
   _itmUpdateSelectBtn();
 }
 
-// ─ 「欲しい！」「欲しい？」エモートボタン（選択中のアイコンで送れる）
+// ─ エモートボタン描画（新UIでは want-btn は相手エリアに直置き済み）
 function _itmRenderEmoteButtons() {
-  const area = document.getElementById('itm-emote-area');
-  if (!area) return;
-  area.innerHTML = `
-    <div style="font-size:.46rem;color:#7a8a6a;margin-bottom:5px;text-align:center;letter-spacing:.05em;">
-      ✨ アイコンで気持ちを伝えよう
-    </div>
-    <div style="display:flex;gap:8px;justify-content:center;align-items:center;">
-      <button onclick="itmSendEmote('want')" style="
-        display:flex;flex-direction:column;align-items:center;gap:3px;
-        padding:6px 14px;background:linear-gradient(135deg,#050a1a,#0a1025);
-        border:1.5px solid #2a5aaa;border-radius:10px;cursor:pointer;
-        color:#88aaff;font-size:.58rem;font-weight:700;transition:all .15s;
-        min-width:80px;
-      " id="itm-emote-want-btn">
-        <span id="itm-emote-want-icon" style="font-size:1.4rem;line-height:1;">🙏</span>
-        <span>欲しい！</span>
-      </button>
-      <button onclick="itmSendEmote('question')" style="
-        display:flex;flex-direction:column;align-items:center;gap:3px;
-        padding:6px 14px;background:linear-gradient(135deg,#1a0a05,#25100a);
-        border:1.5px solid #aa5a2a;border-radius:10px;cursor:pointer;
-        color:#ffaa66;font-size:.58rem;font-weight:700;transition:all .15s;
-        min-width:80px;
-      " id="itm-emote-question-btn">
-        <span id="itm-emote-question-icon" style="font-size:1.4rem;line-height:1;">🤔</span>
-        <span>欲しい？</span>
-      </button>
-    </div>
-    <div id="itm-emote-recv" style="
-      min-height:36px;display:flex;align-items:center;justify-content:center;
-      font-size:.6rem;color:#c9a84c;text-align:center;margin-top:4px;
-      background:#0a0800;border-radius:8px;padding:4px 8px;
-      border:1px solid #2a2a1a;
-    "></div>
-  `;
+  // 新UIでは itm-emote-want-btn は HTML に直接配置されているため何もしない
   _itmUpdateEmoteIcons();
 }
 
-// エモートボタンに選択中アイコンを反映
+// エモートボタンのアイコンを選択状態に合わせて更新
 function _itmUpdateEmoteIcons() {
-  const wantIconEl     = document.getElementById('itm-emote-want-icon');
-  const questionIconEl = document.getElementById('itm-emote-question-icon');
+  const wantIconEl = document.getElementById('itm-emote-want-icon');
   if (!wantIconEl) return;
-
   if (_itm.selectedWant) {
-    // 欲しいアイコンが選ばれていれば「欲しい！」ボタンに表示
-    wantIconEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedWant)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;">`;
+    wantIconEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedWant)}" style="width:22px;height:22px;object-fit:contain;border-radius:4px;">`;
   } else {
     wantIconEl.textContent = '🙏';
-  }
-  if (_itm.selectedOffer) {
-    // 渡すアイコンが選ばれていれば「欲しい？」ボタンに表示
-    questionIconEl.innerHTML = `<img src="${gachaIconUrl(_itm.selectedOffer)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;">`;
-  } else {
-    questionIconEl.textContent = '🤔';
   }
 }
 
@@ -20451,9 +20457,9 @@ async function itmSendEmote(emoteType) {
   // ボタンアニメーション
   const btn = document.getElementById('itm-emote-' + emoteType + '-btn');
   if (btn) {
-    btn.style.transform = 'scale(1.12)';
-    btn.style.opacity = '.7';
-    setTimeout(() => { btn.style.transform = ''; btn.style.opacity = ''; }, 400);
+    btn.style.transform = 'scale(1.15)';
+    btn.style.opacity = '.6';
+    setTimeout(() => { btn.style.transform = ''; btn.style.opacity = emoteType === 'want' && _itm.selectedWant ? '1' : '.5'; }, 400);
   }
 
   // エモートをサーバーに送信（セッションのフラグとして保存）
@@ -20482,50 +20488,60 @@ function _itmShowReceivedEmote(emoteType, iconId) {
 }
 
 function itmToggleWant(id) {
-  if (_itm.selectedWant === id) {
-    _itm.selectedWant = null;
-  } else {
-    if (_itm.selectedWant) {
-      const prev = document.getElementById('itm-th-' + _itm.selectedWant);
-      if (prev) { prev.style.borderColor = '#1a2a3a'; prev.style.transform = ''; }
-      const pt = document.getElementById('itm-th-tag-' + _itm.selectedWant);
-      if (pt) pt.style.display = 'none';
-    }
-    _itm.selectedWant = id;
+  // 前の選択を解除
+  if (_itm.selectedWant && _itm.selectedWant !== id) {
+    const prev = document.getElementById('itm-th-' + _itm.selectedWant);
+    if (prev) { prev.style.animation = ''; prev.style.transform = ''; prev.style.borderColor = '#1a2a4a'; }
+    const pt = document.getElementById('itm-th-tag-' + _itm.selectedWant);
+    if (pt) pt.style.display = 'none';
   }
-  const el = document.getElementById('itm-th-' + id);
-  const tag = document.getElementById('itm-th-tag-' + id);
   if (_itm.selectedWant === id) {
-    if (el) { el.style.borderColor = '#4488ff'; el.style.transform = 'scale(1.06)'; }
-    if (tag) tag.style.display = '';
-  } else {
-    if (el) { el.style.borderColor = '#1a2a3a'; el.style.transform = ''; }
+    // 同じものを再タップ → 解除
+    _itm.selectedWant = null;
+    const el = document.getElementById('itm-th-' + id);
+    if (el) { el.style.animation = ''; el.style.transform = ''; el.style.borderColor = '#1a2a4a'; }
+    const tag = document.getElementById('itm-th-tag-' + id);
     if (tag) tag.style.display = 'none';
+  } else {
+    _itm.selectedWant = id;
+    const el = document.getElementById('itm-th-' + id);
+    if (el) {
+      el.style.borderColor = '#4488ff';
+      el.style.transform = 'scale(1.08)';
+      el.style.animation = '_itmWantGlow 1.2s ease-in-out infinite';
+    }
+    const tag = document.getElementById('itm-th-tag-' + id);
+    if (tag) tag.style.display = '';
   }
   _itmUpdateSelectBtn();
   _itmUpdateEmoteIcons();
 }
 
 function itmToggleOffer(id) {
-  if (_itm.selectedOffer === id) {
-    _itm.selectedOffer = null;
-  } else {
-    if (_itm.selectedOffer) {
-      const prev = document.getElementById('itm-my-' + _itm.selectedOffer);
-      if (prev) { prev.style.borderColor = '#2a2a1a'; prev.style.transform = ''; }
-      const pt = document.getElementById('itm-my-tag-' + _itm.selectedOffer);
-      if (pt) pt.style.display = 'none';
-    }
-    _itm.selectedOffer = id;
+  // 前の選択を解除
+  if (_itm.selectedOffer && _itm.selectedOffer !== id) {
+    const prev = document.getElementById('itm-my-' + _itm.selectedOffer);
+    if (prev) { prev.style.animation = ''; prev.style.transform = ''; prev.style.borderColor = '#2a2a1a'; }
+    const pt = document.getElementById('itm-my-tag-' + _itm.selectedOffer);
+    if (pt) pt.style.display = 'none';
   }
-  const el = document.getElementById('itm-my-' + id);
-  const tag = document.getElementById('itm-my-tag-' + id);
   if (_itm.selectedOffer === id) {
-    if (el) { el.style.borderColor = '#c9a84c'; el.style.transform = 'scale(1.06)'; }
-    if (tag) tag.style.display = '';
-  } else {
-    if (el) { el.style.borderColor = '#2a2a1a'; el.style.transform = ''; }
+    // 同じものを再タップ → 解除
+    _itm.selectedOffer = null;
+    const el = document.getElementById('itm-my-' + id);
+    if (el) { el.style.animation = ''; el.style.transform = ''; el.style.borderColor = '#2a2a1a'; }
+    const tag = document.getElementById('itm-my-tag-' + id);
     if (tag) tag.style.display = 'none';
+  } else {
+    _itm.selectedOffer = id;
+    const el = document.getElementById('itm-my-' + id);
+    if (el) {
+      el.style.borderColor = '#c9a84c';
+      el.style.transform = 'scale(1.08)';
+      el.style.animation = '_itmOfferGlow 1.2s ease-in-out infinite';
+    }
+    const tag = document.getElementById('itm-my-tag-' + id);
+    if (tag) tag.style.display = '';
   }
   _itmUpdateSelectBtn();
   _itmUpdateEmoteIcons();
@@ -20533,17 +20549,45 @@ function itmToggleOffer(id) {
 
 function _itmUpdateSelectBtn() {
   const hasOffer = !!_itm.selectedOffer;
-  const btn = document.getElementById('itm-sel-confirmBtn');
-  if (!btn) return;
-  btn.style.opacity     = hasOffer ? '1' : '.4';
-  btn.style.pointerEvents = hasOffer ? '' : 'none';
+  const hasWant  = !!_itm.selectedWant;
 
+  // 確定ボタン（渡すアイコンが必須）
+  const btn = document.getElementById('itm-sel-confirmBtn');
+  if (btn) {
+    btn.style.opacity       = hasOffer ? '1' : '.4';
+    btn.style.pointerEvents = hasOffer ? '' : 'none';
+    btn.textContent = hasOffer
+      ? (hasWant ? '✓ 決定して交換を待つ（欲しい指定あり）' : '✓ 決定して交換を待つ')
+      : '✓ 決定して交換を待つ';
+  }
+
+  // 渡すプレビュー
   const op = document.getElementById('itm-sel-offerPreview');
   if (op) {
     op.innerHTML = _itm.selectedOffer
       ? `<img src="${gachaIconUrl(_itm.selectedOffer)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`
-      : '<span style="font-size:.44rem;color:#5a4a2a;">未選択</span>';
-    op.style.borderColor = _itm.selectedOffer ? '#c9a84c' : '#2a2a1a';
+      : '<span style="font-size:.35rem;color:#5a4a2a;">未選択</span>';
+    op.style.borderStyle  = _itm.selectedOffer ? 'solid' : 'dashed';
+    op.style.borderColor  = _itm.selectedOffer ? '#c9a84c' : '#3a2a0a';
+    op.style.animation    = _itm.selectedOffer ? '_itmOfferGlow 1.4s ease-in-out infinite' : '';
+  }
+
+  // 欲しいプレビュー
+  const wp = document.getElementById('itm-sel-wantPreview');
+  if (wp) {
+    wp.innerHTML = _itm.selectedWant
+      ? `<img src="${gachaIconUrl(_itm.selectedWant)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`
+      : '<span style="font-size:.35rem;color:#2a4a7a;">未選択</span>';
+    wp.style.borderStyle  = _itm.selectedWant ? 'solid' : 'dashed';
+    wp.style.borderColor  = _itm.selectedWant ? '#4488ff' : '#1a2a4a';
+    wp.style.animation    = _itm.selectedWant ? '_itmWantGlow 1.4s ease-in-out infinite' : '';
+  }
+
+  // 「欲しい！と送る」ボタンのON/OFF
+  const emoteWantBtn = document.getElementById('itm-emote-want-btn');
+  if (emoteWantBtn) {
+    emoteWantBtn.style.opacity       = hasWant ? '1' : '.5';
+    emoteWantBtn.style.pointerEvents = hasWant ? '' : 'none';
   }
 }
 
@@ -20560,6 +20604,7 @@ async function itmConfirmSelect() {
       body: JSON.stringify({
         offerId:   _itm.offerId,
         offerIcon: _itm.selectedOffer,
+        wantIcon:  _itm.selectedWant || null,
       }),
     });
     const data = await res.json();
@@ -24002,6 +24047,14 @@ function plantMineRinshan(ri){
 <style>
 @keyframes _itmEmotePop { 0%{transform:scale(.7);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
 @keyframes _itmConfirmPulse { 0%,100%{box-shadow:0 0 0 0 #f0d08055} 50%{box-shadow:0 0 0 8px #f0d08000} }
+@keyframes _itmWantGlow {
+  0%,100%{ box-shadow:0 0 6px 2px #4488ffaa, inset 0 0 8px #2255cc44; border-color:#4488ff; }
+  50%{     box-shadow:0 0 18px 6px #88bbffcc, inset 0 0 16px #4488ff66; border-color:#aaddff; }
+}
+@keyframes _itmOfferGlow {
+  0%,100%{ box-shadow:0 0 6px 2px #c9a84caa, inset 0 0 8px #88661144; border-color:#c9a84c; }
+  50%{     box-shadow:0 0 18px 6px #ffd700cc, inset 0 0 16px #c9a84c66; border-color:#ffe066; }
+}
 </style>
 <div id="iconTradeModal" style="
   position:fixed;inset:0;z-index:250;
@@ -24046,47 +24099,87 @@ function plantMineRinshan(ri){
       ">キャンセル</button>
     </div>
 
-    <!-- ── Phase SELECT: アイコン選択（両者同時） ── -->
-    <div id="itm-phase-SELECT" style="display:none;flex-direction:column;gap:8px;overflow-y:auto;flex:1;">
+    <!-- ── Phase SELECT: アイコン選択（向かい合わせUI） ── -->
+    <div id="itm-phase-SELECT" style="display:none;flex-direction:column;gap:0;overflow-y:auto;flex:1;">
 
-      <!-- 選択プレビュー（上部固定） -->
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;
-        background:#0a0e08;border:1px solid #2a2a1a;border-radius:10px;padding:8px 12px;">
-        <div style="text-align:center;flex:1;">
-          <div style="font-size:.46rem;color:#c9a84c;margin-bottom:4px;">渡すアイコン（自分から）</div>
-          <div id="itm-sel-offerPreview" style="
-            width:54px;height:54px;border-radius:8px;border:2px dashed #2a2a1a;
-            background:#0a0800;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
-          "><span style="font-size:.44rem;color:#5a4a2a;">未選択</span></div>
+      <!-- ▲ 相手エリア（青系） -->
+      <div id="itm-sel-theirSection" style="
+        background:linear-gradient(180deg,#04080f,#070d1a);
+        border:1.5px solid #1a2a4a;border-radius:10px 10px 0 0;
+        padding:8px 10px 10px;
+      ">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+          <span style="font-size:.9rem;">👤</span>
+          <span id="itm-sel-theirName" style="font-size:.62rem;font-weight:700;color:#88aaee;letter-spacing:.04em;"></span>
+          <span style="font-size:.43rem;color:#2a4a7a;margin-left:auto;">タップ → 欲しい！</span>
+        </div>
+        <div id="itm-sel-theirGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;min-height:50px;"></div>
+        <div style="margin-top:6px;display:flex;justify-content:flex-end;">
+          <button id="itm-emote-want-btn" onclick="itmSendEmote('want')" style="
+            display:flex;align-items:center;gap:4px;
+            padding:3px 9px;background:rgba(30,60,120,.4);
+            border:1px solid #2a5aaa;border-radius:7px;cursor:pointer;
+            color:#88aaff;font-size:.52rem;font-weight:700;transition:all .15s;
+            opacity:.5;pointer-events:none;
+          ">
+            <span id="itm-emote-want-icon" style="font-size:.9rem;line-height:1;">🙏</span>
+            <span>欲しい！と送る</span>
+          </button>
         </div>
       </div>
 
-      <!-- 「欲しい！」「欲しい？」エモートエリア -->
-      <div id="itm-emote-area" style="flex-shrink:0;"></div>
-
-      <!-- 相手のアイコン（エモート用に非表示で保持） -->
-      <div id="itm-sel-theirSection" style="display:none;">
-        <div id="itm-sel-theirGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;min-height:44px;"></div>
+      <!-- ── 中央プレビュー帯 ── -->
+      <div style="
+        display:flex;align-items:center;justify-content:center;gap:10px;
+        padding:7px 14px;flex-shrink:0;
+        background:linear-gradient(180deg,#070d1a 0%,#0c0c0c 50%,#0a0800 100%);
+        border-left:1.5px solid #2a2a2a;border-right:1.5px solid #2a2a2a;
+      ">
+        <div style="text-align:center;flex:1;">
+          <div style="font-size:.38rem;color:#4a6aaa;margin-bottom:3px;">🙏 欲しい（任意）</div>
+          <div id="itm-sel-wantPreview" style="
+            width:44px;height:44px;border-radius:7px;border:2px dashed #1a2a4a;
+            background:#04080f;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
+          "><span style="font-size:.35rem;color:#2a4a7a;">未選択</span></div>
+        </div>
+        <div style="font-size:1.5rem;color:#2a3a2a;flex-shrink:0;line-height:1;">⇅</div>
+        <div style="text-align:center;flex:1;">
+          <div style="font-size:.38rem;color:#8a6a2a;margin-bottom:3px;">💎 渡す（必須）</div>
+          <div id="itm-sel-offerPreview" style="
+            width:44px;height:44px;border-radius:7px;border:2px dashed #3a2a0a;
+            background:#0a0800;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
+          "><span style="font-size:.35rem;color:#5a4a2a;">未選択</span></div>
+        </div>
       </div>
 
-      <div style="border-top:1px solid #1a1a0e;flex-shrink:0;"></div>
-
-      <!-- 自分のアイコン -->
-      <div>
-        <div style="font-size:.55rem;color:#c9a84c;letter-spacing:.07em;margin-bottom:5px;">🏆 あなたのレジェンドアイコン <span style="color:#7a6a3a;font-size:.48rem;">（渡すものを1つ選択）</span></div>
-        <div id="itm-sel-myGrid" style="
-          display:grid;grid-template-columns:repeat(5,1fr);gap:5px;min-height:44px;
-        "></div>
+      <!-- ▼ 自分エリア（金系） -->
+      <div style="
+        background:linear-gradient(180deg,#0a0800,#0c0900);
+        border:1.5px solid #3a2a0a;border-radius:0 0 10px 10px;
+        padding:8px 10px 10px;
+      ">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+          <span style="font-size:.43rem;color:#6a5a1a;">タップ → 渡す選択</span>
+          <span style="margin-left:auto;font-size:.62rem;font-weight:700;color:#c9a84c;letter-spacing:.04em;">あなた</span>
+          <span style="font-size:.9rem;">🙋</span>
+        </div>
+        <div id="itm-sel-myGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;min-height:50px;"></div>
+        <button id="itm-sel-confirmBtn" onclick="itmConfirmSelect()" style="
+          margin-top:8px;width:100%;padding:11px;
+          background:linear-gradient(135deg,#1a1200,#2a1e00);
+          border:1.5px solid #c9a84c;border-radius:9px;
+          color:#f0d080;font-size:.72rem;font-weight:700;cursor:pointer;
+          opacity:.4;pointer-events:none;transition:all .2s;
+        ">✓ 決定して交換を待つ</button>
       </div>
 
-      <!-- 確定ボタン -->
-      <button id="itm-sel-confirmBtn" onclick="itmConfirmSelect()" style="
-        flex-shrink:0;width:100%;padding:12px;
-        background:linear-gradient(135deg,#1a1200,#2a1e00);
-        border:1.5px solid #c9a84c;border-radius:9px;
-        color:#f0d080;font-size:.76rem;font-weight:700;cursor:pointer;
-        opacity:.4;pointer-events:none;transition:all .2s;
-      ">✓ この内容で決定する</button>
+      <!-- エモート受信・エモートエリア -->
+      <div id="itm-emote-recv" style="
+        min-height:26px;display:flex;align-items:center;justify-content:center;
+        font-size:.56rem;color:#c9a84c;text-align:center;margin-top:5px;
+        border-radius:7px;padding:3px 8px;flex-shrink:0;
+      "></div>
+      <div id="itm-emote-area" style="display:none;"></div>
     </div>
 
     <!-- ── Phase CONFIRM: 両者に「交換しますか？」確認 ── -->

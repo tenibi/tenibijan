@@ -3589,6 +3589,14 @@ body{
           </div>
           <span id="gpVpadLabelTitleSetting" style="font-size:.58rem;color:#4a6a5a;width:120px;">OFF</span>
         </div>
+        <!-- 対戦画面 上下位置 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🖥️ 対戦画面 上下</span>
+          <button onclick="_gameScreenOffsetStep(-10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#88ccff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▲</button>
+          <span id="gameScreenOffsetValTitle" style="font-size:.58rem;color:#88ccff;width:36px;text-align:center;">0px</span>
+          <button onclick="_gameScreenOffsetStep(10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#88ccff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▼</button>
+          <button onclick="_gameScreenOffsetReset()" style="width:28px;height:28px;background:#041018;border:1px solid #2a2a1a;border-radius:6px;color:#7a7a5a;font-size:.58rem;cursor:pointer;flex-shrink:0;">↺</button>
+        </div>
         <!-- 仮想パッド位置（下方向オフセット） -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
           <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ 仮想パッド位置</span>
@@ -4933,6 +4941,7 @@ function saveSettings(){
       gpRumbleOn: typeof window.gpGetRumbleOn === 'function' ? window.gpGetRumbleOn() : true,
       gpVpadOn: typeof window.gpGetVpadOn === 'function' ? window.gpGetVpadOn() : false,
       gpVpadOffsetY: typeof window.gpGetVpadOffsetY === 'function' ? window.gpGetVpadOffsetY() : 0,
+      gameScreenOffsetY: window._gameScreenOffsetY || 0,
       iconVoiceScale: Object.assign({}, iconVoiceScale),
       seScale: Object.fromEntries(
         ['draw','discard','ron','tsumo','riichi','pon','kan','kita','yakuman','light','yami','haku','steal','mine','myTurn','countdown','voice']
@@ -5077,6 +5086,10 @@ function loadSettings(){
     if(data.gpVpadOffsetY != null && typeof window.gpSetVpadOffsetY === 'function'){
       window.gpSetVpadOffsetY(+data.gpVpadOffsetY);
       _applyGpVpadOffsetUI();
+    }
+    // 対戦画面 上下オフセット
+    if(data.gameScreenOffsetY != null){
+      _applyGameScreenOffset(+data.gameScreenOffsetY);
     }
     // レジェンドアイコン個別ボイス音量
     if(data.iconVoiceScale){
@@ -20264,24 +20277,19 @@ async function _itmPollQueue() {
 async function _itmLoadIconsAndEnterSelect() {
   _itmSetBanner('アイコンを読み込み中…', '#88ccaa');
   try {
-    const [meRes, theirRes] = await Promise.all([
-      authFetch('/api/profile'),
-      authFetch('/api/icon-trade/friend-icons/' + encodeURIComponent(_itm.friendId)),
-    ]);
-    const meData    = await meRes.json();
-    const theirData = await theirRes.json();
-    if (!theirData.ok) { _itmSetBanner(theirData.error || 'エラー', '#cc6666'); return; }
+    const meRes = await authFetch('/api/profile');
+    const meData = await meRes.json();
 
     _itm.myIcons    = Object.keys(meData.gachaIconCounts || {})
       .filter(id => /^L\d{2}$/.test(id) && (meData.gachaIconCounts[id] || 0) >= 1);
     if (!_itm.myIcons.length)
       _itm.myIcons = (meData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
-    _itm.theirIcons = theirData.legendIcons || [];
+    _itm.theirIcons = [];
 
     // ★ 両者同時にSELECTフェーズへ
     _itmShowPhase('SELECT');
     _itmRenderSelectGrids();
-    _itmSetBanner('💡 渡すアイコンと欲しいアイコンをそれぞれ選んでください', '#88ccaa');
+    _itmSetBanner('💡 渡すアイコンを1つ選んでください', '#88ccaa');
 
     if (_itm.pollTimer) clearInterval(_itm.pollTimer);
     _itm.pollTimer = setInterval(_itmPollSession, 2000);
@@ -20292,23 +20300,11 @@ async function _itmLoadIconsAndEnterSelect() {
 
 // ─ SELECT グリッド描画
 function _itmRenderSelectGrids() {
-  // 相手のアイコン（欲しいものを選ぶ）
+  // 相手のアイコングリッドは非表示にする（エモート用に selectedWant は残す）
   const tg = document.getElementById('itm-sel-theirGrid');
-  tg.innerHTML = _itm.theirIcons.length
-    ? _itm.theirIcons.map(id => `
-        <div id="itm-th-${id}" onclick="itmToggleWant('${id}')" style="
-          aspect-ratio:3/4;border-radius:7px;border:2px solid #1a2a3a;background:#040810;
-          cursor:pointer;overflow:hidden;position:relative;transition:border-color .15s,transform .1s;
-          display:flex;align-items:center;justify-content:center;
-        ">
-          <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
-          <div id="itm-th-tag-${id}" style="
-            position:absolute;bottom:0;left:0;right:0;
-            background:rgba(0,120,255,.8);color:#fff;font-size:.38rem;text-align:center;
-            padding:2px 0;display:none;font-weight:700;
-          ">🙏 欲しい！</div>
-        </div>`).join('')
-    : '<div style="grid-column:1/-1;font-size:.52rem;color:#3a5a7a;text-align:center;padding:10px 0;">レジェンドアイコンなし</div>';
+  if (tg) tg.innerHTML = '';
+  const theirSection = document.getElementById('itm-sel-theirSection');
+  if (theirSection) theirSection.style.display = 'none';
 
   // 自分のアイコン（渡すものを選ぶ）
   const mg = document.getElementById('itm-sel-myGrid');
@@ -20487,19 +20483,12 @@ function itmToggleOffer(id) {
 }
 
 function _itmUpdateSelectBtn() {
-  const hasBoth = _itm.selectedWant && _itm.selectedOffer;
+  const hasOffer = !!_itm.selectedOffer;
   const btn = document.getElementById('itm-sel-confirmBtn');
   if (!btn) return;
-  btn.style.opacity     = hasBoth ? '1' : '.4';
-  btn.style.pointerEvents = hasBoth ? '' : 'none';
+  btn.style.opacity     = hasOffer ? '1' : '.4';
+  btn.style.pointerEvents = hasOffer ? '' : 'none';
 
-  const wp = document.getElementById('itm-sel-wantPreview');
-  if (wp) {
-    wp.innerHTML = _itm.selectedWant
-      ? `<img src="${gachaIconUrl(_itm.selectedWant)}" style="width:100%;height:100%;object-fit:contain;padding:3px;">`
-      : '<span style="font-size:.44rem;color:#3a5a7a;">未選択</span>';
-    wp.style.borderColor = _itm.selectedWant ? '#4488ff' : '#1a2a3a';
-  }
   const op = document.getElementById('itm-sel-offerPreview');
   if (op) {
     op.innerHTML = _itm.selectedOffer
@@ -20511,7 +20500,7 @@ function _itmUpdateSelectBtn() {
 
 // ─ 選択確定 → サーバーに送信してCONFIRM待ちへ
 async function itmConfirmSelect() {
-  if (!_itm.selectedWant || !_itm.selectedOffer) return;
+  if (!_itm.selectedOffer) return;
   const btn = document.getElementById('itm-sel-confirmBtn');
   if (btn) { btn.style.opacity = '.5'; btn.style.pointerEvents = 'none'; }
   _itmSetBanner('送信中…', '#88ccaa');
@@ -20521,7 +20510,6 @@ async function itmConfirmSelect() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         offerId:   _itm.offerId,
-        wantIcon:  _itm.selectedWant,
         offerIcon: _itm.selectedOffer,
       }),
     });
@@ -23524,6 +23512,14 @@ function plantMineRinshan(ri){
               </div>
               <span id="gpVpadLabelHdr" style="font-size:.58rem;color:#4a6a5a;width:80px;">OFF</span>
             </div>
+            <!-- 対戦画面 上下位置 -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🖥️ 対戦画面 上下</span>
+              <button onclick="_gameScreenOffsetStep(-10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#88ccff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▲</button>
+              <span id="gameScreenOffsetValHdr" style="font-size:.58rem;color:#88ccff;width:36px;text-align:center;">0px</span>
+              <button onclick="_gameScreenOffsetStep(10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#88ccff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▼</button>
+              <button onclick="_gameScreenOffsetReset()" style="width:28px;height:28px;background:#041018;border:1px solid #2a2a1a;border-radius:6px;color:#7a7a5a;font-size:.58rem;cursor:pointer;flex-shrink:0;">↺</button>
+            </div>
             <!-- 仮想パッド位置（下方向オフセット） -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
               <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ 仮想パッド位置</span>
@@ -24008,15 +24004,7 @@ function plantMineRinshan(ri){
       <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;
         background:#0a0e08;border:1px solid #2a2a1a;border-radius:10px;padding:8px 12px;">
         <div style="text-align:center;flex:1;">
-          <div style="font-size:.46rem;color:#88ccff;margin-bottom:4px;">欲しいもの（相手から）</div>
-          <div id="itm-sel-wantPreview" style="
-            width:54px;height:54px;border-radius:8px;border:2px dashed #1a2a3a;
-            background:#040810;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
-          "><span style="font-size:.44rem;color:#3a5a7a;">未選択</span></div>
-        </div>
-        <div style="font-size:1.4rem;color:#c9a84c;flex-shrink:0;">⇄</div>
-        <div style="text-align:center;flex:1;">
-          <div style="font-size:.46rem;color:#c9a84c;margin-bottom:4px;">差し出すもの（自分から）</div>
+          <div style="font-size:.46rem;color:#c9a84c;margin-bottom:4px;">渡すアイコン（自分から）</div>
           <div id="itm-sel-offerPreview" style="
             width:54px;height:54px;border-radius:8px;border:2px dashed #2a2a1a;
             background:#0a0800;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
@@ -24027,19 +24015,16 @@ function plantMineRinshan(ri){
       <!-- 「欲しい！」「欲しい？」エモートエリア -->
       <div id="itm-emote-area" style="flex-shrink:0;"></div>
 
-      <!-- 相手のアイコン -->
-      <div>
-        <div style="font-size:.55rem;color:#88ccff;letter-spacing:.07em;margin-bottom:5px;">🏆 相手のレジェンドアイコン <span style="color:#5a7aaa;font-size:.48rem;">（欲しいものを選択）</span></div>
-        <div id="itm-sel-theirGrid" style="
-          display:grid;grid-template-columns:repeat(5,1fr);gap:5px;min-height:44px;
-        "></div>
+      <!-- 相手のアイコン（エモート用に非表示で保持） -->
+      <div id="itm-sel-theirSection" style="display:none;">
+        <div id="itm-sel-theirGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;min-height:44px;"></div>
       </div>
 
       <div style="border-top:1px solid #1a1a0e;flex-shrink:0;"></div>
 
       <!-- 自分のアイコン -->
       <div>
-        <div style="font-size:.55rem;color:#c9a84c;letter-spacing:.07em;margin-bottom:5px;">🏆 あなたのレジェンドアイコン <span style="color:#7a6a3a;font-size:.48rem;">（渡すものを選択）</span></div>
+        <div style="font-size:.55rem;color:#c9a84c;letter-spacing:.07em;margin-bottom:5px;">🏆 あなたのレジェンドアイコン <span style="color:#7a6a3a;font-size:.48rem;">（渡すものを1つ選択）</span></div>
         <div id="itm-sel-myGrid" style="
           display:grid;grid-template-columns:repeat(5,1fr);gap:5px;min-height:44px;
         "></div>
@@ -24113,6 +24098,9 @@ function plantMineRinshan(ri){
         color:#88ee66;font-size:.74rem;font-weight:700;cursor:pointer;
       ">✓ 閉じる</button>
     </div>
+
+  </div>
+</div>
 
 <!-- ===== NEW演出スポットライトモーダル ===== -->
 <div id="gachaNewSpotlight" onclick="gnsOnOverlayClick()">
@@ -26627,8 +26615,33 @@ if(_origOpenProfile){
         window.gpSetVpadOffsetY(+data.gpVpadOffsetY);
         if (typeof _applyGpVpadOffsetUI === 'function') _applyGpVpadOffsetUI();
       }
+      // 対戦画面 上下オフセット
+      if (data.gameScreenOffsetY != null && typeof _applyGameScreenOffset === 'function') {
+        _applyGameScreenOffset(+data.gameScreenOffsetY);
+      }
     } catch(e) {}
   })();
 
 })();
+
+// ── 対戦画面 上下オフセット ──────────────────────────────
+window._gameScreenOffsetY = 0;
+function _applyGameScreenOffset(v) {
+  v = Math.max(-300, Math.min(300, +v || 0));
+  window._gameScreenOffsetY = v;
+  const el = document.getElementById('gameScreen');
+  if (el) el.style.transform = v !== 0 ? `translateY(${v}px)` : '';
+  const label = v > 0 ? '+' + v + 'px' : v + 'px';
+  const t = document.getElementById('gameScreenOffsetValTitle');
+  const h = document.getElementById('gameScreenOffsetValHdr');
+  if (t) t.textContent = label;
+  if (h) h.textContent = label;
+  if (typeof saveSettings === 'function') saveSettings();
+}
+function _gameScreenOffsetStep(delta) {
+  _applyGameScreenOffset((window._gameScreenOffsetY || 0) + delta);
+}
+function _gameScreenOffsetReset() {
+  _applyGameScreenOffset(0);
+}
 </script>

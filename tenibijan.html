@@ -200,6 +200,10 @@ window.addEventListener('beforeunload', ()=>{
 // ── 自宅サーバーURL ───────────────────────────────────────────
 const BACKEND = "https://tenibijan.duckdns.org";
 
+// ── ローカルテストモード ──────────────────────────────────────
+// true にすると: ログインスキップ・サーバー通信モック・即CPU戦開始
+const LOCAL_TEST_MODE = false;
+
 // ── PeerJS: TURN認証情報付きでPeerを生成するヘルパー ──────────
 // /api/turn-credentialsからiceServersを取得し、失敗時はSTUNのみで続行
 async function _createPeer(peerId) {
@@ -235,6 +239,14 @@ document.addEventListener('visibilitychange', () => {
 // 401が返ったらセッション切れとみなし、jwt_tokenを削除してGoogleログインへリダイレクト
 let _authRedirecting = false; // 二重リダイレクト防止フラグ
 function authFetch(path, opts = {}, noRedirect = false) {
+  // ローカルテストモード: サーバー通信をスキップ
+  if(LOCAL_TEST_MODE){
+    return Promise.resolve({
+      ok: true, status: 200,
+      json: ()=>Promise.resolve({}),
+      text: ()=>Promise.resolve('{}')
+    });
+  }
   const token = localStorage.getItem('jwt_token');
   const headers = Object.assign({}, opts.headers || {});
   if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -4182,155 +4194,6 @@ body{
 
 <!-- GAME -->
 <div id="gameScreen">
-  <!-- ══════════ 仮想コントローラー ══════════ -->
-  <div id="vpadOverlay" style="display:none;position:fixed;inset:0;z-index:19000;pointer-events:none;">
-    <!-- 十字キー（左下） -->
-    <div id="vpadDpad" style="
-      position:absolute;bottom:24px;left:20px;
-      width:138px;height:138px;
-      pointer-events:auto;user-select:none;-webkit-user-select:none;
-    ">
-      <!-- 上 -->
-      <div data-vpad="up" style="
-        position:absolute;left:50%;top:0;transform:translateX(-50%);
-        width:44px;height:44px;border-radius:8px 8px 4px 4px;
-        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
-        display:flex;align-items:center;justify-content:center;
-        font-size:1.3rem;color:#c9a84c;cursor:pointer;
-        -webkit-tap-highlight-color:transparent;touch-action:none;
-      ">▲</div>
-      <!-- 下 -->
-      <div data-vpad="down" style="
-        position:absolute;left:50%;bottom:0;transform:translateX(-50%);
-        width:44px;height:44px;border-radius:4px 4px 8px 8px;
-        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
-        display:flex;align-items:center;justify-content:center;
-        font-size:1.3rem;color:#c9a84c;cursor:pointer;
-        -webkit-tap-highlight-color:transparent;touch-action:none;
-      ">▼</div>
-      <!-- 左 -->
-      <div data-vpad="left" style="
-        position:absolute;top:50%;left:0;transform:translateY(-50%);
-        width:44px;height:44px;border-radius:8px 4px 4px 8px;
-        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
-        display:flex;align-items:center;justify-content:center;
-        font-size:1.3rem;color:#c9a84c;cursor:pointer;
-        -webkit-tap-highlight-color:transparent;touch-action:none;
-      ">◀</div>
-      <!-- 右 -->
-      <div data-vpad="right" style="
-        position:absolute;top:50%;right:0;transform:translateY(-50%);
-        width:44px;height:44px;border-radius:4px 8px 8px 4px;
-        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
-        display:flex;align-items:center;justify-content:center;
-        font-size:1.3rem;color:#c9a84c;cursor:pointer;
-        -webkit-tap-highlight-color:transparent;touch-action:none;
-      ">▶</div>
-      <!-- 中心 -->
-      <div style="
-        position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-        width:34px;height:34px;border-radius:50%;
-        background:rgba(10,20,15,0.6);border:1px solid #1a3a2a;
-        pointer-events:none;
-      "></div>
-    </div>
-    <!-- AボタンとBボタン（右下） -->
-    <div style="
-      position:absolute;bottom:24px;right:20px;
-      width:120px;height:120px;
-      pointer-events:auto;user-select:none;-webkit-user-select:none;
-    ">
-      <!-- B（キャンセル・左） -->
-      <div data-vpad="skip" style="
-        position:absolute;left:0;top:50%;transform:translateY(-50%);
-        width:52px;height:52px;border-radius:50%;
-        background:rgba(10,20,15,0.82);border:2px solid #5a3a2a;
-        display:flex;align-items:center;justify-content:center;
-        font-size:.7rem;color:#cc8844;font-weight:700;cursor:pointer;
-        flex-direction:column;gap:1px;
-        -webkit-tap-highlight-color:transparent;touch-action:none;
-      "><span style="font-size:.85rem;">B</span><span style="font-size:.5rem;opacity:.7;">キャンセル</span></div>
-      <!-- A（決定・右） -->
-      <div data-vpad="select_tile" style="
-        position:absolute;right:0;top:50%;transform:translateY(-50%);
-        width:52px;height:52px;border-radius:50%;
-        background:rgba(10,20,15,0.82);border:2px solid #2a5a3a;
-        display:flex;align-items:center;justify-content:center;
-        font-size:.7rem;color:#44cc88;font-weight:700;cursor:pointer;
-        flex-direction:column;gap:1px;
-        -webkit-tap-highlight-color:transparent;touch-action:none;
-      "><span style="font-size:.85rem;">A</span><span style="font-size:.5rem;opacity:.7;">決定</span></div>
-    </div>
-  </div>
-  <script>
-  // ══════════ 仮想パッド ══════════
-  (function(){
-    const REPEAT_DELAY = 400;
-    const REPEAT_INTERVAL = 160;
-    const DIRS = ['up','down','left','right'];
-    let _timers = {};
-
-    function _press(action){
-      if(typeof _dispatchPhys === 'function'){
-        // _dispatchPhys はクロージャ内なので window経由で呼べないが、
-        // postMessage経由で自前ゲームパッドイベントとして送る
-      }
-      // 直接 _execAction を公開関数経由で呼ぶ
-      if(typeof window.__vpadDispatch === 'function') window.__vpadDispatch(action);
-    }
-
-    function _startRepeat(action){
-      _press(action);
-      if(DIRS.includes(action)){
-        _timers[action] = setTimeout(function tick(){
-          _press(action);
-          _timers[action] = setTimeout(tick, REPEAT_INTERVAL);
-        }, REPEAT_DELAY);
-      }
-    }
-
-    function _stopRepeat(action){
-      if(_timers[action]){ clearTimeout(_timers[action]); delete _timers[action]; }
-    }
-
-    function _attach(el){
-      const action = el.dataset.vpad;
-      if(!action) return;
-
-      const _activeClass = ()=>{
-        el.style.background = 'rgba(40,80,50,0.92)';
-        el.style.transform = (el.style.transform||'').replace('scale(0.88)','') + ' scale(0.88)';
-      };
-      const _inactiveClass = ()=>{
-        el.style.background = 'rgba(10,20,15,0.82)';
-        el.style.transform = (el.style.transform||'').replace(' scale(0.88)','').replace('scale(0.88)','');
-      };
-
-      el.addEventListener('touchstart', e=>{
-        e.preventDefault();
-        _activeClass();
-        _startRepeat(action);
-      }, {passive:false});
-      el.addEventListener('touchend', e=>{
-        e.preventDefault();
-        _inactiveClass();
-        _stopRepeat(action);
-      }, {passive:false});
-      el.addEventListener('touchcancel', e=>{
-        _inactiveClass();
-        _stopRepeat(action);
-      });
-      // マウスでも動作
-      el.addEventListener('mousedown', e=>{ e.preventDefault(); _activeClass(); _startRepeat(action); });
-      el.addEventListener('mouseup',   e=>{ _inactiveClass(); _stopRepeat(action); });
-      el.addEventListener('mouseleave',e=>{ _inactiveClass(); _stopRepeat(action); });
-    }
-
-    document.addEventListener('DOMContentLoaded', ()=>{
-      document.querySelectorAll('[data-vpad]').forEach(_attach);
-    });
-  })();
-  </script>
   <div class="game-header" style="display:none;">
     <div id="timerDisplay" style="display:none!important;">
       <div class="timer-bar-wrap" style="width:80px;height:8px;background:#111;border-radius:4px;overflow:hidden;border:1px solid #223;">
@@ -4482,6 +4345,156 @@ body{
 <!-- pen panel removed: direct wall canvas drawing -->
 
 </div>
+
+<!-- ══════════ 仮想コントローラー ══════════ -->
+  <div id="vpadOverlay" style="display:none;position:fixed;left:0;right:0;top:0;bottom:0;z-index:19000;pointer-events:none;overflow:visible;">
+    <!-- 十字キー（左下） -->
+    <div id="vpadDpad" style="
+      position:absolute;bottom:24px;left:20px;
+      width:138px;height:138px;
+      pointer-events:auto;user-select:none;-webkit-user-select:none;
+    ">
+      <!-- 上 -->
+      <div data-vpad="up" style="
+        position:absolute;left:50%;top:0;transform:translateX(-50%);
+        width:44px;height:44px;border-radius:8px 8px 4px 4px;
+        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:#c9a84c;cursor:pointer;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      ">▲</div>
+      <!-- 下 -->
+      <div data-vpad="down" style="
+        position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+        width:44px;height:44px;border-radius:4px 4px 8px 8px;
+        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:#c9a84c;cursor:pointer;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      ">▼</div>
+      <!-- 左 -->
+      <div data-vpad="left" style="
+        position:absolute;top:50%;left:0;transform:translateY(-50%);
+        width:44px;height:44px;border-radius:8px 4px 4px 8px;
+        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:#c9a84c;cursor:pointer;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      ">◀</div>
+      <!-- 右 -->
+      <div data-vpad="right" style="
+        position:absolute;top:50%;right:0;transform:translateY(-50%);
+        width:44px;height:44px;border-radius:4px 8px 8px 4px;
+        background:rgba(10,20,15,0.82);border:1px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.3rem;color:#c9a84c;cursor:pointer;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      ">▶</div>
+      <!-- 中心 -->
+      <div style="
+        position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+        width:34px;height:34px;border-radius:50%;
+        background:rgba(10,20,15,0.6);border:1px solid #1a3a2a;
+        pointer-events:none;
+      "></div>
+    </div>
+    <!-- AボタンとBボタン（右下） -->
+    <div style="
+      position:absolute;bottom:24px;right:20px;
+      width:120px;height:120px;
+      pointer-events:auto;user-select:none;-webkit-user-select:none;
+    ">
+      <!-- B（キャンセル・左） -->
+      <div data-vpad="skip" style="
+        position:absolute;left:0;top:50%;transform:translateY(-50%);
+        width:52px;height:52px;border-radius:50%;
+        background:rgba(10,20,15,0.82);border:2px solid #5a3a2a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:.7rem;color:#cc8844;font-weight:700;cursor:pointer;
+        flex-direction:column;gap:1px;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      "><span style="font-size:.85rem;">B</span><span style="font-size:.5rem;opacity:.7;">キャンセル</span></div>
+      <!-- A（決定・右） -->
+      <div data-vpad="select_tile" style="
+        position:absolute;right:0;top:50%;transform:translateY(-50%);
+        width:52px;height:52px;border-radius:50%;
+        background:rgba(10,20,15,0.82);border:2px solid #2a5a3a;
+        display:flex;align-items:center;justify-content:center;
+        font-size:.7rem;color:#44cc88;font-weight:700;cursor:pointer;
+        flex-direction:column;gap:1px;
+        -webkit-tap-highlight-color:transparent;touch-action:none;
+      "><span style="font-size:.85rem;">A</span><span style="font-size:.5rem;opacity:.7;">決定</span></div>
+    </div>
+  </div>
+  <script>
+  // ══════════ 仮想パッド ══════════
+  (function(){
+    const REPEAT_DELAY = 400;
+    const REPEAT_INTERVAL = 160;
+    const DIRS = ['up','down','left','right'];
+    let _timers = {};
+
+    function _press(action){
+      if(typeof _dispatchPhys === 'function'){
+        // _dispatchPhys はクロージャ内なので window経由で呼べないが、
+        // postMessage経由で自前ゲームパッドイベントとして送る
+      }
+      // 直接 _execAction を公開関数経由で呼ぶ
+      if(typeof window.__vpadDispatch === 'function') window.__vpadDispatch(action);
+    }
+
+    function _startRepeat(action){
+      _press(action);
+      if(DIRS.includes(action)){
+        _timers[action] = setTimeout(function tick(){
+          _press(action);
+          _timers[action] = setTimeout(tick, REPEAT_INTERVAL);
+        }, REPEAT_DELAY);
+      }
+    }
+
+    function _stopRepeat(action){
+      if(_timers[action]){ clearTimeout(_timers[action]); delete _timers[action]; }
+    }
+
+    function _attach(el){
+      const action = el.dataset.vpad;
+      if(!action) return;
+
+      const _activeClass = ()=>{
+        el.style.background = 'rgba(40,80,50,0.92)';
+        el.style.transform = (el.style.transform||'').replace('scale(0.88)','') + ' scale(0.88)';
+      };
+      const _inactiveClass = ()=>{
+        el.style.background = 'rgba(10,20,15,0.82)';
+        el.style.transform = (el.style.transform||'').replace(' scale(0.88)','').replace('scale(0.88)','');
+      };
+
+      el.addEventListener('touchstart', e=>{
+        e.preventDefault();
+        _activeClass();
+        _startRepeat(action);
+      }, {passive:false});
+      el.addEventListener('touchend', e=>{
+        e.preventDefault();
+        _inactiveClass();
+        _stopRepeat(action);
+      }, {passive:false});
+      el.addEventListener('touchcancel', e=>{
+        _inactiveClass();
+        _stopRepeat(action);
+      });
+      // マウスでも動作
+      el.addEventListener('mousedown', e=>{ e.preventDefault(); _activeClass(); _startRepeat(action); });
+      el.addEventListener('mouseup',   e=>{ _inactiveClass(); _stopRepeat(action); });
+      el.addEventListener('mouseleave',e=>{ _inactiveClass(); _stopRepeat(action); });
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      document.querySelectorAll('[data-vpad]').forEach(_attach);
+    });
+  })();
+  </script>
 
 <!-- 山牌拡大オーバーレイ -->
 <div id="wallExpandOverlay" onclick="closeWallExpand(event)">
@@ -23192,6 +23205,18 @@ function doTwitchLogout(){
 
 // Show profile on first load if no name saved
 (function(){
+  // ── ローカルテストモード: ログイン・サーバーを完全スキップ ──
+  if(LOCAL_TEST_MODE){
+    PROFILE.name = 'テスト';
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('lobby').style.display='';
+    loadSettings();
+    loadCpuGameSettings();
+    renderCpuSlots();
+    // 少し待ってからCPU戦を即開始
+    setTimeout(()=>{ initGame(); }, 300);
+    return;
+  }
   // ローカルゲストトークンが残っている場合は削除してログイン画面へ
   if(localStorage.getItem('jwt_token') === 'local_guest_token'){
     localStorage.removeItem('jwt_token');
@@ -25006,6 +25031,12 @@ if(_origOpenProfile){
   let _gpOverlay = null;
   let _listening = null;
 
+  // ─────────── 掴みモード（牌の並べ替え）───────────
+  let _gpGrabMode      = false;  // 掴みモード中フラグ
+  let _gpGrabHoldStart = 0;      // Aボタン押し始めの時刻
+  let _gpGrabHoldTimer = null;   // 長押し判定タイマー
+  const GP_GRAB_HOLD_MS = 250;   // 長押し判定時間(ms)
+
   // ─────────── HUD ───────────
   function _createOverlay(){
     if(_gpOverlay) return;
@@ -25262,9 +25293,11 @@ if(_origOpenProfile){
 
     _tiles().forEach((t,i)=>{
       const active = inHand && i===_gpCursor;
-      t.style.outline      = active ? '3px solid #f0d47a' : '';
+      const isGrab = active && _gpGrabMode;
+      t.style.outline      = active ? (isGrab ? '3px solid #66eeff' : '3px solid #f0d47a') : '';
       t.style.outlineOffset= active ? '2px' : '';
-      t.style.transform    = active ? 'translateY(-6px)' : '';
+      t.style.transform    = active ? (isGrab ? 'translateY(-12px) scale(1.08)' : 'translateY(-6px)') : '';
+      t.style.filter       = isGrab ? 'drop-shadow(0 0 8px #33ccff)' : '';
     });
     acts.forEach((b,i)=>{
       const active = inAction && i===_gpActIdx;
@@ -25726,6 +25759,41 @@ if(_origOpenProfile){
   }
 
   // ─────────── アクション実行 ───────────
+  // ─────────── 掴みモード: 牌の入れ替え ───────────
+  function _swapTile(dir){
+    const t = _tiles();
+    if(!t.length) return;
+    const fromIdx = _gpCursor;
+    const toIdx   = fromIdx + dir;
+    if(toIdx < 0 || toIdx >= t.length) return;
+    const myPlayerIdx = (typeof NET !== 'undefined') ? NET.myIdx : 0;
+    if(typeof G === 'undefined' || !G.players || !G.players[myPlayerIdx]) return;
+    const hand = G.players[myPlayerIdx].hand;
+    if(!hand || fromIdx >= hand.length || toIdx >= hand.length) return;
+
+    // データを入れ替え
+    const tmp = hand[fromIdx]; hand[fromIdx] = hand[toIdx]; hand[toIdx] = tmp;
+    _gpCursor = toIdx;
+
+    // DOM直接更新: 2要素のinnerHTMLとdata属性のみ書き換え（renderAll不要）
+    [fromIdx, toIdx].forEach(i => {
+      const el = t[i];
+      if(!el) return;
+      const tile = hand[i];
+      if(!tile) return;
+      el.innerHTML    = (typeof emj === 'function') ? emj(tile) : '';
+      el.dataset.suit = tile.suit;
+      el.dataset.num  = String(tile.num);
+      const doras = (typeof getDoras === 'function') ? getDoras() : [];
+      const isDora = doras.some(d => d && d.suit===tile.suit && String(d.num)===String(tile.num));
+      el.classList.toggle('tile-dora-glow', isDora && !el.style.opacity);
+      el.classList.toggle('tile-aka-glow',  !!tile._isAka);
+    });
+
+    _highlight();
+    _hud('🀄 入れ替え ' + (dir > 0 ? '→' : '←') + '　' + (_gpCursor+1) + '枚目');
+  }
+
   function _execAction(actionKey){
     const tiles = _tiles();
     const acts  = _actBtns();
@@ -26240,6 +26308,7 @@ if(_origOpenProfile){
 
       // ══════════ LEFT ══════════
       case 'left':
+        if(_gpGrabMode && _gpFocus==='hand'){ _swapTile(-1); break; }
         if(_gpFocus==='hand'){
           if(tiles.length){ _gpCursor=(_gpCursor-1+tiles.length)%tiles.length; _highlight(); }
         } else if(_gpFocus==='action'){
@@ -26267,6 +26336,7 @@ if(_origOpenProfile){
 
       // ══════════ RIGHT ══════════
       case 'right':
+        if(_gpGrabMode && _gpFocus==='hand'){ _swapTile(+1); break; }
         if(_gpFocus==='hand'){
           if(tiles.length){ _gpCursor=(_gpCursor+1)%tiles.length; _highlight(); }
         } else if(_gpFocus==='action'){
@@ -26365,8 +26435,14 @@ if(_origOpenProfile){
         const idx=parseInt(tile.dataset.idx,10);
         if(isNaN(idx)) break;
         if(typeof selIdx!=='undefined'){
-          if(selIdx===idx){ if(typeof humanDiscard==='function') humanDiscard(); }
-          else { selIdx=idx; if(typeof renderAll==='function') renderAll(); }
+          if(typeof oneClickDiscard!=='undefined' && oneClickDiscard && typeof G!=='undefined' && G.phase==='discard'){
+            // 1クリックモード: Aボタン1回で即捨て
+            selIdx=idx; if(typeof humanDiscard==='function') humanDiscard();
+          } else {
+            // 選択捨てモード: 選択 → 再押しで捨て
+            if(selIdx===idx){ if(typeof humanDiscard==='function') humanDiscard(); }
+            else { selIdx=idx; if(typeof renderAll==='function') renderAll(); }
+          }
         }
         break;
       }
@@ -26555,8 +26631,37 @@ if(_origOpenProfile){
         const phys    = String(bi);
         const pressed = btn.pressed || btn.value > 0.5;
         if(pressed && !_prev[phys]){
-          if(bi===12||bi===13||bi===14||bi===15) _sendPhysRepeat(phys);
-          else _dispatchPhys(phys);
+          // select_tileにバインドされているボタン＆手牌フォーカス中: 長押し判定開始
+          if(_bindings[phys] === 'select_tile' && _gpFocus === 'hand'){
+            _gpGrabHoldStart = Date.now();
+            clearTimeout(_gpGrabHoldTimer);
+            _gpGrabHoldTimer = setTimeout(()=>{
+              if(_prev[phys]){
+                _gpGrabMode = true;
+                _highlight();
+                _hud('🤏 牌を掴み中 — ←→で入れ替え、Aを離すと解除');
+              }
+            }, GP_GRAB_HOLD_MS);
+          } else {
+            if(bi===12||bi===13||bi===14||bi===15) _sendPhysRepeat(phys);
+            else _dispatchPhys(phys);
+          }
+        }
+        // ボタンリリース検出
+        if(!pressed && _prev[phys]){
+          if(_bindings[phys] === 'select_tile'){
+            clearTimeout(_gpGrabHoldTimer);
+            if(_gpGrabMode){
+              _gpGrabMode = false;
+              _highlight();
+              _hud('✅ 配置確定');
+              _rumble(80, 80, 0.3, 0.2);
+            } else if(_gpGrabHoldStart && (Date.now() - _gpGrabHoldStart) < GP_GRAB_HOLD_MS){
+              // 短押し → 通常のselect_tile動作
+              _dispatchPhys(phys);
+            }
+            _gpGrabHoldStart = 0;
+          }
         }
         _prev[phys] = pressed;
       });
@@ -26712,11 +26817,9 @@ if(_origOpenProfile){
   window.gpGetVpadOffsetY = ()=> _vpadOffsetY;
   window.gpSetVpadOffsetY = (v)=>{
     _vpadOffsetY = Math.max(0, Math.min(300, +v || 0));
-    const dpad = document.getElementById('vpadDpad');
-    const rbtn = document.querySelector('#vpadOverlay > div:nth-child(2)');
+    const overlay = document.getElementById('vpadOverlay');
     const off = _vpadOffsetY;
-    if(dpad) dpad.style.bottom = (24 - off) + 'px';
-    if(rbtn) rbtn.style.bottom = (24 - off) + 'px';
+    if(overlay) overlay.style.transform = off !== 0 ? 'translateY(' + off + 'px)' : '';
   };
 
   // ─────────── コントローラー振動 ───────────
@@ -26776,8 +26879,10 @@ if(_origOpenProfile){
           if(t.length && _gpCursor >= t.length) _gpCursor = t.length - 1;
 
           // アクションボタンが出たら自動的にアクションへフォーカス（パネル操作中は維持）
+          // ただしリーチ・オープンリーチボタンのみの場合は手牌操作を優先して切り替えない
           const _panelFocused = ['corner','emote','settings','automenu'].includes(_gpFocus);
-          if(a.length>0 && _gpFocus==='hand'){
+          const _onlyRiichi = a.length>0 && a.every(b=>b.classList.contains('btn-riichi')||b.classList.contains('btn-open-riichi'));
+          if(a.length>0 && _gpFocus==='hand' && !_onlyRiichi){
             _gpFocus='action'; _gpActIdx=0;
           } else if(a.length===0 && _gpFocus==='action'){
             _gpFocus='hand';

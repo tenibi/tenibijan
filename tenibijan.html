@@ -3906,6 +3906,32 @@ body{
           onkeydown="if(event.key==='Enter')joinRoom()">
         <button class="btn btn-primary" onclick="joinRoom()" style="padding:8px 14px;font-size:.8rem;">参加</button>
       </div>
+      <!-- 数字パッド -->
+      <div id="roomNumpad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;">
+        <button onclick="_roomPadTap('1')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">1</button>
+        <button onclick="_roomPadTap('2')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">2</button>
+        <button onclick="_roomPadTap('3')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">3</button>
+        <button onclick="_roomPadTap('4')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">4</button>
+        <button onclick="_roomPadTap('5')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">5</button>
+        <button onclick="_roomPadTap('6')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">6</button>
+        <button onclick="_roomPadTap('7')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">7</button>
+        <button onclick="_roomPadTap('8')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">8</button>
+        <button onclick="_roomPadTap('9')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">9</button>
+        <button onclick="_roomPadTap('0')" style="padding:10px 0;font-size:1.1rem;font-weight:700;background:#030a10;border:1.5px solid #1a4a2a;border-radius:8px;color:#a0c0a0;cursor:pointer;font-family:inherit;">0</button>
+        <button onclick="_roomPadBackspace()" style="grid-column:span 2;padding:10px 0;font-size:1rem;font-weight:700;background:#030a10;border:1.5px solid #2a1a1a;border-radius:8px;color:#8a6a6a;cursor:pointer;font-family:inherit;">⌫</button>
+      </div>
+      <script>
+      function _roomPadTap(d){
+        const inp = document.getElementById('roomInput');
+        if(!inp) return;
+        if(inp.value.length < 6){ inp.value += d; }
+      }
+      function _roomPadBackspace(){
+        const inp = document.getElementById('roomInput');
+        if(!inp) return;
+        inp.value = inp.value.slice(0, -1);
+      }
+      </script>
       <div id="guestWaitMsg" style="display:none;font-size:.6rem;color:#4a7a5a;text-align:center;margin-top:8px;">
         ホストの開始を待っています<span class="thinking-dots"></span>
         <div id="guestMemberList" style="font-size:.6rem;color:#4a8a6a;margin-top:4px;"></div>

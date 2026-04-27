@@ -20320,6 +20320,7 @@ const _itm = {
   pollTimer: null,
   phase: 'WAIT',        // WAIT / SELECT / CONFIRM / DONE
   iConfirmed: false,    // 自分が「はい」を押したか
+  chatRendered: new Set(), // チャット重複防止
 };
 
 // エモート送信履歴（重複防止）
@@ -20332,6 +20333,9 @@ function _itmShowPhase(p) {
     const el = document.getElementById('itm-phase-' + x);
     if (el) el.style.display = (x === p) ? 'flex' : 'none';
   });
+  // チャットは SELECT / CONFIRM 中のみ表示
+  const chat = document.getElementById('itm-chat');
+  if (chat) chat.style.display = (p === 'SELECT' || p === 'CONFIRM') ? 'flex' : 'none';
 }
 
 // ─ バナー
@@ -20345,6 +20349,33 @@ function _itmSetBanner(msg, color) {
 
 // ─ 交換ボタン押下（フレンド一覧から）
 async function startIconTradeMatch(friendId, friendName) {
+  // ── ポップアップウィンドウで開く（すでにポップアップ内なら従来モーダル表示） ──
+  if (!new URLSearchParams(window.location.search).has('iconTrade')) {
+    const baseUrl = window.location.pathname + (window.location.search.replace(/([?&])iconTrade=[^&]*/,'').replace(/([?&])friendName=[^&]*/,'') || '');
+    const sep = baseUrl.includes('?') ? '&' : '?';
+    const popupUrl = baseUrl + sep + 'iconTrade=' + encodeURIComponent(friendId) + '&friendName=' + encodeURIComponent(friendName);
+    const popup = window.open(popupUrl, 'iconTradePopup_' + friendId,
+      'width=520,height=780,resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no');
+    if (popup) {
+      const btn = document.getElementById('tradeBtn-' + friendId);
+      if (btn) { btn.textContent = '⏳ 別ウィンドウで開いています…'; btn.style.opacity = '.6'; btn.style.pointerEvents = 'none'; }
+      // BroadcastChannel で交換完了 / キャンセル を受信してボタンをリセット
+      try {
+        const _ch = new BroadcastChannel('iconTradeResult');
+        _ch.onmessage = (ev) => {
+          if (ev.data?.friendId === friendId) {
+            const b = document.getElementById('tradeBtn-' + friendId);
+            if (b) { b.textContent = '🔄 交換'; b.style.opacity = ''; b.style.pointerEvents = ''; }
+            _ch.close();
+          }
+        };
+      } catch(e) {}
+      return;
+    }
+    // ポップアップがブロックされた場合は従来のモーダルにフォールバック
+    console.warn('[ITM] ポップアップがブロックされました。モーダルで表示します。');
+  }
+
   _itm.friendId = friendId;
   _itm.friendName = friendName;
   _itm.offerId = null;
@@ -20354,6 +20385,9 @@ async function startIconTradeMatch(friendId, friendName) {
   _itm.myIcons = [];
   _itm.theirIcons = [];
   _itm.iConfirmed = false;
+  _itm.chatRendered = new Set();
+  const _chatBox = document.getElementById('itm-chat-msgs');
+  if (_chatBox) _chatBox.innerHTML = '';
 
   const btn = document.getElementById('tradeBtn-' + friendId);
   if (btn) { btn.textContent = '⏳ 申込中…'; btn.style.opacity = '.6'; btn.style.pointerEvents = 'none'; }
@@ -20668,6 +20702,8 @@ function itmToggleWant(id) {
     }
     const tag = document.getElementById('itm-th-tag-' + id);
     if (tag) tag.style.display = '';
+    // アイコンのリーチボイスを再生
+    _playIconSe(id, 'riichi', () => {});
   }
   _itmUpdateSelectBtn();
   _itmUpdateEmoteIcons();
@@ -20698,6 +20734,8 @@ function itmToggleOffer(id) {
     }
     const tag = document.getElementById('itm-my-tag-' + id);
     if (tag) tag.style.display = '';
+    // アイコンのリーチボイスを再生
+    _playIconSe(id, 'riichi', () => {});
   }
   _itmUpdateSelectBtn();
   _itmUpdateEmoteIcons();
@@ -20962,6 +21000,9 @@ async function _itmPollSession() {
         _itmSetBanner('✅ 選択完了！相手の選択を待っています…', '#88ccaa');
       }
     }
+
+    // チャットメッセージ受信
+    if (Array.isArray(t.chatMessages)) _itmApplyChats(t.chatMessages);
   } catch(e) {}
 }
 
@@ -20970,8 +21011,10 @@ function _itmShowComplete(t) {
   if (_itm.pollTimer) { clearInterval(_itm.pollTimer); _itm.pollTimer = null; }
   _itmShowPhase('DONE');
   _itmSetBanner('🎉 交換完了！', '#88ee66');
-  const gotId  = t?.gotIcon  || null;
-  const gaveId = t?.gaveIcon || null;
+  // gotIcon/gaveIcon がサーバーレスポンスにない場合（ゲスト側のポーリング経由など）は
+  // ローカルで保持していた選択情報をフォールバックとして使用する
+  const gotId  = t?.gotIcon  || _itm.selectedWant  || null;
+  const gaveId = t?.gaveIcon || _itm.selectedOffer || null;
   const gotEl  = document.getElementById('itm-d-gotIcon');
   const gaveEl = document.getElementById('itm-d-gaveIcon');
   if (gotEl  && gotId)  gotEl.innerHTML  = `<img src="${gachaIconUrl(gotId)}"  style="width:100%;height:100%;object-fit:contain;padding:3px;">`;
@@ -20979,6 +21022,63 @@ function _itmShowComplete(t) {
   _itm.offerId = null;
   const btn = document.getElementById('tradeBtn-' + _itm.friendId);
   if (btn) { btn.textContent = '🔄 交換'; btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+}
+
+// ─ チャット: メッセージ送信
+async function _itmSendChat() {
+  const input = document.getElementById('itm-chat-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  if (text.length > 100) { input.value = text.slice(0, 100); return; }
+  if (!_itm.offerId) {
+    _itmAddChatMsgLocal({ isMine: true, text });
+    input.value = '';
+    return;
+  }
+  input.value = '';
+  // 楽観的に自分のメッセージをすぐ表示
+  const tempId = 'tmp_' + Date.now();
+  _itmAddChatMsgLocal({ isMine: true, text, id: tempId });
+  try {
+    await authFetch('/api/icon-trade/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offerId: _itm.offerId, text }),
+    });
+  } catch(e) { console.warn('[ITM chat] send error', e); }
+}
+
+// ─ チャット: ローカルにメッセージを追加
+function _itmAddChatMsgLocal({ isMine, text, id }) {
+  const key = id || (isMine ? 'me' : 'them') + ':' + text + ':' + Date.now();
+  if (_itm.chatRendered.has(key)) return;
+  _itm.chatRendered.add(key);
+  const box = document.getElementById('itm-chat-msgs');
+  if (!box) return;
+  const name = isMine ? 'あなた' : (_itm.friendName || '相手');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;flex-direction:column;align-items:' + (isMine ? 'flex-end' : 'flex-start') + ';margin:1px 2px;';
+  div.innerHTML =
+    '<div style="font-size:.42rem;color:' + (isMine ? '#8a7a3a' : '#3a6a8a') + ';margin-bottom:1px;">' + _esc(name) + '</div>' +
+    '<div style="max-width:85%;padding:4px 8px;border-radius:' + (isMine ? '8px 8px 2px 8px' : '8px 8px 8px 2px') + ';font-size:.6rem;word-break:break-all;line-height:1.4;' +
+      (isMine
+        ? 'background:#1a1400;border:1px solid #4a3a10;color:#e0c87a;'
+        : 'background:#060e16;border:1px solid #1a3a5a;color:#88bbdd;') +
+    '">' + _esc(text) + '</div>';
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ─ チャット: ポーリングで届いたメッセージを反映
+function _itmApplyChats(messages) {
+  if (!Array.isArray(messages)) return;
+  messages.forEach(m => {
+    if (!m || !m.text) return;
+    const key = m.id || ((m.fromSelf ? 'me' : 'them') + ':' + m.ts + ':' + m.text);
+    if (_itm.chatRendered.has(key)) return;
+    _itmAddChatMsgLocal({ isMine: !!m.fromSelf, text: m.text, id: key });
+  });
 }
 
 // ─ モーダルを閉じる
@@ -20995,6 +21095,15 @@ function closeIconTradeModal() {
   if (_itm.friendId) {
     const btn = document.getElementById('tradeBtn-' + _itm.friendId);
     if (btn) { btn.textContent = '🔄 交換'; btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+  }
+  // ポップアップウィンドウ内ならば親ウィンドウに通知して自分を閉じる
+  if (new URLSearchParams(window.location.search).has('iconTrade')) {
+    try {
+      const _ch = new BroadcastChannel('iconTradeResult');
+      _ch.postMessage({ friendId: _itm.friendId });
+      _ch.close();
+    } catch(e) {}
+    setTimeout(() => { try { window.close(); } catch(e) {} }, 400);
   }
 }
 
@@ -23353,6 +23462,31 @@ function doTwitchLogout(){
     history.replaceState(null,'','/game');
     setTimeout(()=>{ _shopToast('Twitch連携に失敗しました。もう一度お試しください。'); }, 500);
   }
+
+  // ── アイコン交換ポップアップ起動（?iconTrade=xxx&friendName=yyy が付いている場合） ──
+  const _iconTradeId   = _params.get('iconTrade');
+  const _iconTradeName = _params.get('friendName');
+  if (_iconTradeId && _iconTradeName) {
+    // URLをきれいにしてから交換モーダルを起動
+    history.replaceState(null, '', window.location.pathname);
+    // loadProfile が非同期のためプロファイル取得完了を待ってから起動
+    const _waitAndTrade = () => {
+      if (typeof startIconTradeMatch === 'function') {
+        startIconTradeMatch(_iconTradeId, decodeURIComponent(_iconTradeName));
+      }
+    };
+    // loadProfile の authFetch 完了より後に実行（最大3秒待機）
+    let _tradeRetry = 0;
+    const _tradeInterval = setInterval(() => {
+      _tradeRetry++;
+      if (typeof authFetch === 'function' && localStorage.getItem('jwt_token')) {
+        clearInterval(_tradeInterval);
+        _waitAndTrade();
+      } else if (_tradeRetry >= 30) {
+        clearInterval(_tradeInterval);
+      }
+    }, 100);
+  }
 })();
 
 // ============================================================
@@ -24433,6 +24567,30 @@ function plantMineRinshan(ri){
         background:linear-gradient(135deg,#0a1200,#142200);border:1.5px solid #55aa44;border-radius:10px;
         color:#88ee66;font-size:.74rem;font-weight:700;cursor:pointer;
       ">✓ 閉じる</button>
+    </div>
+
+    <!-- ── チャットエリア（SELECT / CONFIRM フェーズで表示） ── -->
+    <div id="itm-chat" style="display:none;flex-direction:column;gap:0;flex-shrink:0;margin-top:4px;border-top:1px solid #1e1e12;padding-top:6px;">
+      <div style="font-size:.42rem;color:#5a5a3a;letter-spacing:.05em;margin-bottom:3px;padding-left:2px;">💬 チャット</div>
+      <div id="itm-chat-msgs" style="
+        height:80px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:4px 3px;
+        background:#05050a;border-radius:6px 6px 0 0;border:1px solid #18182a;border-bottom:none;
+        scroll-behavior:smooth;
+      "></div>
+      <div style="display:flex;gap:3px;background:#07070e;border:1px solid #18182a;border-radius:0 0 6px 6px;padding:4px 5px;">
+        <input id="itm-chat-input" type="text" maxlength="100"
+          placeholder="メッセージを入力… (Enter で送信)"
+          style="
+            flex:1;background:#03030a;border:1px solid #25253a;border-radius:5px;
+            color:#c0c8e0;font-size:.6rem;padding:5px 8px;outline:none;font-family:inherit;
+          "
+          onkeydown="if(event.key==='Enter'){_itmSendChat();event.preventDefault();}">
+        <button onclick="_itmSendChat()" style="
+          padding:5px 10px;background:#0a0e1a;border:1px solid #2a3a5a;border-radius:5px;
+          color:#7a9acc;font-size:.58rem;cursor:pointer;white-space:nowrap;font-weight:700;
+          transition:background .15s;flex-shrink:0;
+        " onmouseover="this.style.background='#121e30'" onmouseout="this.style.background='#0a0e1a'">送信</button>
+      </div>
     </div>
 
   </div>

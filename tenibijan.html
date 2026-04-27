@@ -2153,6 +2153,8 @@ body{
   }
   .emote-picker-card:hover{ border-color:#5a9a7a; }
   .emote-picker-card.selected-slot{ border-color:#ffd700;background:#1a1500; }
+  .tile-ext-btn{ padding:4px 14px;border-radius:6px;font-size:.65rem;cursor:pointer;border:1px solid #2a5a3a;background:#030a10;color:#5a7a6a;transition:all .15s; }
+  .tile-ext-btn.tile-ext-active{ background:#0a2a0a;border-color:var(--gold);color:var(--gold);font-weight:700; }
   </style>
 </head>
 <body>
@@ -3561,6 +3563,14 @@ body{
     </div>
     <!-- 操作タブ -->
     <div id="titleTabContentOperation" style="display:none;">
+      <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1a3a2a;">
+        <div style="font-size:.6rem;color:#5a7a6a;margin-bottom:8px;letter-spacing:.05em;">🖼 牌の画像形式</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="tileImgExtPNG" class="tile-ext-btn tile-ext-active" onclick="setTileImgExt('png')">PNG</button>
+          <button id="tileImgExtSVG" class="tile-ext-btn" onclick="setTileImgExt('svg')">SVG</button>
+          <span style="font-size:.55rem;color:#3a5a4a;margin-left:4px;">切り替え後すぐに反映されます</span>
+        </div>
+      </div>
       <div style="font-size:.6rem;color:#5a7a6a;margin-bottom:10px;letter-spacing:.05em;">🀇 捨て方式</div>
       <div style="display:flex;flex-direction:column;gap:6px;">
         <label id="discardModeSelectLabel" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;border:2px solid #1a3a2a;background:#030a10;">
@@ -3646,10 +3656,10 @@ body{
         <!-- 仮想パッド位置（下方向オフセット） -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
           <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ 仮想パッド位置</span>
-          <input id="gpVpadOffsetSliderTitle" type="range" min="0" max="300" step="10" value="0"
-            style="width:80px;accent-color:#aa66ff;"
-            oninput="if(typeof window.gpSetVpadOffsetY==='function'){window.gpSetVpadOffsetY(+this.value);} document.getElementById('gpVpadOffsetValTitle').textContent=this.value+'px'; document.getElementById('gpVpadOffsetSliderHdr') && (document.getElementById('gpVpadOffsetSliderHdr').value=this.value); document.getElementById('gpVpadOffsetValHdr') && (document.getElementById('gpVpadOffsetValHdr').textContent=this.value+'px'); if(typeof saveSettings==='function') saveSettings();">
-          <span id="gpVpadOffsetValTitle" style="font-size:.58rem;color:#aa66ff;width:36px;text-align:right;">0px</span>
+          <button onclick="_gpVpadOffsetStep(-10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#aa66ff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▲</button>
+          <span id="gpVpadOffsetValTitle" style="font-size:.58rem;color:#aa66ff;width:36px;text-align:center;">0px</span>
+          <button onclick="_gpVpadOffsetStep(10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#aa66ff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▼</button>
+          <button onclick="_gpVpadOffsetReset()" style="width:28px;height:28px;background:#041018;border:1px solid #2a2a1a;border-radius:6px;color:#7a7a5a;font-size:.58rem;cursor:pointer;flex-shrink:0;">↺</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
           <span id="gpStatusDotTitle" style="width:9px;height:9px;border-radius:50%;background:#2a4a3a;flex-shrink:0;box-shadow:0 0 4px #2a4a3a;transition:background .3s,box-shadow .3s;"></span>
@@ -5042,6 +5052,7 @@ function saveSettings(){
       gpVpadOffsetY: typeof window.gpGetVpadOffsetY === 'function' ? window.gpGetVpadOffsetY() : 0,
       gameScreenOffsetY: window._gameScreenOffsetY || 0,
       iconVoiceScale: Object.assign({}, iconVoiceScale),
+      tileImgExt: _tileImgExt,
       seScale: Object.fromEntries(
         ['draw','discard','ron','tsumo','riichi','pon','kan','kita','yakuman','light','yami','haku','steal','mine','myTurn','countdown','voice']
         .map(k=>[k, SFX.getSeScale(k)])
@@ -5197,6 +5208,11 @@ function loadSettings(){
       });
       _applyIconVoiceSliders();
     }
+    // 牌画像形式（PNG/SVG）
+    if(data.tileImgExt==='svg'||data.tileImgExt==='png'){
+      _tileImgExt = data.tileImgExt;
+      _applyTileImgExtUI();
+    }
   }catch(e){}
 }
 
@@ -5286,15 +5302,22 @@ function _applyGpVpadUI(){
 // 仮想パッド位置オフセットをUIとDOMに反映
 function _applyGpVpadOffsetUI(){
   const v = typeof window.gpGetVpadOffsetY === 'function' ? window.gpGetVpadOffsetY() : 0;
-  // スライダーを同期
-  ['gpVpadOffsetSliderTitle','gpVpadOffsetSliderHdr'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.value=v;
-  });
   ['gpVpadOffsetValTitle','gpVpadOffsetValHdr'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.textContent=v+'px';
   });
-  // DOMに反映（gpSetVpadOffsetYが内部でやるが念のため）
   if(typeof window.gpSetVpadOffsetY==='function') window.gpSetVpadOffsetY(v);
+}
+function _gpVpadOffsetStep(delta){
+  const cur = typeof window.gpGetVpadOffsetY === 'function' ? window.gpGetVpadOffsetY() : 0;
+  const v = Math.max(0, Math.min(300, cur + delta));
+  if(typeof window.gpSetVpadOffsetY==='function') window.gpSetVpadOffsetY(v);
+  _applyGpVpadOffsetUI();
+  if(typeof saveSettings==='function') saveSettings();
+}
+function _gpVpadOffsetReset(){
+  if(typeof window.gpSetVpadOffsetY==='function') window.gpSetVpadOffsetY(0);
+  _applyGpVpadOffsetUI();
+  if(typeof saveSettings==='function') saveSettings();
 }
 
 
@@ -14940,14 +14963,38 @@ function _wallTileRect(idx){
 
 const _wallImgCache={};
 const _doraImgCache={};
+
+// 牌画像の拡張子（'png' or 'svg'）。設定で切り替え・localStorage保存
+let _tileImgExt = 'png';
+
   function tileImgUrl(t){
     if(!t)return null;
-    
-    if(t.suit==='honor'){return TILE_IMG.honor[t.num]||null;}
-    // 赤ドラ
-    if(t._isAka&&TILE_IMG_AKA[t.suit]&&TILE_IMG_AKA[t.suit][t.num]) return TILE_IMG_AKA[t.suit][t.num];
-    return (TILE_IMG[t.suit]&&TILE_IMG[t.suit][t.num])||null;
+    let url;
+    if(t.suit==='honor'){ url = TILE_IMG.honor[t.num]||null; }
+    else if(t._isAka&&TILE_IMG_AKA[t.suit]&&TILE_IMG_AKA[t.suit][t.num]){ url = TILE_IMG_AKA[t.suit][t.num]; }
+    else { url = (TILE_IMG[t.suit]&&TILE_IMG[t.suit][t.num])||null; }
+    if(url && _tileImgExt !== 'png') url = url.replace(/\.png$/, '.'+_tileImgExt);
+    return url;
   }
+
+function setTileImgExt(ext){
+  if(_tileImgExt === ext) return;
+  _tileImgExt = ext;
+  Object.keys(_wallImgCache).forEach(k=>delete _wallImgCache[k]);
+  Object.keys(_doraImgCache).forEach(k=>delete _doraImgCache[k]);
+  _applyTileImgExtUI();
+  saveSettings();
+  if(typeof renderWall==='function') renderWall();
+  if(typeof renderDoraCanvas==='function') renderDoraCanvas();
+}
+function _applyTileImgExtUI(){
+  ['tileImgExtPNG','tileImgExtPNGHdr'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.toggle('tile-ext-active', _tileImgExt==='png');
+  });
+  ['tileImgExtSVG','tileImgExtSVGHdr'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.toggle('tile-ext-active', _tileImgExt==='svg');
+  });
+}
   function renderWall(){
   const lbl=document.getElementById('wallLabel');
   if(lbl&&G.deck) lbl.textContent=`山牌 ${G.deck.length}/${G.deckSlots?.length||0}枚`;
@@ -21244,6 +21291,8 @@ function _syncSettingsPanels(){
 
     let h = src.innerHTML;
     h = h
+      .replace(/id="tileImgExtPNG"/g,            'id="tileImgExtPNGHdr"')
+      .replace(/id="tileImgExtSVG"/g,             'id="tileImgExtSVGHdr"')
       .replace(/id="gpActiveToggleTitle"/g,     'id="gpActiveToggleHdr"')
       .replace(/id="gpActiveLabelTitle"/g,       'id="gpActiveLabelHdr"')
       .replace(/id="gpRumbleToggleTitle"/g,      'id="gpRumbleToggleHdr"')
@@ -21255,7 +21304,9 @@ function _syncSettingsPanels(){
       .replace(/id="gpBindTableTitle"/g,         'id="gpBindTable"')
       .replace(/id="discardAnimToggle"/g,        'id="discardAnimToggleHdr"')
       .replace(/id="discardModeSelectLabel"/g,   'id="discardModeSelectLabelHdr"')
-      .replace(/id="discardModeOneClickLabel"/g, 'id="discardModeOneClickLabelHdr"');
+      .replace(/id="discardModeOneClickLabel"/g, 'id="discardModeOneClickLabelHdr"')
+      .replace(/id="gameScreenOffsetValTitle"/g, 'id="gameScreenOffsetValHdr"')
+      .replace(/id="gpVpadOffsetValTitle"/g,     'id="gpVpadOffsetValHdr"');
 
     dst.innerHTML = h;
   })();
@@ -23942,10 +23993,10 @@ function plantMineRinshan(ri){
             <!-- 仮想パッド位置（下方向オフセット） -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
               <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ 仮想パッド位置</span>
-              <input id="gpVpadOffsetSliderHdr" type="range" min="0" max="300" step="10" value="0"
-                style="width:80px;accent-color:#aa66ff;"
-                oninput="if(typeof window.gpSetVpadOffsetY==='function'){window.gpSetVpadOffsetY(+this.value);} document.getElementById('gpVpadOffsetValHdr').textContent=this.value+'px'; document.getElementById('gpVpadOffsetSliderTitle') && (document.getElementById('gpVpadOffsetSliderTitle').value=this.value); document.getElementById('gpVpadOffsetValTitle') && (document.getElementById('gpVpadOffsetValTitle').textContent=this.value+'px'); if(typeof saveSettings==='function') saveSettings();">
-              <span id="gpVpadOffsetValHdr" style="font-size:.58rem;color:#aa66ff;width:36px;text-align:right;">0px</span>
+              <button onclick="_gpVpadOffsetStep(-10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#aa66ff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▲</button>
+              <span id="gpVpadOffsetValHdr" style="font-size:.58rem;color:#aa66ff;width:36px;text-align:center;">0px</span>
+              <button onclick="_gpVpadOffsetStep(10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#aa66ff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▼</button>
+              <button onclick="_gpVpadOffsetReset()" style="width:28px;height:28px;background:#041018;border:1px solid #2a2a1a;border-radius:6px;color:#7a7a5a;font-size:.58rem;cursor:pointer;flex-shrink:0;">↺</button>
             </div>
             <div id="gpStatusRow" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
               <span id="gpStatusDot" style="width:9px;height:9px;border-radius:50%;background:#2a4a3a;flex-shrink:0;box-shadow:0 0 4px #2a4a3a;transition:background .3s,box-shadow .3s;"></span>

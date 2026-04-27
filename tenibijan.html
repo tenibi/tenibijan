@@ -5262,10 +5262,23 @@ function toggleGpVpad(){
   _applyGpVpadUI();
   saveSettings();
 }
+function _isVpadAllowedScreen(){
+  // 仮想パッドを表示してよい画面かどうか判定
+  // ルームマッチ・ランクマッチ・CPU対戦・手にボム の対戦画面のみ許可
+  const gameScreenActive = document.getElementById('gameScreen')?.classList.contains('active');
+  if(!gameScreenActive) return false;
+  const isRankMatch   = typeof NET !== 'undefined' && !!NET.isRankMatch;
+  const isRoomMatch   = typeof NET !== 'undefined' && !!NET.online && !NET.isRankMatch;
+  const isCpuGame     = typeof numPlayers !== 'undefined' && numPlayers === 1
+                        && !(typeof G !== 'undefined' && G && G._soloStage); // CPU対戦（ボムなし）
+  const isBombGame    = typeof numPlayers !== 'undefined' && numPlayers === 1
+                        && typeof G !== 'undefined' && G && !!G._soloStage;   // 手にボム
+  return isRankMatch || isRoomMatch || isCpuGame || isBombGame;
+}
 function _applyGpVpadUI(){
   const on = typeof window.gpGetVpadOn==='function' ? window.gpGetVpadOn() : false;
   const overlay = document.getElementById('vpadOverlay');
-  if(overlay) overlay.style.display = on ? 'block' : 'none';
+  if(overlay) overlay.style.display = (on && _isVpadAllowedScreen()) ? 'block' : 'none';
   ['gpVpadToggleHdr','gpVpadToggleTitleSetting'].forEach(id=>{
     const el=document.getElementById(id); if(!el) return;
     el.style.background = on ? '#aa66ff' : '#1a3a2a';
@@ -5486,7 +5499,7 @@ async function attemptRejoin(){
           bgmToGame();
           hideRoomLobby();
           document.getElementById('lobby').style.display='none';
-          document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
+          document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock(); setTimeout(()=>{if(typeof _applyGpVpadUI==='function') _applyGpVpadUI();},50);
           scaleTable();
           setOnlineStatus('');
           addLog('✅ 対局に復帰しました','log-new');
@@ -6944,7 +6957,7 @@ function _forceStartRankCPUGame(){
   bgmToGame();
   // 💣 爆弾数表示を非表示（ランクCPU戦は手にボムなし）
   _hideBombCountDisplay();
-  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
+  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock(); setTimeout(()=>{if(typeof _applyGpVpadUI==='function') _applyGpVpadUI();},50);
   scaleTable();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,
      lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,
@@ -8715,7 +8728,7 @@ function onNetData(msg, senderIdx){
       bgmToGame();
       hideRoomLobby();
       document.getElementById('lobby').style.display='none';
-      document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
+      document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock(); setTimeout(()=>{if(typeof _applyGpVpadUI==='function') _applyGpVpadUI();},50);
       scaleTable();
       // ゲーム開始時点で復帰セッションを保存
       setTimeout(saveRejoinSession, 600);
@@ -9624,7 +9637,7 @@ function startOnlineGame(){
   }
   hideRoomLobby();
   document.getElementById('lobby').style.display='none';
-  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
+  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock(); setTimeout(()=>{if(typeof _applyGpVpadUI==='function') _applyGpVpadUI();},50);
   scaleTable();
   updateEmoteAreaVisibility();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
@@ -10014,7 +10027,7 @@ function initGame(){
   // 💣 爆弾数表示をリセット（手にボム以外では非表示）
   _hideBombCountDisplay();
   document.getElementById('lobby').style.display='none';
-  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
+  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock(); setTimeout(()=>{if(typeof _applyGpVpadUI==='function') _applyGpVpadUI();},50);
   scaleTable();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:numPlayers===1?1:0,riichiPot:0,
@@ -13822,7 +13835,7 @@ function startTenbiBattle(){
      dealer:Math.floor(Math.random()*2),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,_sessionYakuman:[]};
-  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
+  document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock(); setTimeout(()=>{if(typeof _applyGpVpadUI==='function') _applyGpVpadUI();},50);
   scaleTable();
   startRound();
   // 手にビバトルCPUの表示能力をhakuに上書き（内部ロジックはtenbiのまま）
@@ -13863,6 +13876,7 @@ async function backToRoom(){
   document.getElementById('titleConfirmOverlay').classList.remove('show');
   document.querySelectorAll('.light-peek-overlay').forEach(el=>el.remove());
   document.getElementById('gameScreen').classList.remove('active'); _releaseWakeLock();
+  if(typeof _applyGpVpadUI==='function') _applyGpVpadUI();
   document.getElementById('lobby').style.display='none';
 
   bgmToTitle();
@@ -14127,6 +14141,7 @@ function backToLobby(){
   // 動的に生成されたオーバーレイも除去（light-peek-overlay など）
   document.querySelectorAll('.light-peek-overlay').forEach(el => el.remove());
   document.getElementById('gameScreen').classList.remove('active'); _releaseWakeLock();
+  if(typeof _applyGpVpadUI==='function') _applyGpVpadUI();
   hideRoomLobby();
   document.getElementById('lobby').style.display='block';
   bgmToTitle();

@@ -14716,8 +14716,10 @@ function renderWallExpand(){
   // CSS表示サイズを設定（論理サイズは元の wallCanvas と同じ → 同じ renderWall ロジックで描ける）
   ec.style.width  = dispW + 'px';
   ec.style.height = dispH + 'px';
-  ec.width  = logW;
-  ec.height = logH;
+  // DPR対応: 物理ピクセルで描画して鮮明にする
+  const dprEx = window.devicePixelRatio || 1;
+  ec.width  = Math.round(logW * dprEx);
+  ec.height = Math.round(logH * dprEx);
 
   // wallCanvas と完全に同じ描画ロジックを流用
   // 一時的に wallCanvas を ec に差し替えて renderWall を呼ぶ
@@ -14958,10 +14960,17 @@ const _doraImgCache={};
   const cw=W_COLS*(_wTW()+_wGAP())-_wGAP();
   const ch=rows*(_wTH()+_wGAP())-_wGAP();
 
-  // canvasサイズ設定
-  if(wc.width!==cw||wc.height!==ch){ wc.width=cw; wc.height=ch; }
+  // canvasサイズ設定（devicePixelRatio対応で高解像度ディスプレイでも鮮明に）
+  const dpr = window.devicePixelRatio || 1;
+  const cwP = Math.round(cw * dpr);
+  const chP = Math.round(ch * dpr);
+  if(wc.width!==cwP||wc.height!==chP){
+    wc.width=cwP; wc.height=chP;
+    wc.style.width=cw+'px'; wc.style.height=ch+'px';
+  }
 
   const ctx=wc.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,cw,ch);
 
   const _isPenTenpai = G_ABILITY_MODE && PROFILE.ability==='pen' && !!(G.players[NET.myIdx]?.tenpai);
@@ -27444,8 +27453,12 @@ function _gameScreenOffsetReset() {
         'flex-direction:column',
         // 牌らしいクリーム色の本体
         'background:linear-gradient(160deg,#f7f2e2 55%,#e8dfc4)',
-        'border-radius:9px',
-        'padding:10px',
+        // 牌の縦長比率 (約3:4) を再現
+        'width:4.8em',
+        'height:6.4em',
+        'font-size:3.5rem',
+        'border-radius:10px 10px 8px 8px',
+        'padding:6px',
         // ベベル（上左が明るく・下右が暗い）+ 外枠2重 + ドロップシャドウ
         'box-shadow:inset 3px 3px 5px rgba(255,255,255,0.9),inset -3px -3px 5px rgba(90,65,10,0.28),0 0 0 3px #7a5c10,0 0 0 5px #c9a845,0 8px 28px rgba(0,0,0,0.72)',
       ].join(';');
@@ -27525,14 +27538,14 @@ function _gameScreenOffsetReset() {
       let tileHTML = '';
       if(typeof emj === 'function') tileHTML = emj(tile);
       pop.innerHTML =
-        `<div style="font-size:3.5rem;line-height:1;display:flex;align-items:center;justify-content:center;">${tileHTML}</div>`;
+        `<div style="line-height:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${tileHTML}</div>`;
       // img に白背景を付けて透過を防ぐ
       pop.querySelectorAll('img').forEach(img=>{
-        img.style.cssText = 'width:2.4em;height:2.4em;object-fit:contain;display:block;background:white;border-radius:4px;';
+        img.style.cssText = 'width:1em;height:1em;object-fit:contain;display:block;background:white;border-radius:4px;';
       });
     } else {
-      // 裏牌 - キャンバスの裏面グラデーション色で表示
-      pop.innerHTML = '<div style="width:2.4em;height:2.4em;font-size:3.5rem;background:linear-gradient(135deg,#1a3a50,#0d2035);border-radius:4px;border:1px solid #2a5a70;"></div>';
+      // 裏牌 - キャンバスの裏面グラデーション色で表示（外枠が牌形なので内側は塗りつぶすだけ）
+      pop.innerHTML = '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a3a50,#0d2035);border-radius:6px;border:1px solid #2a5a70;"></div>';
     }
     pop.style.display = 'flex';
     _positionPopup(pop, tileRect);

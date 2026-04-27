@@ -15109,10 +15109,11 @@ const _doraImgCache={};
       if(imgUrl){
         const cached=_wallImgCache[imgUrl];
         if(cached&&cached.complete){
-          // アスペクト比を保ったまま中央に収める（object-fit:contain 相当）
+          // アスペクト比を保ったまま 53×53 に収め、セル中央ではみ出して描画
           const iw=cached.naturalWidth||cached.width||1;
           const ih=cached.naturalHeight||cached.height||1;
-          const scale=Math.min(r.w/iw, r.h/ih);
+          const _revImgSize = 53 * _wScale();
+          const scale=Math.min(_revImgSize/iw, _revImgSize/ih);
           const dw=iw*scale, dh=ih*scale;
           const dx=r.x+(r.w-dw)/2, dy=r.y+(r.h-dh)/2;
           ctx.drawImage(cached,dx,dy,dw,dh);
@@ -25694,8 +25695,11 @@ if(_origOpenProfile){
     if(!wc) return;
     const rect = wc.getBoundingClientRect();
     const tr   = _wallTileRect(slotIdx);
-    const scaleX = rect.width  / wc.width;
-    const scaleY = rect.height / wc.height;
+    // wc.width は物理ピクセル(DPR込み)なので、論理CSSサイズ(style.width)で割る
+    const logW = parseFloat(wc.style.width)  || wc.offsetWidth  || 1;
+    const logH = parseFloat(wc.style.height) || wc.offsetHeight || 1;
+    const scaleX = rect.width  / logW;
+    const scaleY = rect.height / logH;
     if(!ov){
       ov = document.createElement('div');
       ov.id = 'gpWallCursor';
@@ -27545,14 +27549,23 @@ function _gameScreenOffsetReset() {
     const isReveal = !!(G.lightRevealedSlots?.[slotIdx]);
     const pop = _getOrCreatePopup();
 
+    // 縦画面では牌の視覚サイズに合わせてポップアップを縮小
+    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    const popW = isPortrait ? Math.max(44, Math.round(window.innerWidth * 0.13)) : 72;
+    const popH = Math.round(popW * 4 / 3);
+    pop.style.width  = popW + 'px';
+    pop.style.height = popH + 'px';
+    const imgW = popW - 8;
+    const imgH = popH - 8;
+
     if(isReveal){
       let tileHTML = '';
       if(typeof emj === 'function') tileHTML = emj(tile);
       pop.innerHTML =
         `<div style="line-height:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${tileHTML}</div>`;
-      // img をポップアップ全体にフィット（64×88px = padding 4px を引いた内寸）
+      // img をポップアップ全体にフィット（padding 4px を引いた内寸）
       pop.querySelectorAll('img').forEach(img=>{
-        img.style.cssText = 'width:64px;height:88px;object-fit:contain;display:block;background:white;border-radius:4px;';
+        img.style.cssText = `width:${imgW}px;height:${imgH}px;object-fit:contain;display:block;background:white;border-radius:4px;`;
       });
     } else {
       // 裏牌 - キャンバスの裏面グラデーション色で表示（外枠が牌形なので内側は塗りつぶすだけ）

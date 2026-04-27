@@ -20540,7 +20540,30 @@ async function itmSendEmote(emoteType) {
   if (btn) {
     btn.style.transform = 'scale(1.15)';
     btn.style.opacity = '.6';
-    setTimeout(() => { btn.style.transform = ''; btn.style.opacity = emoteType === 'want' && _itm.selectedWant ? '1' : '.5'; }, 400);
+    setTimeout(() => { btn.style.transform = ''; btn.style.opacity = emoteType === 'want' && _itm.selectedWant ? '1' : emoteType === 'question' && _itm.selectedOffer ? '1' : '.5'; }, 400);
+  }
+
+  // 「欲しい？」送信時: 自分のアイコン（myGrid）をピンクに光らせる
+  if (emoteType === 'question' && iconId) {
+    const myCell = document.getElementById('itm-my-' + iconId);
+    if (myCell) {
+      myCell.style.borderColor = '#ff66aa';
+      myCell.style.animation = '_itmQuestionGlow 1.2s ease-in-out infinite';
+    }
+    const myTag = document.getElementById('itm-my-tag-' + iconId);
+    if (myTag) {
+      myTag.textContent = '🤔 欲しい？';
+      myTag.style.background = 'rgba(180,30,80,.92)';
+      myTag.style.display = '';
+    }
+    // 4秒後に選択状態の色に戻す
+    clearTimeout(itmSendEmote._questionTimer);
+    itmSendEmote._questionTimer = setTimeout(() => {
+      if (_itm.selectedOffer === iconId) {
+        if (myCell) { myCell.style.borderColor = '#c9a84c'; myCell.style.animation = '_itmOfferGlow 1.2s ease-in-out infinite'; }
+        if (myTag) { myTag.textContent = '💎 渡す'; myTag.style.background = ''; }
+      }
+    }, 4000);
   }
 
   // エモートをサーバーに送信（セッションのフラグとして保存）
@@ -20556,14 +20579,60 @@ async function itmSendEmote(emoteType) {
 // 受信エモート表示
 function _itmShowReceivedEmote(emoteType, iconId) {
   const el = document.getElementById('itm-emote-recv');
-  if (!el) return;
   const label = emoteType === 'want' ? '欲しい！' : '欲しい？';
   const emoji  = emoteType === 'want' ? '🙏' : '🤔';
+
+  // ── アイコングリッドのセルを直接光らせる ──
+  if (iconId) {
+    // want: 相手エリア(itm-th-)のアイコンを青く / question: 相手エリア(itm-th-)のアイコンをピンクに
+    const cellId = 'itm-th-' + iconId;
+    const cell = document.getElementById(cellId);
+    if (cell) {
+      // 前回のハイライトをリセット
+      if (_itmShowReceivedEmote._prevCell && _itmShowReceivedEmote._prevCell !== cell) {
+        const pc = _itmShowReceivedEmote._prevCell;
+        pc.style.animation = '';
+        pc.style.borderColor = pc.dataset.origBorderColor || '#1a2a4a';
+        const pt = document.getElementById(pc.id.replace('itm-th-','itm-th-tag-'));
+        if (pt) { pt.style.display = 'none'; pt.style.background = ''; pt.textContent = ''; }
+      }
+      // 点灯（want→青, question→ピンク）
+      cell.dataset.origBorderColor = cell.style.borderColor || '#1a2a4a';
+      const glowAnim   = emoteType === 'want' ? '_itmWantGlow' : '_itmQuestionGlow';
+      const glowColor  = emoteType === 'want' ? '#4488ff' : '#ff66aa';
+      const tagBg      = emoteType === 'want' ? 'rgba(20,80,200,.92)' : 'rgba(160,20,70,.92)';
+      cell.style.borderColor = glowColor;
+      cell.style.animation = glowAnim + ' 1.2s ease-in-out infinite';
+      // タグラベル
+      const tag = document.getElementById('itm-th-tag-' + iconId);
+      if (tag) {
+        tag.textContent = emoji + ' ' + label;
+        tag.style.background = tagBg;
+        tag.style.display = '';
+      }
+      _itmShowReceivedEmote._prevCell = cell;
+      // 4秒後に解除（自分がwantで選択中でない場合のみ）
+      clearTimeout(_itmShowReceivedEmote._timer);
+      _itmShowReceivedEmote._timer = setTimeout(() => {
+        const isMyWant = _itm.selectedWant === iconId;
+        if (!isMyWant) {
+          cell.style.animation = '';
+          cell.style.animation = '';
+          cell.style.borderColor = cell.dataset.origBorderColor || '#1a2a4a';
+          if (tag) { tag.style.display = 'none'; tag.textContent = ''; }
+        }
+        _itmShowReceivedEmote._prevCell = null;
+      }, 4000);
+    }
+  }
+
+  // ── 下部テキスト通知（補助として残す） ──
+  if (!el) return;
   let iconHtml = '';
   if (iconId) {
-    iconHtml = `<img src="${gachaIconUrl(iconId)}" style="width:24px;height:24px;object-fit:contain;border-radius:4px;vertical-align:middle;margin:0 4px;">`;
+    iconHtml = `<img src="${gachaIconUrl(iconId)}" style="width:18px;height:18px;object-fit:contain;border-radius:3px;vertical-align:middle;margin:0 3px;">`;
   }
-  el.innerHTML = `<span style="animation:_itmEmotePop .4s ease-out;">${_itm.friendName} が送信: ${iconHtml}${emoji} <b>${label}</b></span>`;
+  el.innerHTML = `<span style="animation:_itmEmotePop .4s ease-out;">${_itm.friendName}: ${iconHtml}${emoji} <b>${label}</b></span>`;
   clearTimeout(el._timer);
   el._timer = setTimeout(() => { el.innerHTML = ''; }, 4000);
 }
@@ -20669,6 +20738,13 @@ function _itmUpdateSelectBtn() {
   if (emoteWantBtn) {
     emoteWantBtn.style.opacity       = hasWant ? '1' : '.5';
     emoteWantBtn.style.pointerEvents = hasWant ? '' : 'none';
+  }
+
+  // 「欲しい？と送る」ボタンのON/OFF（渡すアイコン選択時に有効）
+  const emoteQuestionBtn = document.getElementById('itm-emote-question-btn');
+  if (emoteQuestionBtn) {
+    emoteQuestionBtn.style.opacity       = hasOffer ? '1' : '.5';
+    emoteQuestionBtn.style.pointerEvents = hasOffer ? '' : 'none';
   }
 }
 
@@ -24148,6 +24224,10 @@ function plantMineRinshan(ri){
   0%,100%{ box-shadow:0 0 6px 2px #c9a84caa, inset 0 0 8px #88661144; border-color:#c9a84c; }
   50%{     box-shadow:0 0 18px 6px #ffd700cc, inset 0 0 16px #c9a84c66; border-color:#ffe066; }
 }
+@keyframes _itmQuestionGlow {
+  0%,100%{ box-shadow:0 0 6px 2px #ff66aaaa, inset 0 0 8px #cc226644; border-color:#ff66aa; }
+  50%{     box-shadow:0 0 18px 6px #ff99cccc, inset 0 0 16px #ff66aa66; border-color:#ffaad4; }
+}
 </style>
 <div id="iconTradeModal" style="
   position:fixed;inset:0;z-index:250;
@@ -24257,6 +24337,18 @@ function plantMineRinshan(ri){
           <span style="font-size:.9rem;">🙋</span>
         </div>
         <div id="itm-sel-myGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;min-height:50px;"></div>
+        <div style="margin-top:6px;display:flex;justify-content:flex-start;">
+          <button id="itm-emote-question-btn" onclick="itmSendEmote('question')" style="
+            display:flex;align-items:center;gap:4px;
+            padding:3px 9px;background:rgba(120,30,60,.4);
+            border:1px solid #aa3366;border-radius:7px;cursor:pointer;
+            color:#ff88bb;font-size:.52rem;font-weight:700;transition:all .15s;
+            opacity:.5;pointer-events:none;
+          ">
+            <span id="itm-emote-question-icon" style="font-size:.9rem;line-height:1;">🤔</span>
+            <span>欲しい？と送る</span>
+          </button>
+        </div>
         <button id="itm-sel-confirmBtn" onclick="itmConfirmSelect()" style="
           margin-top:8px;width:100%;padding:11px;
           background:linear-gradient(135deg,#1a1200,#2a1e00);

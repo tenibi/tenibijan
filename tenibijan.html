@@ -5264,8 +5264,12 @@ function toggleGpVpad(){
 }
 function _applyGpVpadUI(){
   const on = typeof window.gpGetVpadOn==='function' ? window.gpGetVpadOn() : false;
-  const overlay = document.getElementById('vpadOverlay');
-  if(overlay) overlay.style.display = on ? 'block' : 'none';
+  // overlay の表示/非表示は _applyVpadVisibility に委譲（ゲーム画面チェック込み）
+  if(typeof window._applyVpadVisibility === 'function') window._applyVpadVisibility();
+  else {
+    const overlay = document.getElementById('vpadOverlay');
+    if(overlay) overlay.style.display = on ? 'block' : 'none';
+  }
   ['gpVpadToggleHdr','gpVpadToggleTitleSetting'].forEach(id=>{
     const el=document.getElementById(id); if(!el) return;
     el.style.background = on ? '#aa66ff' : '#1a3a2a';
@@ -15096,7 +15100,7 @@ const _doraImgCache={};
       if(imgUrl){
         const cached=_wallImgCache[imgUrl];
         if(cached&&cached.complete){
-          const _dw1=48,_dh1=48;ctx.drawImage(cached,r.x+(r.w-_dw1)/2,r.y+(r.h-_dh1)/2,_dw1,_dh1);
+          ctx.drawImage(cached,r.x,r.y,r.w,r.h);
         } else if(!cached){
           const img=new Image();
           _wallImgCache[imgUrl]=img;
@@ -25205,6 +25209,7 @@ if(_origOpenProfile){
     { key:'focus_corner', label:'L/R 左下ボタン⇔手牌 切替' },
     { key:'toggle_pull',    label:'引くボタン ON/OFF' },
     { key:'toggle_ability', label:'能力ボタン ON/OFF' },
+    { key:'tsumo_giri',   label:'RT (R2) ツモ切り' },
   ];
 
   const DEFAULT_BINDINGS = {
@@ -25220,6 +25225,7 @@ if(_origOpenProfile){
     '3':       'toggle_pull',    // Y (△)
     '4':       'focus_corner', // LB(L1)
     '5':       'focus_corner', // RB(R1)
+    '7':       'tsumo_giri',   // RT(R2)
   };
 
   // 物理ボタン表示名
@@ -25483,6 +25489,12 @@ if(_origOpenProfile){
       const t = tiles[_dzTileIdx];
       if(t) t.scrollIntoView({block:'nearest',inline:'nearest'});
     }
+    // ポップアップフック
+    if(typeof window._onDzHighlight === 'function'){
+      const sec2 = _dzSections()[_dzPlayerIdx];
+      const tileEl = sec2 ? _dzTilesOf(sec2)[_dzTileIdx] : null;
+      window._onDzHighlight(tileEl);
+    }
   }
   function _dzClickCurrent(){
     const secs = _dzSections();
@@ -25571,6 +25583,10 @@ if(_origOpenProfile){
     }
     // 山牌カーソル
     _drawWallCursor(inWall ? _gpWallIdx : -1);
+    // ポップアップフック（山牌フォーカス中のみ）
+    if(typeof window._onWallHighlight === 'function'){
+      window._onWallHighlight(inWall ? _gpWallIdx : -1);
+    }
   }
 
   function _drawWallCursor(slotIdx){
@@ -26396,22 +26412,28 @@ if(_origOpenProfile){
       };
       if(actionKey==='left'){
         _gpWallIdx = _nextValid(_gpWallIdx, -1);
-        _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ←'); return;
+        _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ←');
+        if(typeof window._onWallHighlight==='function') window._onWallHighlight(_gpWallIdx);
+        return;
       }
       if(actionKey==='right'){
         _gpWallIdx = _nextValid(_gpWallIdx, 1);
-        _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 →'); return;
+        _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 →');
+        if(typeof window._onWallHighlight==='function') window._onWallHighlight(_gpWallIdx);
+        return;
       }
       if(actionKey==='up'){
         let ni = _gpWallIdx - W_COLS;
         while(ni >= 0 && G.deckSlots[ni] === null) ni--;
-        if(ni >= 0){ _gpWallIdx = ni; _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ↑'); }
+        if(ni >= 0){ _gpWallIdx = ni; _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ↑');
+          if(typeof window._onWallHighlight==='function') window._onWallHighlight(_gpWallIdx); }
         return;
       }
       if(actionKey==='down'){
         let ni = _gpWallIdx + W_COLS;
         while(ni < total && G.deckSlots[ni] === null) ni++;
-        if(ni < total){ _gpWallIdx = ni; _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ↓'); }
+        if(ni < total){ _gpWallIdx = ni; _drawWallCursor(_gpWallIdx); renderWallExpand(); _hud('山牌 ↓');
+          if(typeof window._onWallHighlight==='function') window._onWallHighlight(_gpWallIdx); }
         return;
       }
       if(actionKey==='select_tile'){
@@ -26742,6 +26764,29 @@ if(_origOpenProfile){
         break;
       }
 
+      // ══════════ TSUMO_GIRI (RT/R2) ══════════
+      case 'tsumo_giri': {
+        // discard フェーズ・自分のターンのみ有効
+        if(typeof G === 'undefined' || !G || G.phase !== 'discard') break;
+        const myIdx2 = typeof NET !== 'undefined' ? NET.myIdx : 0;
+        const myTurn2 = NET.online ? G.current === myIdx2 : G.current === 0;
+        if(!myTurn2) break;
+        const p2 = G.players[myIdx2];
+        if(!p2) break;
+        // ツモ切り: 末尾（ツモ牌）を selIdx にセットして humanDiscard
+        const drawnIdx = p2.hand.length - 1;
+        if(drawnIdx < 0) break;
+        if(p2.riichi){
+          // リーチ中は選択不要でそのままツモ切り
+          if(typeof humanDiscard === 'function'){ _playBotanSe(); humanDiscard(); }
+        } else {
+          if(typeof selIdx !== 'undefined') selIdx = drawnIdx;
+          if(typeof humanDiscard === 'function'){ _playBotanSe(); humanDiscard(); }
+        }
+        _hud('ツモ切り');
+        break;
+      }
+
       // ══════════ TOGGLE_ABILITY (X) ══════════
       case 'toggle_ability': {
         // ドキュメント全体から能力ボタンを検索
@@ -27050,6 +27095,7 @@ if(_origOpenProfile){
   }
   window.gpGetVpadOn = ()=> _vpadUserWantsOn;
   window.gpSetVpadOn = (v)=>{ _vpadUserWantsOn = !!v; _applyVpadVisibility(); };
+  window._applyVpadVisibility = _applyVpadVisibility;
   // gameScreen の active クラス変化を監視して自動的に表示/非表示切替
   setTimeout(()=>{
     const gs = document.getElementById('gameScreen');
@@ -27094,18 +27140,9 @@ if(_origOpenProfile){
   // 汎用（外部から呼べるよう公開）
   window.gpRumble = _rumble;
 
-  // ─────────── ツモ牌カーソル自動追従 ───────────
-  // humanPickWall / drawTile の直後に末尾カーソルを設定する
-  function _moveCursorToDrawnTile(){
-    // 少し待ってDOM更新後に手牌末尾へ
-    setTimeout(()=>{
-      const t = _tiles();
-      if(!t.length) return;
-      _gpCursor = t.length - 1;
-      _gpFocus  = 'hand';
-      _highlight();
-    }, 80);
-  }
+  // ─────────── ツモ牌カーソル自動追従（廃止） ───────────
+  // ツモ後のカーソル自動移動は行わない（R2ツモ切りで対応）
+  function _moveCursorToDrawnTile(){ /* 無効化 */ }
 
   // renderAll ラップ: カーソル補正 + バインドテーブル再描画
   setTimeout(()=>{
@@ -27267,281 +27304,130 @@ function _gameScreenOffsetReset() {
         'align-items:center',
         'justify-content:center',
         'flex-direction:column',
-        'gap:6px',
-        'background:rgba(3,10,18,0.93)',
+        'gap:4px',
+        'background:rgba(3,10,18,0.94)',
         'border:2px solid #f0d47a',
         'border-radius:12px',
-        'padding:10px 14px',
-        'box-shadow:0 0 24px #f0d47a66,0 4px 32px #0008',
-        'min-width:80px',
+        'padding:10px 16px',
+        'box-shadow:0 0 24px #f0d47a66,0 4px 32px #000a',
+        'min-width:72px',
         'text-align:center',
-        'transition:opacity .08s',
       ].join(';');
       document.body.appendChild(el);
     }
     return el;
   }
 
-  // ポップアップを特定座標に表示
-  // anchorEl: 基準となるDOM要素（nullの場合はanchorRect使用）
-  // anchorRect: {left,top,width,height} in px (viewport座標)
-  // tileObj: {suit, num, ...} or null（裏牌等）
-  // label: 補助テキスト（省略可）
-  function _showGpTilePopup(anchorRect, tileObj, label){
-    const pop = _getOrCreatePopup();
-    // タイル内容
-    let inner = '';
-    if(tileObj){
-      if(typeof emj === 'function'){
-        const ej = emj(tileObj);
-        // emjはHTML文字列を返す場合がある
-        inner += `<div style="font-size:3.2rem;line-height:1;display:flex;align-items:center;justify-content:center;">${ej}</div>`;
-      }
-      if(typeof tileLabel === 'function'){
-        inner += `<div style="font-size:.72rem;color:#c9a84c;letter-spacing:.08em;margin-top:2px;">${tileLabel(tileObj)}${tileObj._isAka?'<span style="color:#ff6644;"> 赤</span>':''}</div>`;
-      }
-    } else {
-      inner += `<div style="font-size:2.6rem;">🀫</div>`;
-    }
-    if(label){
-      inner += `<div style="font-size:.6rem;color:#5a8a7a;margin-top:1px;">${label}</div>`;
-    }
-    pop.innerHTML = inner;
-    pop.style.display = 'flex';
-
-    // 位置計算：アンカーの上方に出す（はみ出す場合は下に）
+  function _positionPopup(pop, anchorRect){
+    // アンカーの上に出す（はみ出す場合は下）
     requestAnimationFrame(()=>{
       const pw = pop.offsetWidth  || 100;
       const ph = pop.offsetHeight || 100;
-      const margin = 10;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-
-      // 水平: アンカー中央揃え
+      const M  = 12;
       let lx = anchorRect.left + anchorRect.width / 2 - pw / 2;
-      lx = Math.max(margin, Math.min(vw - pw - margin, lx));
-
-      // 垂直: アンカー上方優先
-      let ly = anchorRect.top - ph - margin;
-      if(ly < margin) ly = anchorRect.top + anchorRect.height + margin;
-
+      lx = Math.max(M, Math.min(window.innerWidth  - pw - M, lx));
+      let ly = anchorRect.top - ph - M;
+      if(ly < M) ly = anchorRect.top + anchorRect.height + M;
       pop.style.left = lx + 'px';
       pop.style.top  = ly + 'px';
     });
   }
 
-  function _hideGpTilePopup(){
-    const pop = document.getElementById('gpTileZoomPopup');
-    if(pop) pop.style.display = 'none';
+  function _hidePopup(){
+    const p = document.getElementById('gpTileZoomPopup');
+    if(p) p.style.display = 'none';
   }
 
-  // ───── 捨て牌拡大モーダル: _dzHighlight をラップ ─────
-  // _dzHighlight は IIFE 内部関数だが window._dzInitCursor 経由で
-  // 呼ばれる際に _dzHighlight が更新済みになるよう、
-  // MutationObserver で捨て牌拡大モーダルの表示を監視し、
-  // タイル focus 状態から表示中タイルを特定する。
-  // → より確実な方法として、カーソルDOM変化（outline付与）を監視する。
+  // 捨て牌拡大: カーソルタイルDOM要素からポップアップ表示
+  function _showFromTileEl(tileEl){
+    if(!tileEl) return _hidePopup();
+    const rect = tileEl.getBoundingClientRect();
+    // 画面外なら非表示
+    if(rect.width === 0) return _hidePopup();
 
-  // 捨て牌拡大内のカーソル牌を MutationObserver で監視
-  function _observeDiscardZoom(){
-    const content = document.getElementById('discardZoomContent');
-    if(!content) return;
-
-    const obs = new MutationObserver(()=>{
-      // outline が付いているタイルを探す
-      const focused = content.querySelector('.tile[style*="3px solid #f0d47a"]');
-      const overlay = document.getElementById('discardZoomOverlay');
-      const isOpen  = overlay && overlay.style.display === 'flex';
-
-      if(!isOpen || !focused){
-        _hideGpTilePopup();
-        return;
-      }
-
-      // タイルのテキスト・画像からtileObjを特定するのは難しいため
-      // DOMの位置からポップアップを表示し、内容はonclick属性等から取得
-      const rect = focused.getBoundingClientRect();
-      // タイルのテキストノードやimg src からtileを推定
-      // → emj出力を逆引きするより、focused.innerHTML をそのまま使う
-      // ポップアップには focused のクローンを3倍サイズで表示する方式に変更
-      _showGpTilePopupFromEl(rect, focused);
-    });
-
-    obs.observe(content, { attributes: true, attributeFilter: ['style'], subtree: true });
-  }
-
-  // DOM要素の内容を大きく表示するポップアップ
-  function _showGpTilePopupFromEl(anchorRect, tileEl){
     const pop = _getOrCreatePopup();
 
-    // tileElの innerHTML をクローン（画像・絵文字含む）
     const clone = document.createElement('div');
     clone.innerHTML = tileEl.innerHTML;
-    // スタイルリセット
     clone.style.cssText = 'font-size:5rem;line-height:1;display:flex;align-items:center;justify-content:center;';
-    // img があれば大きくする
     clone.querySelectorAll('img').forEach(img=>{
-      img.style.cssText = 'width:3em;height:3em;object-fit:contain;display:block;';
+      img.style.cssText = 'width:2.8em;height:2.8em;object-fit:contain;display:block;';
     });
-
-    // ラベル（牌の種類）
-    const labelEl = document.createElement('div');
-    labelEl.style.cssText = 'font-size:.68rem;color:#c9a84c;letter-spacing:.08em;margin-top:4px;';
-    // tileElのクラスから suit を推定
-    const cls = tileEl.className || '';
-    if(cls.includes('man')) labelEl.textContent = '萬子';
-    else if(cls.includes('pin')) labelEl.textContent = '筒子';
-    else if(cls.includes('sou')) labelEl.textContent = '索子';
-    else if(cls.includes('honor')) labelEl.textContent = '字牌';
-    else labelEl.textContent = '';
 
     pop.innerHTML = '';
     pop.appendChild(clone);
-    if(labelEl.textContent) pop.appendChild(labelEl);
     pop.style.display = 'flex';
-
-    requestAnimationFrame(()=>{
-      const pw = pop.offsetWidth  || 120;
-      const ph = pop.offsetHeight || 120;
-      const margin = 10;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      let lx = anchorRect.left + anchorRect.width / 2 - pw / 2;
-      lx = Math.max(margin, Math.min(vw - pw - margin, lx));
-      let ly = anchorRect.top - ph - margin;
-      if(ly < margin) ly = anchorRect.top + anchorRect.height + margin;
-      pop.style.left = lx + 'px';
-      pop.style.top  = ly + 'px';
-    });
+    _positionPopup(pop, rect);
   }
 
-  // ───── 山牌カーソル: _drawWallCursor をラップ ─────
-  function _patchDrawWallCursor(){
-    const orig = window._drawWallCursor;
-    if(typeof orig !== 'function') return;
+  // 山牌: slotIdx の牌データからポップアップ表示
+  function _showFromWallSlot(slotIdx){
+    if(slotIdx < 0) return _hidePopup();
 
-    window._drawWallCursor = function(slotIdx){
-      orig.apply(this, arguments);
+    // カーソルDOMで位置を取得
+    const ov = document.getElementById('gpWallCursor');
+    if(!ov || ov.style.display === 'none') return _hidePopup();
+    const rect = ov.getBoundingClientRect();
 
-      // カーソルが非表示になる場合は隠す
-      if(slotIdx < 0){
-        _hideGpTilePopup();
-        return;
+    if(typeof G === 'undefined' || !G || !G.deckSlots) return _hidePopup();
+    const tile = G.deckSlots[slotIdx];
+    if(!tile) return _hidePopup();
+
+    const myIdx    = typeof NET !== 'undefined' ? NET.myIdx : 0;
+    const isMyDraw = G.phase === 'draw_wait' && G.current === myIdx;
+    const isReveal = !!(G.lightRevealedSlots?.[slotIdx]);
+
+    const pop = _getOrCreatePopup();
+
+    if(isMyDraw || isReveal){
+      // 牌を表示
+      let tileHTML = '';
+      if(typeof emj === 'function') tileHTML = emj(tile);
+      let labelText = '';
+      if(typeof tileLabel === 'function'){
+        labelText = tileLabel(tile) + (tile._isAka ? ' 赤' : '');
       }
-      // 捨て牌拡大が開いている間は山牌ポップアップ不要
-      const _discardZoomEl = document.getElementById('discardZoomOverlay');
-      if(_discardZoomEl && _discardZoomEl.style.display === 'flex') return;
-
-      // カーソルDOMから位置を取得
-      const ov = document.getElementById('gpWallCursor');
-      if(!ov || ov.style.display === 'none'){
-        _hideGpTilePopup();
-        return;
-      }
-      const rect = ov.getBoundingClientRect();
-
-      // 牌データ
-      if(typeof G === 'undefined' || !G || !G.deckSlots) return;
-      const tile = G.deckSlots[slotIdx];
-
-      // 自分のターン(draw_wait)のみ牌を表示、それ以外は裏牌
-      const myIdx = typeof NET !== 'undefined' ? NET.myIdx : 0;
-      const isMyDraw = G.phase === 'draw_wait' && G.current === myIdx;
-      // 光モード等で公開されている牌かどうか
-      const isRevealed = tile && tile._revealed;
-
-      if(!tile){
-        _hideGpTilePopup();
-        return;
-      }
-
-      if(isMyDraw || isRevealed){
-        _showGpTilePopup(rect, tile, '山牌');
-      } else {
-        // 裏牌ポップアップ
-        const pop = _getOrCreatePopup();
-        pop.innerHTML = `<div style="font-size:3rem;line-height:1;">🀫</div><div style="font-size:.6rem;color:#5a8a7a;margin-top:3px;">山牌</div>`;
-        pop.style.display = 'flex';
-        requestAnimationFrame(()=>{
-          const pw = pop.offsetWidth  || 90;
-          const ph = pop.offsetHeight || 90;
-          const margin = 10;
-          const vw = window.innerWidth;
-          const vh = window.innerHeight;
-          let lx = rect.left + rect.width / 2 - pw / 2;
-          lx = Math.max(margin, Math.min(vw - pw - margin, lx));
-          let ly = rect.top - ph - margin;
-          if(ly < margin) ly = rect.top + rect.height + margin;
-          pop.style.left = lx + 'px';
-          pop.style.top  = ly + 'px';
-        });
-      }
-    };
-  }
-
-  // ───── 山牌拡大オーバーレイ内でもカーソル移動時にポップアップ ─────
-  // renderWallExpand 後に gpWallCursor 位置変化を監視
-  function _observeWallExpandCursor(){
-    // gpWallCursor の style 変化を監視
-    const checkAndShowPopup = () => {
-      const wallOv = document.getElementById('wallExpandOverlay');
-      const isOpen = wallOv && wallOv.classList.contains('show');
-      if(!isOpen) return;
-
-      const ov = document.getElementById('gpWallCursor');
-      if(!ov || ov.style.display === 'none'){
-        _hideGpTilePopup();
-        return;
-      }
-      const rect = ov.getBoundingClientRect();
-      if(typeof G === 'undefined' || !G || !G.deckSlots) return;
-
-      // _gpWallIdx は IIFE 内部変数なので直接参照できないため
-      // カーソルDOM位置から最近傍スロットを探す
-      // → 代わりに _drawWallCursor のラップ内で処理済みのため不要
-    };
-
-    // wallExpandOverlay のクラス変化を監視して開閉検知
-    const wallOv = document.getElementById('wallExpandOverlay');
-    if(wallOv){
-      new MutationObserver(()=>{
-        if(!wallOv.classList.contains('show')){
-          _hideGpTilePopup();
-        }
-      }).observe(wallOv, { attributes: true, attributeFilter: ['class'] });
+      pop.innerHTML =
+        `<div style="font-size:5rem;line-height:1;display:flex;align-items:center;justify-content:center;">${tileHTML}</div>` +
+        (labelText ? `<div style="font-size:.7rem;color:#c9a84c;letter-spacing:.06em;">${labelText}</div>` : '');
+      // img があれば拡大
+      pop.querySelectorAll('img').forEach(img=>{
+        img.style.cssText = 'width:2.8em;height:2.8em;object-fit:contain;display:block;';
+      });
+    } else {
+      // 裏牌
+      pop.innerHTML = '<div style="font-size:4rem;line-height:1;">🀫</div>' +
+                      '<div style="font-size:.62rem;color:#5a8a7a;">山牌</div>';
     }
+    pop.style.display = 'flex';
+    _positionPopup(pop, rect);
   }
 
-  // ───── 捨て牌拡大が閉じられたときにポップアップを隠す ─────
-  function _observeDiscardZoomClose(){
+  // ── フックを登録 ──
+  // 捨て牌拡大カーソル移動時
+  window._onDzHighlight = function(tileEl){
     const overlay = document.getElementById('discardZoomOverlay');
-    if(!overlay) return;
-    new MutationObserver(()=>{
-      if(overlay.style.display !== 'flex'){
-        _hideGpTilePopup();
-      }
-    }).observe(overlay, { attributes: true, attributeFilter: ['style'] });
-  }
+    if(!overlay || overlay.style.display !== 'flex') return _hidePopup();
+    _showFromTileEl(tileEl);
+  };
 
-  // ─── 初期化: ゲーム画面が表示されてから実行 ───
-  function _initGpTileZoomPopup(){
-    _patchDrawWallCursor();
-    _observeDiscardZoom();
-    _observeDiscardZoomClose();
-    _observeWallExpandCursor();
-    // ゲームパッド非アクティブ時 / アクションボタンフォーカス時はポップアップを隠す
-    // → _hideGpTilePopup はすでに各所で呼ばれているので追加不要
-  }
+  // 山牌カーソル移動時（_highlight経由 & 山牌拡大キー操作経由）
+  window._onWallHighlight = function(slotIdx){
+    _showFromWallSlot(slotIdx);
+  };
 
-  // DOMContentLoaded 後、または即時実行
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', ()=> setTimeout(_initGpTileZoomPopup, 2200));
-  } else {
-    setTimeout(_initGpTileZoomPopup, 2200);
-  }
+  // 捨て牌拡大を閉じた時・山牌フォーカスが外れた時にポップアップを隠す
+  // → _highlight() のフックが slotIdx=-1 で呼ばれるので _showFromWallSlot(-1) → _hidePopup() で自動対応
+  // → 捨て牌拡大を閉じたとき用に style 監視
+  setTimeout(()=>{
+    const dzOv = document.getElementById('discardZoomOverlay');
+    if(dzOv){
+      new MutationObserver(()=>{
+        if(dzOv.style.display !== 'flex') _hidePopup();
+      }).observe(dzOv, { attributes: true, attributeFilter: ['style'] });
+    }
+  }, 500);
 
-  // 公開（デバッグ用）
-  window._gpTileZoomPopupInit = _initGpTileZoomPopup;
-  window._hideGpTilePopup = _hideGpTilePopup;
+  window._hideGpTilePopup = _hidePopup;
 })();
 </script>

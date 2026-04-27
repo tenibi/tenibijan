@@ -15109,7 +15109,13 @@ const _doraImgCache={};
       if(imgUrl){
         const cached=_wallImgCache[imgUrl];
         if(cached&&cached.complete){
-          ctx.drawImage(cached,r.x,r.y,r.w,r.h);
+          // アスペクト比を保ったまま中央に収める（object-fit:contain 相当）
+          const iw=cached.naturalWidth||cached.width||1;
+          const ih=cached.naturalHeight||cached.height||1;
+          const scale=Math.min(r.w/iw, r.h/ih);
+          const dw=iw*scale, dh=ih*scale;
+          const dx=r.x+(r.w-dw)/2, dy=r.y+(r.h-dh)/2;
+          ctx.drawImage(cached,dx,dy,dw,dh);
         } else if(!cached){
           const img=new Image();
           _wallImgCache[imgUrl]=img;
@@ -27451,14 +27457,15 @@ function _gameScreenOffsetReset() {
         'align-items:center',
         'justify-content:center',
         'flex-direction:column',
-        // 牌らしいクリーム色の本体
+        // 牌らしいクリーム色の本体（ほんの少し透過）
+        'opacity:0.85',
         'background:linear-gradient(160deg,#f7f2e2 55%,#e8dfc4)',
         // 牌の縦長比率 (約3:4) を再現
         'width:4.8em',
         'height:6.4em',
-        'font-size:3.5rem',
-        'border-radius:10px 10px 8px 8px',
-        'padding:6px',
+        'font-size:2rem',
+        'border-radius:6px 6px 5px 5px',
+        'padding:4px',
         // ベベル（上左が明るく・下右が暗い）+ 外枠2重 + ドロップシャドウ
         'box-shadow:inset 3px 3px 5px rgba(255,255,255,0.9),inset -3px -3px 5px rgba(90,65,10,0.28),0 0 0 3px #7a5c10,0 0 0 5px #c9a845,0 8px 28px rgba(0,0,0,0.72)',
       ].join(';');

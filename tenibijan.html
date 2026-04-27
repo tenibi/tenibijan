@@ -25250,7 +25250,8 @@ if(_origOpenProfile){
   let _gpCursor  = 0;
   let _gpActIdx  = 0;
   let _gpWallIdx = 0;
-  let _gpFocus   = 'hand';  // 'hand'|'action'|'wall'|'corner'|'emote'|'settings'|'automenu'
+  let _gpFocus   = 'hand';  // 'hand'|'action'|'wall'|'corner'|'emote'|'settings'|'automenu'|'light'
+  let _gpLightFocus = 0;  // 光モード: _lightTargets() 内のカーソル位置
   // ── ズーム画面カーソル ──
   let _dzPlayerIdx = 0; // 捨て牌拡大: 現在のプレイヤー行インデックス
   let _dzTileIdx   = 0; // 捨て牌拡大: 現在のプレイヤー内の捨て牌インデックス
@@ -25402,11 +25403,16 @@ if(_origOpenProfile){
   // ─────────── 左下コーナーボタン取得 ───────────
   function _cornerBtns(){
     const cl = document.getElementById('tableCornerLeft');
-    if(!cl) return [];
-    return Array.from(cl.querySelectorAll('button')).filter(b=>{
+    const leftBtns = cl ? Array.from(cl.querySelectorAll('button')).filter(b=>{
+      const s = window.getComputedStyle(b);
+      return s.display !== 'none' && s.visibility !== 'hidden' && !b.disabled;
+    }) : [];
+    // 右コーナーの能力ボタンも含める
+    const abilityBtns = Array.from(document.querySelectorAll('#cornerBtns .corner-ability-btn')).filter(b=>{
       const s = window.getComputedStyle(b);
       return s.display !== 'none' && s.visibility !== 'hidden' && !b.disabled;
     });
+    return [...leftBtns, ...abilityBtns];
   }
   // ─────────── エモートパネルのボタン取得 ───────────
   function _emotePanelBtns(){
@@ -25509,6 +25515,72 @@ if(_origOpenProfile){
     else t.click();
   }
 
+  // ── 光モード: 選択可能ターゲット一覧 ──────────────────────────
+  function _lightTargets(){
+    const targets = [];
+    // 相手の手牌タイル（onclick付き）
+    ['.seat-top','.seat-right','.seat-left'].forEach(sel=>{
+      const hw = document.querySelector(sel+' .hand-wrap');
+      if(!hw) return;
+      hw.querySelectorAll('.tile').forEach(t=>{
+        if(t.getAttribute('onclick')) targets.push({el:t, di:null, click:()=>t.click()});
+      });
+    });
+    // ドラ山 & 嶺上牌（doraCanvas 上の選択可能スロット）
+    const dc = document.getElementById('doraCanvas');
+    if(dc && typeof G!=='undefined' && G){
+      // ドラ表示牌: di=7..10
+      for(let di=7; di<=10; di++){
+        const alreadyOpen = di===7 || (di>=8 && (di-8)<(G.kanDoraCount||0));
+        const isRevealed = !!(G.lightRevealedSlots?.['dc_'+di]);
+        if(!alreadyOpen && !isRevealed) targets.push({el:null, di, click:()=>_doraCanvasClickDI(di)});
+      }
+      // 嶺上牌: di=rinshanIdx..6
+      const usedR = G.rinshanIdx ?? 6;
+      for(let di=usedR; di<=6; di++){
+        const isRevealed = !!(G.lightRevealedSlots?.['dc_'+di]);
+        if(!isRevealed) targets.push({el:null, di, click:()=>_doraCanvasClickDI(di)});
+      }
+    }
+    return targets;
+  }
+
+  function _doraCanvasClickDI(di){
+    const dc = document.getElementById('doraCanvas');
+    if(!dc) return;
+    // DC_W=36, DC_H=48, DC_GAP=2 → stride=38
+    let cx, cy;
+    if(di<=6){ cx=di*38+18; cy=24; }
+    else { const col=(di-7)+3; cx=col*38+18; cy=50+24; }
+    const bcr = dc.getBoundingClientRect();
+    const scaleX = bcr.width / (dc.width||1);
+    const scaleY = bcr.height / (dc.height||1);
+    dc.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,
+      clientX: bcr.left + cx*scaleX,
+      clientY: bcr.top  + cy*scaleY
+    }));
+  }
+
+  function _lightHighlight(){
+    // まず全対象のハイライトをリセット
+    ['.seat-top','.seat-right','.seat-left'].forEach(sel=>{
+      const hw = document.querySelector(sel+' .hand-wrap');
+      if(!hw) return;
+      hw.querySelectorAll('.tile').forEach(t=>{
+        t.style.outline=''; t.style.outlineOffset=''; t.style.transform='';
+      });
+    });
+    const targets = _lightTargets();
+    if(!targets.length) return;
+    const f = Math.min(_gpLightFocus, targets.length-1);
+    const cur = targets[f];
+    if(cur && cur.el){
+      cur.el.style.outline='3px solid #ffee22';
+      cur.el.style.outlineOffset='2px';
+      cur.el.style.transform='translateY(-6px) scale(1.1)';
+    }
+  }
+
   function _highlight(){
     if(!_gpActive){
       _tiles().forEach(t=>{ t.style.outline=''; t.style.outlineOffset=''; t.style.transform=''; });
@@ -25587,6 +25659,8 @@ if(_origOpenProfile){
     if(typeof window._onWallHighlight === 'function'){
       window._onWallHighlight(inWall ? _gpWallIdx : -1);
     }
+    // 光モードハイライト
+    if(_gpFocus === 'light') _lightHighlight();
   }
 
   function _drawWallCursor(slotIdx){
@@ -26467,6 +26541,53 @@ if(_origOpenProfile){
       return; // 他キーはブロック
     }
 
+    // ── 光モード (G.lightMode==='pick') ──────────────────────────
+    if(typeof G!=='undefined' && G && G.lightMode==='pick'){
+      // lightフォーカスでなければ自動切り替え
+      if(_gpFocus !== 'light' && _gpFocus !== 'wall'){
+        _gpFocus = 'light'; _gpLightFocus = 0; _highlight(); return;
+      }
+      if(_gpFocus === 'light'){
+        const targets = _lightTargets();
+        if(!targets.length){
+          // 対象なし → 山牌へ
+          _gpFocus = 'wall';
+          if(G.deckSlots){ const fi=G.deckSlots.findIndex(s=>s!==null); if(fi>=0) _gpWallIdx=fi; }
+          _highlight(); return;
+        }
+        if(_gpLightFocus >= targets.length) _gpLightFocus = targets.length - 1;
+        if(actionKey === 'left'){
+          _gpLightFocus = _gpLightFocus > 0 ? _gpLightFocus - 1 : targets.length - 1;
+          _highlight();
+        } else if(actionKey === 'right'){
+          _gpLightFocus = _gpLightFocus < targets.length - 1 ? _gpLightFocus + 1 : 0;
+          _highlight();
+        } else if(actionKey === 'up'){
+          // 山牌カーソルへ
+          _gpFocus = 'wall';
+          if(G.deckSlots){ const fi=G.deckSlots.findIndex(s=>s!==null); if(fi>=0) _gpWallIdx=fi; }
+          _highlight();
+        } else if(actionKey === 'select_tile'){
+          targets[_gpLightFocus].click();
+          setTimeout(()=>_highlight(), 100);
+        } else if(actionKey === 'skip'){
+          // キャンセル
+          G.lightMode = false; G.lightUserIdx = null;
+          try{ _lightPending = null; }catch(e){}
+          if(typeof renderAll === 'function') renderAll();
+          _gpFocus = 'hand'; _highlight();
+        }
+        return;
+      }
+      // wall フォーカス中: B で light に戻る
+      if(_gpFocus === 'wall' && actionKey === 'skip'){
+        _gpFocus = 'light'; _gpLightFocus = 0; _highlight(); return;
+      }
+    } else if(_gpFocus === 'light'){
+      // lightMode が終わったら hand に戻す
+      _gpFocus = 'hand'; _highlight();
+    }
+
     switch(actionKey){
 
       // ══════════ UP ══════════
@@ -26793,13 +26914,27 @@ if(_origOpenProfile){
 
       // ══════════ TOGGLE_ABILITY (X) ══════════
       case 'toggle_ability': {
-        // ドキュメント全体から能力ボタンを検索
-        const abilityBtn = document.querySelector('.corner-ability-btn');
-        if(abilityBtn){
-          _playBotanSe();
-          if(typeof abilityBtn.onclick === 'function') abilityBtn.onclick();
-          else abilityBtn.dispatchEvent(new MouseEvent('click', {bubbles:true}));
-          _hud('能力ボタン: 使用 [' + abilityBtn.textContent.trim().slice(0,8) + ']');
+        // 能力ボタンを全取得してサイクル（複数ある場合は順番に押す）
+        const abilityBtns = Array.from(document.querySelectorAll('.corner-ability-btn')).filter(b=>{
+          const s = window.getComputedStyle(b);
+          return s.display !== 'none' && s.visibility !== 'hidden' && !b.disabled;
+        });
+        if(abilityBtns.length > 0){
+          // コーナーフォーカスに移行して能力ボタンを選択可能にする
+          _gpFocus = 'corner';
+          // 能力ボタンのインデックスを合わせる（_cornerBtns内での位置）
+          const corners = _cornerBtns();
+          const firstAbilityIdx = corners.findIndex(b=>b.classList.contains('corner-ability-btn'));
+          if(firstAbilityIdx >= 0){
+            _gpCornerIdx = firstAbilityIdx;
+            _highlight();
+            _hud('能力ボタン: ' + corners[firstAbilityIdx].textContent.trim().slice(0,10));
+          } else {
+            // フォールバック: 直接クリック
+            _playBotanSe();
+            abilityBtns[0].click();
+            _hud('能力ボタン: 使用 [' + abilityBtns[0].textContent.trim().slice(0,8) + ']');
+          }
         } else {
           // フォールバック: ペンボタン（ペン能力）
           const penBtn = document.getElementById('penToggleBtn');
@@ -26808,7 +26943,6 @@ if(_origOpenProfile){
             penBtn.click();
             _hud('ペン: トグル');
           } else {
-            // デバッグ情報
             const allBtns = Array.from(document.querySelectorAll('#tableCornerRight button')).map(b=>b.id||b.className.split(' ')[0]).join(',');
             _hud('能力: なし [' + allBtns + ']');
           }
@@ -27362,36 +27496,45 @@ function _gameScreenOffsetReset() {
   function _showFromWallSlot(slotIdx){
     if(slotIdx < 0) return _hidePopup();
 
-    // カーソルDOMで位置を取得
-    const ov = document.getElementById('gpWallCursor');
-    if(!ov || ov.style.display === 'none') return _hidePopup();
-    const rect = ov.getBoundingClientRect();
-
     if(typeof G === 'undefined' || !G || !G.deckSlots) return _hidePopup();
     const tile = G.deckSlots[slotIdx];
     if(!tile) return _hidePopup();
 
-    const myIdx    = typeof NET !== 'undefined' ? NET.myIdx : 0;
-    const isReveal = !!(G.lightRevealedSlots?.[slotIdx]);
+    // transition ラグを避けるため canvas + _wallTileRect から直接座標を計算
+    const _wallExpandEl = document.getElementById('wallExpandOverlay');
+    const _wallOpen = _wallExpandEl && _wallExpandEl.classList.contains('show');
+    const canvasId  = _wallOpen ? 'wallExpandCanvas' : 'wallCanvas';
+    const wc = document.getElementById(canvasId);
+    if(!wc || typeof _wallTileRect !== 'function') return _hidePopup();
+    const wcRect = wc.getBoundingClientRect();
+    const tr = _wallTileRect(slotIdx);
+    const scaleX = wcRect.width  / (wc.width  || 1);
+    const scaleY = wcRect.height / (wc.height || 1);
+    const tileRect = {
+      left:   wcRect.left + tr.x * scaleX,
+      top:    wcRect.top  + tr.y * scaleY,
+      width:  tr.w * scaleX,
+      height: tr.h * scaleY,
+    };
 
+    const isReveal = !!(G.lightRevealedSlots?.[slotIdx]);
     const pop = _getOrCreatePopup();
 
     if(isReveal){
-      // 牌を表示
       let tileHTML = '';
       if(typeof emj === 'function') tileHTML = emj(tile);
       pop.innerHTML =
-        `<div style="font-size:7.5rem;line-height:1;display:flex;align-items:center;justify-content:center;">${tileHTML}</div>`;
-      // img があれば拡大
+        `<div style="font-size:3.5rem;line-height:1;display:flex;align-items:center;justify-content:center;">${tileHTML}</div>`;
+      // img に背景色を付けて透明部分を見やすくする
       pop.querySelectorAll('img').forEach(img=>{
-        img.style.cssText = 'width:2.8em;height:2.8em;object-fit:contain;display:block;';
+        img.style.cssText = 'width:2.4em;height:2.4em;object-fit:contain;display:block;background:#f5f0e8;border-radius:4px;';
       });
     } else {
       // 裏牌
-      pop.innerHTML = '<div style="font-size:6rem;line-height:1;">🀫</div>';
+      pop.innerHTML = '<div style="font-size:3.5rem;line-height:1;">🀫</div>';
     }
     pop.style.display = 'flex';
-    _positionPopup(pop, rect);
+    _positionPopup(pop, tileRect);
   }
 
   // ── フックを登録 ──

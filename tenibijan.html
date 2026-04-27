@@ -20495,10 +20495,10 @@ function _itmRenderSelectGrids() {
           : '';
         return `
         <div id="itm-th-${id}" onclick="itmToggleWant('${id}')" style="
-          aspect-ratio:3/4;border-radius:8px;border:2px solid #1a2a4a;background:#04080f;
+          border-radius:8px;border:2px solid #1a2a4a;background:#04080f;
           cursor:pointer;overflow:hidden;position:relative;
           display:flex;align-items:center;justify-content:center;
-          transition:transform .12s;
+          transition:transform .12s;width:100%;height:100%;box-sizing:border-box;
         ">
           <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
           ${badge}
@@ -20525,10 +20525,10 @@ function _itmRenderSelectGrids() {
             : '';
           return `
           <div id="itm-my-${id}" onclick="itmToggleOffer('${id}')" style="
-            aspect-ratio:3/4;border-radius:8px;border:2px solid #2a2a1a;background:#0a0800;
+            border-radius:8px;border:2px solid #2a2a1a;background:#0a0800;
             cursor:pointer;overflow:hidden;position:relative;
             display:flex;align-items:center;justify-content:center;
-            transition:transform .12s;
+            transition:transform .12s;width:100%;height:100%;box-sizing:border-box;
           ">
             <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
             ${badge}
@@ -24406,7 +24406,7 @@ function plantMineRinshan(ri){
           <span id="itm-sel-theirName" style="font-size:.6rem;font-weight:700;color:#88aaee;letter-spacing:.04em;"></span>
           <span style="font-size:.42rem;color:#2a4a7a;margin-left:auto;">タップ → 欲しい！</span>
         </div>
-        <div id="itm-sel-theirGrid" style="flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;align-content:start;"></div>
+        <div id="itm-sel-theirGrid" style="flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:1fr;gap:4px;"></div>
         <div style="margin-top:4px;display:flex;justify-content:flex-end;flex-shrink:0;">
           <button id="itm-emote-want-btn" onclick="itmSendEmote('want')" style="
             display:flex;align-items:center;gap:4px;
@@ -24418,30 +24418,6 @@ function plantMineRinshan(ri){
             <span id="itm-emote-want-icon" style="font-size:.85rem;line-height:1;">🙏</span>
             <span>欲しい！と送る</span>
           </button>
-        </div>
-      </div>
-
-      <!-- ── 中央プレビュー帯 ── -->
-      <div style="
-        display:flex;align-items:center;justify-content:center;gap:10px;
-        padding:5px 14px;flex-shrink:0;
-        background:linear-gradient(180deg,#070d1a 0%,#0c0c0c 50%,#0a0800 100%);
-        border-left:1.5px solid #2a2a2a;border-right:1.5px solid #2a2a2a;
-      ">
-        <div style="text-align:center;flex:1;">
-          <div style="font-size:.37rem;color:#4a6aaa;margin-bottom:2px;">🙏 欲しい（任意）</div>
-          <div id="itm-sel-wantPreview" style="
-            width:40px;height:40px;border-radius:7px;border:2px dashed #1a2a4a;
-            background:#04080f;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
-          "><span style="font-size:.32rem;color:#2a4a7a;">未選択</span></div>
-        </div>
-        <div style="font-size:1.3rem;color:#2a3a2a;flex-shrink:0;line-height:1;">⇅</div>
-        <div style="text-align:center;flex:1;">
-          <div style="font-size:.37rem;color:#8a6a2a;margin-bottom:2px;">💎 渡す（必須）</div>
-          <div id="itm-sel-offerPreview" style="
-            width:40px;height:40px;border-radius:7px;border:2px dashed #3a2a0a;
-            background:#0a0800;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
-          "><span style="font-size:.32rem;color:#5a4a2a;">未選択</span></div>
         </div>
       </div>
 
@@ -24457,7 +24433,7 @@ function plantMineRinshan(ri){
           <span style="margin-left:auto;font-size:.6rem;font-weight:700;color:#c9a84c;letter-spacing:.04em;">あなた</span>
           <span style="font-size:.85rem;">🙋</span>
         </div>
-        <div id="itm-sel-myGrid" style="flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;align-content:start;"></div>
+        <div id="itm-sel-myGrid" style="flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:1fr;gap:4px;"></div>
         <div style="margin-top:4px;display:flex;justify-content:flex-start;flex-shrink:0;">
           <button id="itm-emote-question-btn" onclick="itmSendEmote('question')" style="
             display:flex;align-items:center;gap:4px;

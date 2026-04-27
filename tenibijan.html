@@ -20349,33 +20349,6 @@ function _itmSetBanner(msg, color) {
 
 // ─ 交換ボタン押下（フレンド一覧から）
 async function startIconTradeMatch(friendId, friendName) {
-  // ── ポップアップウィンドウで開く（すでにポップアップ内なら従来モーダル表示） ──
-  if (!new URLSearchParams(window.location.search).has('iconTrade')) {
-    const baseUrl = window.location.pathname + (window.location.search.replace(/([?&])iconTrade=[^&]*/,'').replace(/([?&])friendName=[^&]*/,'') || '');
-    const sep = baseUrl.includes('?') ? '&' : '?';
-    const popupUrl = baseUrl + sep + 'iconTrade=' + encodeURIComponent(friendId) + '&friendName=' + encodeURIComponent(friendName);
-    const popup = window.open(popupUrl, 'iconTradePopup_' + friendId,
-      'width=520,height=780,resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no');
-    if (popup) {
-      const btn = document.getElementById('tradeBtn-' + friendId);
-      if (btn) { btn.textContent = '⏳ 別ウィンドウで開いています…'; btn.style.opacity = '.6'; btn.style.pointerEvents = 'none'; }
-      // BroadcastChannel で交換完了 / キャンセル を受信してボタンをリセット
-      try {
-        const _ch = new BroadcastChannel('iconTradeResult');
-        _ch.onmessage = (ev) => {
-          if (ev.data?.friendId === friendId) {
-            const b = document.getElementById('tradeBtn-' + friendId);
-            if (b) { b.textContent = '🔄 交換'; b.style.opacity = ''; b.style.pointerEvents = ''; }
-            _ch.close();
-          }
-        };
-      } catch(e) {}
-      return;
-    }
-    // ポップアップがブロックされた場合は従来のモーダルにフォールバック
-    console.warn('[ITM] ポップアップがブロックされました。モーダルで表示します。');
-  }
-
   _itm.friendId = friendId;
   _itm.friendName = friendName;
   _itm.offerId = null;
@@ -21095,15 +21068,6 @@ function closeIconTradeModal() {
   if (_itm.friendId) {
     const btn = document.getElementById('tradeBtn-' + _itm.friendId);
     if (btn) { btn.textContent = '🔄 交換'; btn.style.opacity = ''; btn.style.pointerEvents = ''; }
-  }
-  // ポップアップウィンドウ内ならば親ウィンドウに通知して自分を閉じる
-  if (new URLSearchParams(window.location.search).has('iconTrade')) {
-    try {
-      const _ch = new BroadcastChannel('iconTradeResult');
-      _ch.postMessage({ friendId: _itm.friendId });
-      _ch.close();
-    } catch(e) {}
-    setTimeout(() => { try { window.close(); } catch(e) {} }, 400);
   }
 }
 
@@ -23463,30 +23427,6 @@ function doTwitchLogout(){
     setTimeout(()=>{ _shopToast('Twitch連携に失敗しました。もう一度お試しください。'); }, 500);
   }
 
-  // ── アイコン交換ポップアップ起動（?iconTrade=xxx&friendName=yyy が付いている場合） ──
-  const _iconTradeId   = _params.get('iconTrade');
-  const _iconTradeName = _params.get('friendName');
-  if (_iconTradeId && _iconTradeName) {
-    // URLをきれいにしてから交換モーダルを起動
-    history.replaceState(null, '', window.location.pathname);
-    // loadProfile が非同期のためプロファイル取得完了を待ってから起動
-    const _waitAndTrade = () => {
-      if (typeof startIconTradeMatch === 'function') {
-        startIconTradeMatch(_iconTradeId, decodeURIComponent(_iconTradeName));
-      }
-    };
-    // loadProfile の authFetch 完了より後に実行（最大3秒待機）
-    let _tradeRetry = 0;
-    const _tradeInterval = setInterval(() => {
-      _tradeRetry++;
-      if (typeof authFetch === 'function' && localStorage.getItem('jwt_token')) {
-        clearInterval(_tradeInterval);
-        _waitAndTrade();
-      } else if (_tradeRetry >= 30) {
-        clearInterval(_tradeInterval);
-      }
-    }, 100);
-  }
 })();
 
 // ============================================================

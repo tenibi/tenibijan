@@ -3398,69 +3398,71 @@ body{
         <div class="lpc-coins" id="lpcTbbCoins"><img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tbb.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:2px;">---</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;align-self:stretch;">
-      <button id="portraitFullscreenBtn" onclick="toggleFullscreen()" style="
-        background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
-        color:#5a8a6a;font-size:.65rem;padding:0;cursor:pointer;
-        transition:all .15s;aspect-ratio:1/1;width:100%;
-        display:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="全画面">
-        <span id="portraitFullscreenIcon" style="font-size:1rem;">⛶</span>
-        <span id="portraitFullscreenLabel">全画面</span>
-      </button>
-      <button onclick="toggleTitleSettings()" style="
-        background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
-        color:#5a8a6a;font-size:.65rem;padding:0;cursor:pointer;
-        transition:all .15s;aspect-ratio:1/1;width:100%;
-        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="設定">
-        <span style="font-size:1rem;">⚙️</span>
-        <span>設定</span>
-      </button>
-      <button onclick="_openTwitchAndMission()" style="
-        background:#030a10;border:1px solid #2a1a4a;border-radius:7px;
-        color:#9b59b6;font-size:.65rem;padding:0;cursor:pointer;
-        transition:all .15s;aspect-ratio:1/1;width:100%;
-        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="手にビTwitch">
-        <span style="font-size:1rem;">💜</span>
-        <span>Twitch</span>
-      </button>
-      <button onclick="openFriendScreen()" style="
-        background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
-        color:#5a8a6a;font-size:.65rem;padding:0;cursor:pointer;
-        transition:all .15s;aspect-ratio:1/1;width:100%;position:relative;
-        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="フレンド" id="friendLobbyBtn">
-        <span style="font-size:1rem;">👥</span>
-        <span>フレンド</span>
-        <span id="friendBadge" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ff4444;"></span>
-      </button>
-      <button onclick="_openTeniPachi()" style="
-        background:linear-gradient(135deg,#100818,#06030e);border:1.5px solid #7a3a9a;border-radius:7px;
-        color:#cc88ff;font-size:.65rem;padding:6px 0;cursor:pointer;
-        transition:all .15s;width:100%;grid-column:1/-1;
-        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="手にパチ">
-        <span style="font-size:1.2rem;">🎰</span>
-        <span style="font-weight:700;">手にパチ</span>
-      </button>
-      <button onclick="doGoogleLogout()" style="
-        background:#030a10;border:1px solid #3a1a1a;border-radius:7px;
-        color:#8a5a5a;font-size:.65rem;padding:6px 0;cursor:pointer;
-        transition:all .15s;width:100%;grid-column:1/-1;
-        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="Googleログアウト">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;opacity:0.7;">
-        <span>ログアウト</span>
-      </button>
-      <button id="portraitAdminGiftChestBtn" style="display:none;
-        background:linear-gradient(135deg,#0a0a1a,#1a1405);border:1.5px solid #c9a84c;border-radius:7px;
-        color:#f0d080;font-size:.65rem;padding:0;cursor:pointer;
-        transition:all .15s;width:100%;grid-column:1/-1;position:relative;
-        animation:adminChestGlow 1.6s ease-in-out infinite;
-        display:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="管理者ギフト"
-        onclick="_openAdminGiftModal()">
-        <span id="portraitAdminGiftChestIcon" style="font-size:1.4rem;display:inline-block;animation:chestBounce .8s ease-in-out infinite alternate;">📦</span>
-        <span style="font-weight:700;">管理者ギフトを受け取る</span>
-        <span id="portraitAdminGiftChestDesc" style="font-size:.55rem;color:#a08840;margin-top:1px;"></span>
-        <span id="portraitAdminGiftChestCount" style="position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#c9a84c;color:#000;font-size:.55rem;font-weight:900;line-height:18px;text-align:center;padding:0 4px;box-shadow:0 0 6px #c9a84c88;">0</span>
-      </button>
-    </div>
+  </div>
+
+  <!-- 横1列ボタンバー（バナーの上） -->
+  <div id="portraitIconBar" style="display:flex;gap:5px;width:100%;margin-top:6px;">
+    <button id="portraitFullscreenBtn" onclick="toggleFullscreen()" style="
+      background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
+      color:#5a8a6a;font-size:.65rem;padding:0;cursor:pointer;
+      transition:all .15s;flex:1;aspect-ratio:1/1;
+      display:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="全画面">
+      <span id="portraitFullscreenIcon" style="font-size:1rem;">⛶</span>
+      <span id="portraitFullscreenLabel">全画面</span>
+    </button>
+    <button onclick="toggleTitleSettings()" style="
+      background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
+      color:#5a8a6a;font-size:.65rem;padding:0;cursor:pointer;
+      transition:all .15s;flex:1;aspect-ratio:1/1;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="設定">
+      <span style="font-size:1rem;">⚙️</span>
+      <span>設定</span>
+    </button>
+    <button onclick="_openTwitchAndMission()" style="
+      background:#030a10;border:1px solid #2a1a4a;border-radius:7px;
+      color:#9b59b6;font-size:.65rem;padding:0;cursor:pointer;
+      transition:all .15s;flex:1;aspect-ratio:1/1;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="手にビTwitch">
+      <span style="font-size:1rem;">💜</span>
+      <span>Twitch</span>
+    </button>
+    <button onclick="openFriendScreen()" style="
+      background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
+      color:#5a8a6a;font-size:.65rem;padding:0;cursor:pointer;
+      transition:all .15s;flex:1;aspect-ratio:1/1;position:relative;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="フレンド" id="friendLobbyBtn">
+      <span style="font-size:1rem;">👥</span>
+      <span>フレンド</span>
+      <span id="friendBadge" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ff4444;"></span>
+    </button>
+    <button onclick="_openTeniPachi()" style="
+      background:linear-gradient(135deg,#100818,#06030e);border:1.5px solid #7a3a9a;border-radius:7px;
+      color:#cc88ff;font-size:.65rem;padding:0;cursor:pointer;
+      transition:all .15s;flex:1;aspect-ratio:1/1;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="手にパチ">
+      <span style="font-size:1.2rem;">🎰</span>
+      <span style="font-weight:700;">手にパチ</span>
+    </button>
+    <button onclick="doGoogleLogout()" style="
+      background:#030a10;border:1px solid #3a1a1a;border-radius:7px;
+      color:#8a5a5a;font-size:.65rem;padding:0;cursor:pointer;
+      transition:all .15s;flex:1;aspect-ratio:1/1;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="Googleログアウト">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px;opacity:0.7;">
+      <span>ログアウト</span>
+    </button>
+    <button id="portraitAdminGiftChestBtn" style="display:none;
+      background:linear-gradient(135deg,#0a0a1a,#1a1405);border:1.5px solid #c9a84c;border-radius:7px;
+      color:#f0d080;font-size:.65rem;padding:0;cursor:pointer;
+      transition:all .15s;flex:1;aspect-ratio:1/1;position:relative;
+      animation:adminChestGlow 1.6s ease-in-out infinite;
+      flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.2;" title="管理者ギフト"
+      onclick="_openAdminGiftModal()">
+      <span id="portraitAdminGiftChestIcon" style="font-size:1.4rem;display:inline-block;animation:chestBounce .8s ease-in-out infinite alternate;">📦</span>
+      <span style="font-weight:700;">管理者ギフトを受け取る</span>
+      <span id="portraitAdminGiftChestDesc" style="font-size:.55rem;color:#a08840;margin-top:1px;"></span>
+      <span id="portraitAdminGiftChestCount" style="position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#c9a84c;color:#000;font-size:.55rem;font-weight:900;line-height:18px;text-align:center;padding:0 4px;box-shadow:0 0 6px #c9a84c88;">0</span>
+    </button>
   </div>
 
   <!-- タイトル設定パネル -->
@@ -3660,6 +3662,14 @@ body{
           <span id="gpVpadOffsetValTitle" style="font-size:.58rem;color:#aa66ff;width:36px;text-align:center;">0px</span>
           <button onclick="_gpVpadOffsetStep(10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#aa66ff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▼</button>
           <button onclick="_gpVpadOffsetReset()" style="width:28px;height:28px;background:#041018;border:1px solid #2a2a1a;border-radius:6px;color:#7a7a5a;font-size:.58rem;cursor:pointer;flex-shrink:0;">↺</button>
+        </div>
+        <!-- スティック移動速度 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ スティック速度</span>
+          <input id="stickSpeedSliderTitle" type="range" min="1" max="20" step="0.5" value="7"
+            style="flex:1;accent-color:#3ada8a;"
+            oninput="window._penStickSpeed=+this.value;document.getElementById('stickSpeedValTitle').textContent=this.value;document.getElementById('stickSpeedSliderHdr')&&(document.getElementById('stickSpeedSliderHdr').value=this.value);document.getElementById('stickSpeedValHdr')&&(document.getElementById('stickSpeedValHdr').textContent=this.value);saveSettings();">
+          <span id="stickSpeedValTitle" style="font-size:.58rem;color:#3ada8a;width:28px;text-align:center;">7</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
           <span id="gpStatusDotTitle" style="width:9px;height:9px;border-radius:50%;background:#2a4a3a;flex-shrink:0;box-shadow:0 0 4px #2a4a3a;transition:background .3s,box-shadow .3s;"></span>
@@ -4499,14 +4509,28 @@ body{
 
       // Aボタン（select_tile）は長押し判定を行う専用パス
       if(action === 'select_tile'){
-        const _down = e=>{ e.preventDefault(); _activeClass();   if(typeof window.__vpadSelectDown==='function') window.__vpadSelectDown(); };
-        const _up   = e=>{ e.preventDefault(); _inactiveClass(); if(typeof window.__vpadSelectUp  ==='function') window.__vpadSelectUp();   };
+        const _down = e=>{
+          e.preventDefault(); _activeClass();
+          if(typeof _penModeOn !== 'undefined' && _penModeOn){
+            if(typeof window.__penGpFireDown === 'function') window.__penGpFireDown();
+          } else {
+            if(typeof window.__vpadSelectDown === 'function') window.__vpadSelectDown();
+          }
+        };
+        const _up = e=>{
+          e.preventDefault(); _inactiveClass();
+          if(typeof _penModeOn !== 'undefined' && _penModeOn){
+            if(typeof window.__penGpFireUp === 'function') window.__penGpFireUp();
+          } else {
+            if(typeof window.__vpadSelectUp === 'function') window.__vpadSelectUp();
+          }
+        };
         el.addEventListener('touchstart',  _down, {passive:false});
         el.addEventListener('touchend',    _up,   {passive:false});
         el.addEventListener('touchcancel', _up,   {passive:false});
-        el.addEventListener('mousedown',   e=>{ e.preventDefault(); _activeClass();   if(typeof window.__vpadSelectDown==='function') window.__vpadSelectDown(); });
-        el.addEventListener('mouseup',     e=>{                     _inactiveClass(); if(typeof window.__vpadSelectUp  ==='function') window.__vpadSelectUp();   });
-        el.addEventListener('mouseleave',  e=>{                     _inactiveClass(); if(typeof window.__vpadSelectUp  ==='function') window.__vpadSelectUp();   });
+        el.addEventListener('mousedown',   _down);
+        el.addEventListener('mouseup',     _up);
+        el.addEventListener('mouseleave',  _up);
         return;
       }
 
@@ -4538,7 +4562,7 @@ body{
 
     const STICK_R   = 62;   // 外周円の半径 (px)
     const KNOB_R    = 24;   // ノブ半径 (px)
-    const SPEED_MAX = 7.0;  // カーソル最大速度 (px/frame)
+    const SPEED_MAX = ()=> (window._penStickSpeed || 7.0);  // カーソル最大速度 (px/frame) ※設定で変更可
     const DEAD_JS   = 0.12; // デッドゾーン
 
     let _jsActive   = false;  // ジョイスティックUI表示中か
@@ -4614,11 +4638,11 @@ body{
       if(!_jsActive){ _jsRafId = null; return; }
       const ax = Math.abs(_jsNx), ay = Math.abs(_jsNy);
       if(ax > DEAD_JS || ay > DEAD_JS){
-        const dx = _jsNx * SPEED_MAX;
-        const dy = _jsNy * SPEED_MAX;
+        const dx = _jsNx * SPEED_MAX();
+        const dy = _jsNy * SPEED_MAX();
         if(typeof window.__penGpMoveBy === 'function') window.__penGpMoveBy(dx, dy);
         // 描画中なら mousemove を発火
-        if(_jsDragging && typeof window.__penGpFireMove === 'function') window.__penGpFireMove();
+        if(typeof window.__penGpIsDrawing === 'function' && window.__penGpIsDrawing() && typeof window.__penGpFireMove === 'function') window.__penGpFireMove();
       }
       _jsRafId = requestAnimationFrame(_stickLoop);
     }
@@ -4637,8 +4661,6 @@ body{
       _jsOriginY = rect.top  + rect.height / 2;
       _jsDragging = true;
       _onStickMove(e);
-      // 描画開始
-      if(typeof window.__penGpFireDown === 'function') window.__penGpFireDown();
       const knob = document.getElementById('penVpadKnob');
       if(knob) knob.style.boxShadow = '0 0 16px #3ada8a, 0 0 32px #3ada8a44';
       if(!_jsRafId) _jsRafId = requestAnimationFrame(_stickLoop);
@@ -4662,7 +4684,6 @@ body{
       _jsDragging = false;
       _jsNx = 0; _jsNy = 0;
       _setKnobPos(0, 0);
-      if(typeof window.__penGpFireUp === 'function') window.__penGpFireUp();
       const knob = document.getElementById('penVpadKnob');
       if(knob) knob.style.boxShadow = '0 0 8px #3ada8a88';
     }
@@ -4699,7 +4720,6 @@ body{
       if(_jsEl){ _jsEl.remove(); _jsEl = null; }
       const dpad = document.getElementById('vpadDpad');
       if(dpad) Array.from(dpad.children).forEach(c => { c.style.visibility = ''; });
-      if(typeof window.__penGpFireUp === 'function') window.__penGpFireUp();
     }
 
     // _penModeOn を定期監視してUI切り替え
@@ -5265,6 +5285,7 @@ function saveSettings(){
       gpRumbleOn: typeof window.gpGetRumbleOn === 'function' ? window.gpGetRumbleOn() : true,
       gpVpadOn: typeof window.gpGetVpadOn === 'function' ? window.gpGetVpadOn() : false,
       gpVpadOffsetY: typeof window.gpGetVpadOffsetY === 'function' ? window.gpGetVpadOffsetY() : 0,
+      stickSpeed: window._penStickSpeed || 7.0,
       gameScreenOffsetY: window._gameScreenOffsetY || 0,
       iconVoiceScale: Object.assign({}, iconVoiceScale),
       tileImgExt: _tileImgExt,
@@ -5411,6 +5432,16 @@ function loadSettings(){
     if(data.gpVpadOffsetY != null && typeof window.gpSetVpadOffsetY === 'function'){
       window.gpSetVpadOffsetY(+data.gpVpadOffsetY);
       _applyGpVpadOffsetUI();
+    }
+    // スティック移動速度
+    if(data.stickSpeed != null){
+      window._penStickSpeed = +data.stickSpeed;
+      ['stickSpeedSliderTitle','stickSpeedSliderHdr'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.value=data.stickSpeed;
+      });
+      ['stickSpeedValTitle','stickSpeedValHdr'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.textContent=data.stickSpeed;
+      });
     }
     // 対戦画面 上下オフセット
     if(data.gameScreenOffsetY != null){
@@ -5729,7 +5760,7 @@ async function attemptRejoin(){
           hideRoomLobby();
           document.getElementById('lobby').style.display='none';
           document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
-          scaleTable();
+          scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
           setOnlineStatus('');
           addLog('✅ 対局に復帰しました','log-new');
           _refreshRejoinSession(); // 復帰成功後も次の切断に備えてセッション保持
@@ -5895,7 +5926,22 @@ const TILE_IMG={
   // ページ読み込み完了後にプリロード開始
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', preloadTileImages);
-    document.addEventListener('DOMContentLoaded', ()=>{ showSolo(); });
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // ★修正: 縦画面では showSolo() を呼ばない（lobbySoloが開いた状態になるバグを修正）
+      // 縦画面の初期状態は lobbyMode を表示し各サブカードは非表示にする
+      if(window.innerWidth < window.innerHeight){
+        if(typeof _backToMode==='function') _backToMode();
+        else {
+          ['lobbySolo','lobbyOnline','lobbyRank','lobbyBomb','lobbyDaily'].forEach(id=>{
+            const el=document.getElementById(id); if(el) el.style.display='none';
+          });
+          const lm=document.getElementById('lobbyMode'); if(lm) lm.style.display='';
+          const bb=document.getElementById('_backToModeBtn'); if(bb) bb.style.display='none';
+        }
+      } else {
+        showSolo();
+      }
+    });
   } else {
     preloadTileImages();
   }
@@ -7193,7 +7239,7 @@ function _forceStartRankCPUGame(){
   // 💣 爆弾数表示を非表示（ランクCPU戦は手にボムなし）
   _hideBombCountDisplay();
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
-  scaleTable();
+  scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,
      lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,
      mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},
@@ -8987,7 +9033,7 @@ function onNetData(msg, senderIdx){
       hideRoomLobby();
       document.getElementById('lobby').style.display='none';
       document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
-      scaleTable();
+      scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
       // ゲーム開始時点で復帰セッションを保存
       setTimeout(saveRejoinSession, 600);
       // ゲスト: ホストに自分のアイコン情報とPeerIDを送信（makePlayer後に反映させるため）
@@ -9896,7 +9942,7 @@ function startOnlineGame(){
   hideRoomLobby();
   document.getElementById('lobby').style.display='none';
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
-  scaleTable();
+  scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
   updateEmoteAreaVisibility();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:numPlayers===1?0:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
@@ -10286,7 +10332,7 @@ function initGame(){
   _hideBombCountDisplay();
   document.getElementById('lobby').style.display='none';
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
-  scaleTable();
+  scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:numPlayers===1?1:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
@@ -14094,7 +14140,7 @@ function startTenbiBattle(){
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,_sessionYakuman:[]};
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
-  scaleTable();
+  scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
   startRound();
   // 手にビバトルCPUの表示能力をhakuに上書き（内部ロジックはtenbiのまま）
   if(G.players[1]) G.players[1].displayAbility = 'haku';
@@ -14439,7 +14485,12 @@ function backToLobby(){
     // BOMBモードで能力OFFにした場合、ロビーのUI設定に戻す
     const abilityOnBtn = document.getElementById('modeAbilityOn');
     G_ABILITY_MODE = abilityOnBtn ? abilityOnBtn.classList.contains('active') : true;
-    showSolo();
+    // ★修正: 縦画面ではモード選択画面に戻る（lobbySoloが開いた状態になるバグを修正）
+    if(window.innerWidth < window.innerHeight && typeof _backToMode === 'function'){
+      _backToMode();
+    } else {
+      showSolo();
+    }
   }
   bgmToTitle();
   // ロビーに戻ったときにデイリーミッション状態を更新
@@ -16377,8 +16428,8 @@ function renderTable(){
     const scoreBadge = document.createElement('div');
     const scoreColor=p.score<0?'#44ccff':'var(--gold)';
     scoreBadge.style.cssText='display:flex;align-items:center;justify-content:center;height:48px;min-width:60px;font-size:.85rem;color:'+scoreColor+';font-weight:700;background:#0a0a00;border:1px solid #3a3010;border-radius:4px;padding:0 6px;white-space:nowrap;cursor:pointer;user-select:none;';
-    scoreBadge.title='📳 押し続けで振動攻撃';
-    scoreBadge.innerHTML='<span>'+p.score.toLocaleString()+'点</span><span style="font-size:.55rem;opacity:.45;margin-left:3px;line-height:1;">📳</span>';
+
+    scoreBadge.textContent=p.score.toLocaleString()+'点';
     // ── 振動攻撃: 押し続けでそのプレイヤーを振動 ──
     (function(_pidx){
       scoreBadge.addEventListener('mousedown',  (e)=>{ e.preventDefault(); if(typeof window._startPlayerRumble==='function') window._startPlayerRumble(_pidx); });
@@ -22466,6 +22517,12 @@ function selectAbility(el,ability){
   // DOMContentLoaded後にプロフィール同期
   document.addEventListener('DOMContentLoaded', ()=>{
     setTimeout(()=>{ if(typeof updateLobbyUI==='function') updateLobbyUI(); }, 400);
+    // ★ 縦画面ボタンバーをバナー直前に移動
+    const bar = document.getElementById('portraitIconBar');
+    const banner = document.getElementById('lobbyBannerWrap');
+    if(bar && banner && banner.parentNode){
+      banner.parentNode.insertBefore(bar, banner);
+    }
   });
 })();
 
@@ -24285,6 +24342,14 @@ function plantMineRinshan(ri){
               <button onclick="_gpVpadOffsetStep(10)" style="width:28px;height:28px;background:#041018;border:1px solid #1a3a2a;border-radius:6px;color:#aa66ff;font-size:.9rem;cursor:pointer;flex-shrink:0;">▼</button>
               <button onclick="_gpVpadOffsetReset()" style="width:28px;height:28px;background:#041018;border:1px solid #2a2a1a;border-radius:6px;color:#7a7a5a;font-size:.58rem;cursor:pointer;flex-shrink:0;">↺</button>
             </div>
+            <!-- スティック移動速度 -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span style="font-size:.6rem;color:#5a7a6a;flex:1;">🕹️ スティック速度</span>
+              <input id="stickSpeedSliderHdr" type="range" min="1" max="20" step="0.5" value="7"
+                style="flex:1;accent-color:#3ada8a;"
+                oninput="window._penStickSpeed=+this.value;document.getElementById('stickSpeedValHdr').textContent=this.value;document.getElementById('stickSpeedSliderTitle')&&(document.getElementById('stickSpeedSliderTitle').value=this.value);document.getElementById('stickSpeedValTitle')&&(document.getElementById('stickSpeedValTitle').textContent=this.value);saveSettings();">
+              <span id="stickSpeedValHdr" style="font-size:.58rem;color:#3ada8a;width:28px;text-align:center;">7</span>
+            </div>
             <div id="gpStatusRow" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
               <span id="gpStatusDot" style="width:9px;height:9px;border-radius:50%;background:#2a4a3a;flex-shrink:0;box-shadow:0 0 4px #2a4a3a;transition:background .3s,box-shadow .3s;"></span>
               <span id="gpStatusText" style="font-size:.6rem;color:#3a5a4a;">未接続（コントローラーを繋いでボタンを押してください）</span>
@@ -25573,7 +25638,7 @@ if(_origOpenProfile){
 // コントローラー／スマホを最大パワーで振動させる
 // ══════════════════════════════════════════════════════════════════
 (function(){
-  const _rumbleIntervalMs = 380; // 振動コマンドの送信間隔 (ms)
+  const _rumbleIntervalMs = 200; // 振動コマンドの送信間隔 (ms)
   const _rumbleIntervals  = {};  // playerIdx → intervalId
 
   // 指定プレイヤーに振動コマンドを1回送る
@@ -25641,6 +25706,10 @@ if(_origOpenProfile){
     { key:'toggle_pull',    label:'引くボタン ON/OFF' },
     { key:'toggle_ability', label:'能力ボタン ON/OFF' },
     { key:'tsumo_giri',   label:'RT (R2) ツモ切り' },
+    { key:'rumble_p0',    label:'📳 振動攻撃 P1' },
+    { key:'rumble_p1',    label:'📳 振動攻撃 P2' },
+    { key:'rumble_p2',    label:'📳 振動攻撃 P3' },
+    { key:'rumble_p3',    label:'📳 振動攻撃 P4' },
   ];
 
   const DEFAULT_BINDINGS = {
@@ -26240,7 +26309,17 @@ if(_origOpenProfile){
   function _cpuItems(){ return Array.from(document.querySelectorAll('#cpuSelectGrid button, #cpuSelectScreen button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
 
   // ── lobbyOnlineカード（ルームマッチ参加パネル・数字パッド）──
-  function _isLobbyOnlineVisible(){ const el=document.getElementById('lobbyOnline'); return el&&getComputedStyle(el).display!=='none'; }
+  function _isLobbyOnlineVisible(){
+    const el=document.getElementById('lobbyOnline');
+    if(!el||getComputedStyle(el).display==='none') return false;
+    // 横画面: lobbyOnlineがllSubPanelInner内にある場合、llSubPanelがopenのときだけ有効とする
+    const inner=document.getElementById('llSubPanelInner');
+    if(inner&&inner.contains(el)){
+      const sp=document.getElementById('llSubPanel');
+      return !!(sp&&sp.classList.contains('open'));
+    }
+    return true;
+  }
   function _onlineItems(){ return Array.from(document.querySelectorAll('#lobbyOnline button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
   function _onlineHighlight(){
     _onlineItems().forEach((el,i)=>{
@@ -26550,6 +26629,13 @@ if(_origOpenProfile){
     // ペンモード中はAボタン(select_tile)をゲーム操作に使わない（描画専用）
     if(actionKey === 'select_tile' && typeof _penModeOn !== 'undefined' && _penModeOn) return;
 
+    // 振動攻撃アクション（押し始めに開始・リリース時に停止）
+    if(actionKey.startsWith('rumble_p')){
+      const idx = +actionKey.slice(-1);
+      if(typeof window._startPlayerRumble === 'function') window._startPlayerRumble(idx);
+      return;
+    }
+
     const tiles = _tiles();
     const acts  = _actBtns();
 
@@ -26599,14 +26685,35 @@ if(_origOpenProfile){
         const el=items[f]; if(el){ _playBotanSe(); el.click(); setTimeout(_onlineHighlight,100); }
       } else if(actionKey==='skip'){
         _onlineIn=false; _onlineHighlight();
-        // サブパネルも閉じる
+        // サブパネルを閉じる
         _llSubClearHighlight();
         if(typeof _llCloseSubPanel==='function') _llCloseSubPanel();
+        // ★修正: 縦画面はモード選択に戻る、横画面はshowSolo()でlobbyOnlineを非表示に
+        if(window.innerWidth < window.innerHeight){
+          if(typeof _backToMode==='function') _backToMode();
+        } else {
+          if(typeof showSolo==='function') showSolo();
+        }
         _lobbyIn = true; _lobbyHighlight();
       }
       return;
     }
+    // lobbyOnlineが表示されたままになっていたらリセット（_onlineIn=falseの取りこぼし対策）
     if(_onlineIn){ _onlineIn=false; _onlineHighlight(); }
+    // ★修正: _onlineInがfalseでもlobbyOnlineが見えていてsubpanelが開いている場合はBで閉じる
+    if(!_onlineIn && _isLobbyOnlineVisible()){
+      if(actionKey==='skip'){
+        _llSubClearHighlight();
+        if(typeof _llCloseSubPanel==='function') _llCloseSubPanel();
+        if(window.innerWidth < window.innerHeight){
+          if(typeof _backToMode==='function') _backToMode();
+        } else {
+          if(typeof showSolo==='function') showSolo();
+        }
+        _lobbyIn = true; _lobbyHighlight();
+        return;
+      }
+    }
 
     // ══════════ タイトル（ロビー）画面の操作 ══════════
     if(_isLobbyVisible()){
@@ -27510,6 +27617,11 @@ if(_origOpenProfile){
             }
             _gpGrabHoldStart = 0;
           }
+          // 振動攻撃: ボタンを離したら停止
+          if(_bindings[phys] && _bindings[phys].startsWith('rumble_p')){
+            const _rIdx = +_bindings[phys].slice(-1);
+            if(typeof window._stopPlayerRumble === 'function') window._stopPlayerRumble(_rIdx);
+          }
         }
         _prev[phys] = pressed;
       });
@@ -27854,10 +27966,19 @@ if(_origOpenProfile){
   window.gpSetVpadOn = (v)=>{ _vpadUserWantsOn = !!v; _applyVpadVisibility(); if(!_vpadUserWantsOn && typeof window.__penGpHideCursor==='function') window.__penGpHideCursor(); };
   window._applyVpadVisibility = _applyVpadVisibility;
   // gameScreen の active クラス変化を監視して自動的に表示/非表示切替
-  setTimeout(()=>{
+  // ★修正: setTimeout を除去し即時登録（ルームマッチ開始タイミングと競合するバグを修正）
+  (function _setupVpadObserver(){
     const gs = document.getElementById('gameScreen');
-    if(gs) new MutationObserver(_applyVpadVisibility).observe(gs, { attributes: true, attributeFilter: ['class'] });
-  }, 500);
+    if(gs){
+      new MutationObserver(_applyVpadVisibility).observe(gs, { attributes: true, attributeFilter: ['class'] });
+    } else {
+      // DOM未構築の場合のみ遅延フォールバック
+      setTimeout(()=>{
+        const gs2 = document.getElementById('gameScreen');
+        if(gs2) new MutationObserver(_applyVpadVisibility).observe(gs2, { attributes: true, attributeFilter: ['class'] });
+      }, 200);
+    }
+  })();
 
   // 仮想パッド位置オフセット（下方向 px）
   let _vpadOffsetY = 0;
@@ -27872,6 +27993,14 @@ if(_origOpenProfile){
   // ─────────── コントローラー振動 ───────────
   function _rumble(strongMs, weakMs, strongMag, weakMag){
     if(!_gpRumbleOn) return; // 振動OFFなら何もしない
+    const durationMs = Math.max(strongMs, weakMs);
+
+    // ★ スマホ向け: Vibration API (navigator.vibrate)
+    if(typeof navigator.vibrate === 'function'){
+      try { navigator.vibrate(durationMs); } catch(e){}
+    }
+
+    // ゲームパッド向け: vibrationActuator
     let pads;
     try { pads = navigator.getGamepads(); } catch(e){ return; }
     for(let i=0;i<pads.length;i++){
@@ -27882,7 +28011,7 @@ if(_origOpenProfile){
         if(typeof act.playEffect === 'function'){
           act.playEffect('dual-rumble', {
             startDelay: 0,
-            duration: Math.max(strongMs, weakMs),
+            duration: durationMs,
             weakMagnitude:   weakMag   !== undefined ? weakMag   : 0.4,
             strongMagnitude: strongMag !== undefined ? strongMag : 0.6,
           });

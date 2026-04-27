@@ -3672,6 +3672,28 @@ body{
           <button onclick="gpRefresh()" style="flex:1;background:#030a10;border:1px solid #1a3a4a;border-radius:6px;color:#4a8aaa;font-size:.6rem;padding:6px;cursor:pointer;">🔄 再検出</button>
           <button onclick="gpResetBindings()" style="flex:1;background:#030a10;border:1px solid #2a3a2a;border-radius:6px;color:#5a7a6a;font-size:.6rem;padding:6px;cursor:pointer;">↺ リセット</button>
         </div>
+        <!-- ルームマッチ 振動攻撃 -->
+        <div style="border-top:1px solid #1a3a2a;margin-top:12px;padding-top:10px;">
+          <div style="font-size:.6rem;color:#5a7a6a;margin-bottom:7px;">📳 振動攻撃（押し続けで振動）</div>
+          <div style="display:flex;gap:5px;">
+            <button
+              onmousedown="_startPlayerRumble(0)" onmouseup="_stopPlayerRumble(0)" onmouseleave="_stopPlayerRumble(0)"
+              ontouchstart="event.preventDefault();_startPlayerRumble(0)" ontouchend="_stopPlayerRumble(0)" ontouchcancel="_stopPlayerRumble(0)"
+              style="flex:1;background:#041018;border:1px solid #1a4a2a;border-radius:6px;color:#4acc88;font-size:.58rem;padding:6px 4px;cursor:pointer;user-select:none;">P1</button>
+            <button
+              onmousedown="_startPlayerRumble(1)" onmouseup="_stopPlayerRumble(1)" onmouseleave="_stopPlayerRumble(1)"
+              ontouchstart="event.preventDefault();_startPlayerRumble(1)" ontouchend="_stopPlayerRumble(1)" ontouchcancel="_stopPlayerRumble(1)"
+              style="flex:1;background:#041018;border:1px solid #1a2a4a;border-radius:6px;color:#4a8aff;font-size:.58rem;padding:6px 4px;cursor:pointer;user-select:none;">P2</button>
+            <button
+              onmousedown="_startPlayerRumble(2)" onmouseup="_stopPlayerRumble(2)" onmouseleave="_stopPlayerRumble(2)"
+              ontouchstart="event.preventDefault();_startPlayerRumble(2)" ontouchend="_stopPlayerRumble(2)" ontouchcancel="_stopPlayerRumble(2)"
+              style="flex:1;background:#041018;border:1px solid #3a2a1a;border-radius:6px;color:#ff884a;font-size:.58rem;padding:6px 4px;cursor:pointer;user-select:none;">P3</button>
+            <button
+              onmousedown="_startPlayerRumble(3)" onmouseup="_stopPlayerRumble(3)" onmouseleave="_stopPlayerRumble(3)"
+              ontouchstart="event.preventDefault();_startPlayerRumble(3)" ontouchend="_stopPlayerRumble(3)" ontouchcancel="_stopPlayerRumble(3)"
+              style="flex:1;background:#041018;border:1px solid #3a1a2a;border-radius:6px;color:#ff44aa;font-size:.58rem;padding:6px 4px;cursor:pointer;user-select:none;">P4</button>
+          </div>
+        </div>
       </div>
     </div>
     <div id="titleTabContentRules" style="display:none;font-size:.85rem;color:#8aaa8a;line-height:1.8;text-align:center;padding:20px 10px;">
@@ -4445,11 +4467,6 @@ body{
     let _timers = {};
 
     function _press(action){
-      if(typeof _dispatchPhys === 'function'){
-        // _dispatchPhys はクロージャ内なので window経由で呼べないが、
-        // postMessage経由で自前ゲームパッドイベントとして送る
-      }
-      // 直接 _execAction を公開関数経由で呼ぶ
       if(typeof window.__vpadDispatch === 'function') window.__vpadDispatch(action);
     }
 
@@ -4480,6 +4497,19 @@ body{
         el.style.transform = (el.style.transform||'').replace(' scale(0.88)','').replace('scale(0.88)','');
       };
 
+      // Aボタン（select_tile）は長押し判定を行う専用パス
+      if(action === 'select_tile'){
+        const _down = e=>{ e.preventDefault(); _activeClass();   if(typeof window.__vpadSelectDown==='function') window.__vpadSelectDown(); };
+        const _up   = e=>{ e.preventDefault(); _inactiveClass(); if(typeof window.__vpadSelectUp  ==='function') window.__vpadSelectUp();   };
+        el.addEventListener('touchstart',  _down, {passive:false});
+        el.addEventListener('touchend',    _up,   {passive:false});
+        el.addEventListener('touchcancel', _up,   {passive:false});
+        el.addEventListener('mousedown',   e=>{ e.preventDefault(); _activeClass();   if(typeof window.__vpadSelectDown==='function') window.__vpadSelectDown(); });
+        el.addEventListener('mouseup',     e=>{                     _inactiveClass(); if(typeof window.__vpadSelectUp  ==='function') window.__vpadSelectUp();   });
+        el.addEventListener('mouseleave',  e=>{                     _inactiveClass(); if(typeof window.__vpadSelectUp  ==='function') window.__vpadSelectUp();   });
+        return;
+      }
+
       el.addEventListener('touchstart', e=>{
         e.preventDefault();
         _activeClass();
@@ -4494,7 +4524,6 @@ body{
         _inactiveClass();
         _stopRepeat(action);
       });
-      // マウスでも動作
       el.addEventListener('mousedown', e=>{ e.preventDefault(); _activeClass(); _startRepeat(action); });
       el.addEventListener('mouseup',   e=>{ _inactiveClass(); _stopRepeat(action); });
       el.addEventListener('mouseleave',e=>{ _inactiveClass(); _stopRepeat(action); });
@@ -4503,6 +4532,192 @@ body{
     document.addEventListener('DOMContentLoaded', ()=>{
       document.querySelectorAll('[data-vpad]').forEach(_attach);
     });
+
+    // ══════════ ペンモード用 仮想アナログスティック ══════════
+    // vpadDpad を監視し、_penModeOn が true の間だけジョイスティックUIに切り替える
+
+    const STICK_R   = 62;   // 外周円の半径 (px)
+    const KNOB_R    = 24;   // ノブ半径 (px)
+    const SPEED_MAX = 7.0;  // カーソル最大速度 (px/frame)
+    const DEAD_JS   = 0.12; // デッドゾーン
+
+    let _jsActive   = false;  // ジョイスティックUI表示中か
+    let _jsDragging = false;
+    let _jsOriginX  = 0, _jsOriginY = 0;  // タッチ開始位置（ページ座標）
+    let _jsNx       = 0, _jsNy = 0;       // 正規化されたスティック値 [-1,1]
+    let _jsRafId    = null;
+    let _jsEl       = null;   // ジョイスティックのルート要素
+
+    // ジョイスティックUIを生成してvpadDpadの中に差し込む
+    function _buildJoystick(){
+      const size = STICK_R * 2 + 4;
+      const el = document.createElement('div');
+      el.id = 'penVpadStick';
+      el.style.cssText = [
+        'position:absolute',
+        'left:50%','top:50%',
+        'transform:translate(-50%,-50%)',
+        'width:' + size + 'px',
+        'height:' + size + 'px',
+        'border-radius:50%',
+        'background:rgba(10,20,15,0.78)',
+        'border:2px solid #2a6a4a',
+        'box-shadow:0 0 12px rgba(58,218,138,0.18)',
+        'pointer-events:auto',
+        'user-select:none',
+        '-webkit-user-select:none',
+        'touch-action:none',
+        'display:flex','align-items:center','justify-content:center',
+        'cursor:grab',
+      ].join(';');
+
+      // ノブ
+      const knob = document.createElement('div');
+      knob.id = 'penVpadKnob';
+      knob.style.cssText = [
+        'position:absolute',
+        'width:' + (KNOB_R * 2) + 'px',
+        'height:' + (KNOB_R * 2) + 'px',
+        'border-radius:50%',
+        'background:radial-gradient(circle at 38% 38%, #4aeeaa, #1a8a5a)',
+        'border:2px solid #3ada8a',
+        'box-shadow:0 0 8px #3ada8a88',
+        'pointer-events:none',
+        'transition:box-shadow .1s',
+        'top:50%','left:50%',
+        'transform:translate(-50%,-50%)',
+      ].join(';');
+
+      // 描画ボタンラベル（ノブ中央）
+      const label = document.createElement('div');
+      label.id = 'penVpadDrawLabel';
+      label.textContent = '🖊️';
+      label.title = '長押し: 描画';
+      label.style.cssText = 'position:absolute;font-size:.9rem;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;';
+      knob.appendChild(label);
+
+      el.appendChild(knob);
+      return el;
+    }
+
+    // ノブの位置を更新
+    function _setKnobPos(nx, ny){
+      const knob = document.getElementById('penVpadKnob');
+      if(!knob) return;
+      const dx = nx * STICK_R;
+      const dy = ny * STICK_R;
+      knob.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+    }
+
+    // RAF ループ: スティック値に応じてカーソルを動かす
+    function _stickLoop(){
+      if(!_jsActive){ _jsRafId = null; return; }
+      const ax = Math.abs(_jsNx), ay = Math.abs(_jsNy);
+      if(ax > DEAD_JS || ay > DEAD_JS){
+        const dx = _jsNx * SPEED_MAX;
+        const dy = _jsNy * SPEED_MAX;
+        if(typeof window.__penGpMoveBy === 'function') window.__penGpMoveBy(dx, dy);
+        // 描画中なら mousemove を発火
+        if(_jsDragging && typeof window.__penGpFireMove === 'function') window.__penGpFireMove();
+      }
+      _jsRafId = requestAnimationFrame(_stickLoop);
+    }
+
+    function _getEventXY(e){
+      if(e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      if(e.changedTouches && e.changedTouches.length > 0) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+      return { x: e.clientX, y: e.clientY };
+    }
+
+    function _onStickStart(e){
+      e.preventDefault();
+      const { x, y } = _getEventXY(e);
+      const rect = _jsEl.getBoundingClientRect();
+      _jsOriginX = rect.left + rect.width  / 2;
+      _jsOriginY = rect.top  + rect.height / 2;
+      _jsDragging = true;
+      _onStickMove(e);
+      // 描画開始
+      if(typeof window.__penGpFireDown === 'function') window.__penGpFireDown();
+      const knob = document.getElementById('penVpadKnob');
+      if(knob) knob.style.boxShadow = '0 0 16px #3ada8a, 0 0 32px #3ada8a44';
+      if(!_jsRafId) _jsRafId = requestAnimationFrame(_stickLoop);
+    }
+
+    function _onStickMove(e){
+      if(!_jsDragging) return;
+      e.preventDefault();
+      const { x, y } = _getEventXY(e);
+      let dx = x - _jsOriginX;
+      let dy = y - _jsOriginY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if(dist > STICK_R){ dx = dx/dist*STICK_R; dy = dy/dist*STICK_R; }
+      _jsNx = dx / STICK_R;
+      _jsNy = dy / STICK_R;
+      _setKnobPos(_jsNx, _jsNy);
+    }
+
+    function _onStickEnd(e){
+      e.preventDefault();
+      _jsDragging = false;
+      _jsNx = 0; _jsNy = 0;
+      _setKnobPos(0, 0);
+      if(typeof window.__penGpFireUp === 'function') window.__penGpFireUp();
+      const knob = document.getElementById('penVpadKnob');
+      if(knob) knob.style.boxShadow = '0 0 8px #3ada8a88';
+    }
+
+    // ジョイスティックを有効化（十字キーを隠してjsを表示）
+    function _activateJoystick(){
+      if(_jsActive) return;
+      _jsActive = true;
+      const dpad = document.getElementById('vpadDpad');
+      if(!dpad) return;
+      // 十字キーの子要素を隠す
+      Array.from(dpad.children).forEach(c => { c.style.visibility = 'hidden'; });
+      // ジョイスティック生成・挿入
+      _jsEl = _buildJoystick();
+      dpad.appendChild(_jsEl);
+      _jsEl.addEventListener('touchstart', _onStickStart, {passive:false});
+      _jsEl.addEventListener('touchmove',  _onStickMove,  {passive:false});
+      _jsEl.addEventListener('touchend',   _onStickEnd,   {passive:false});
+      _jsEl.addEventListener('touchcancel',_onStickEnd,   {passive:false});
+      _jsEl.addEventListener('mousedown',  _onStickStart);
+      window.addEventListener('mousemove', _onStickMove);
+      window.addEventListener('mouseup',   _onStickEnd);
+      if(!_jsRafId) _jsRafId = requestAnimationFrame(_stickLoop);
+    }
+
+    // ジョイスティックを無効化（十字キーを戻す）
+    function _deactivateJoystick(){
+      if(!_jsActive) return;
+      _jsActive = false;
+      _jsDragging = false; _jsNx = 0; _jsNy = 0;
+      if(_jsRafId){ cancelAnimationFrame(_jsRafId); _jsRafId = null; }
+      window.removeEventListener('mousemove', _onStickMove);
+      window.removeEventListener('mouseup',   _onStickEnd);
+      if(_jsEl){ _jsEl.remove(); _jsEl = null; }
+      const dpad = document.getElementById('vpadDpad');
+      if(dpad) Array.from(dpad.children).forEach(c => { c.style.visibility = ''; });
+      if(typeof window.__penGpFireUp === 'function') window.__penGpFireUp();
+    }
+
+    // _penModeOn を定期監視してUI切り替え
+    function _watchPenMode(){
+      const isPen = typeof _penModeOn !== 'undefined' ? _penModeOn : false;
+      if(isPen && !_jsActive)        _activateJoystick();
+      else if(!isPen && _jsActive)   _deactivateJoystick();
+    }
+    setInterval(_watchPenMode, 120);
+
+    // togglePenModeが呼ばれた直後にも即座に反映されるようフック
+    const _origToggle = window.togglePenMode;
+    if(typeof _origToggle === 'function'){
+      window.togglePenMode = function(){
+        _origToggle();
+        setTimeout(_watchPenMode, 30);
+      };
+    }
   })();
   </script>
 
@@ -6645,8 +6860,13 @@ function _setModeActive(id){
   });
 }
 function showSolo(){
-  const _isPort=window.innerWidth<window.innerHeight;if(_isPort){document.getElementById('lobbyMode').style.display='';}
-  const bb = document.getElementById('_backToModeBtn'); if(bb) bb.style.display='none';
+  const _isPort=window.innerWidth<window.innerHeight;
+  if(_isPort){
+    document.getElementById('lobbyMode').style.display='none';
+    const bb = document.getElementById('_backToModeBtn'); if(bb) bb.style.display='';
+  } else {
+    const bb = document.getElementById('_backToModeBtn'); if(bb) bb.style.display='none';
+  }
   document.getElementById('lobbySolo').style.display='';
   document.getElementById('lobbyOnline').style.display='none';
   document.getElementById('lobbyRank').style.display='none';
@@ -6660,7 +6880,8 @@ function showSolo(){
   _applyCpuGameSettingsUI();
 }
 function showOnline(){
-  const _isPort=window.innerWidth<window.innerHeight;if(_isPort){const _isPort=window.innerWidth<window.innerHeight;if(_isPort){const _isPort=window.innerWidth<window.innerHeight;if(_isPort){const _isPort=window.innerWidth<window.innerHeight;if(_isPort){document.getElementById('lobbyMode').style.display='none';}}}}
+  const _isPort=window.innerWidth<window.innerHeight;
+  if(_isPort){ document.getElementById('lobbyMode').style.display='none'; }
   document.getElementById('lobbySolo').style.display='none';
   document.getElementById('lobbyOnline').style.display='';
   document.getElementById('lobbyRank').style.display='none';
@@ -8619,6 +8840,29 @@ function netSend(msg){
 }
 
 function onNetData(msg, senderIdx){
+  // ── 振動攻撃 ──────────────────────────────────────────────────
+  if(msg.type==='rumble'){
+    // 自分のコントローラーを最大パワーで振動
+    if(typeof window.gpRumble==='function') window.gpRumble(400,400,1.0,1.0);
+    return;
+  }
+  if(msg.type==='rumbleRelay'){
+    // ゲストがホスト経由で別プレイヤーへ振動を中継依頼
+    if(typeof amIHost==='function' && amIHost()){
+      const tIdx=msg.targetIdx;
+      if(typeof tIdx==='number'){
+        if(tIdx===0){
+          // ホスト自身を振動
+          if(typeof window.gpRumble==='function') window.gpRumble(400,400,1.0,1.0);
+        } else {
+          const tConn=NET.conns&&NET.conns[tIdx-1];
+          if(tConn&&tConn.open) tConn.send({type:'rumble'});
+        }
+      }
+    }
+    return;
+  }
+  // ────────────────────────────────────────────────────────────────
   if(amIHost()){
     handleGuestAction(msg, senderIdx);
   } else {
@@ -14783,12 +15027,12 @@ function renderWallExpand(){
 function _initWallExpandEvents(ec){
   const getPos = (e) => {
     const rect = ec.getBoundingClientRect();
-    const pt   = e.touches ? e.touches[0] : e;
-    const scaleX = ec.width  / rect.width;
-    const scaleY = ec.height / rect.height;
+    const pt   = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+    const logW = parseFloat(ec.style.width)  || rect.width;
+    const logH = parseFloat(ec.style.height) || rect.height;
     return {
-      x: (pt.clientX - rect.left) * scaleX,
-      y: (pt.clientY - rect.top)  * scaleY,
+      x: (pt.clientX - rect.left) * (logW / rect.width),
+      y: (pt.clientY - rect.top)  * (logH / rect.height),
     };
   };
 
@@ -14812,6 +15056,8 @@ function _initWallExpandEvents(ec){
 
   const epDown = (e) => {
     if(!_penModeOn) return;
+    // 仮想コントローラーON中はタッチ描画を無効（コントローラーカーソルで描く）
+    if(e.type&&e.type.startsWith('touch')&&typeof window.gpGetVpadOn==='function'&&window.gpGetVpadOn()) return;
     e.preventDefault(); e.stopPropagation();
     _epActive = true; _epSlots.clear();
     const p = getPos(e); _epLX = p.x; _epLY = p.y;
@@ -14925,7 +15171,29 @@ function _initWallExpandEvents(ec){
 function togglePenMode(){
   if(!G_ABILITY_MODE||PROFILE.ability!=='pen') return; // ペン能力がない場合は無効
   _penModeOn=!_penModeOn;
-  if(_penModeOn){ _initPenToolbar(); }
+  if(!_penModeOn){
+    // ペンモード終了時: コントローラーカーソルを即座に非表示
+    if(typeof window.__penGpHideCursor === 'function') window.__penGpHideCursor();
+  }
+  if(_penModeOn){
+    _initPenToolbar();
+    // コントローラー使用中ならカーソルを画面中央にリセット＆案内表示
+    if(typeof window.gpGetActive === 'function' && window.gpGetActive()){
+      if(typeof window.__penGpResetCursor === 'function') window.__penGpResetCursor();
+      // 簡易トーストで操作ガイドを表示
+      (function(){
+        let t = document.getElementById('_penGpToast');
+        if(!t){ t = document.createElement('div'); t.id='_penGpToast';
+          t.style.cssText='position:fixed;bottom:180px;left:50%;transform:translateX(-50%);z-index:999998;background:rgba(10,20,30,0.88);color:#3ada8a;font-size:.72rem;padding:6px 14px;border-radius:8px;border:1px solid #2a6a4a;pointer-events:none;white-space:nowrap;';
+          document.body.appendChild(t);
+        }
+        t.textContent = '🎮 左スティック: カーソル移動 ／ Aボタン押しながら: 描画';
+        t.style.display = 'block';
+        clearTimeout(t._tm);
+        t._tm = setTimeout(()=>{ t.style.display='none'; }, 3500);
+      })();
+    }
+  }
   const btn=document.getElementById('penToggleBtn');
   if(btn) btn.classList.toggle('pen-active',_penModeOn);
   const tb=document.getElementById('penToolbarFloat');
@@ -15271,9 +15539,12 @@ function _initWallCanvasEvents(wc){
   const getPos=(e)=>{
     const r=wc.getBoundingClientRect();
     const pt=(e.touches&&e.touches[0]) || (e.changedTouches&&e.changedTouches[0]) || e;
+    // wc.width は DPR 倍の物理ピクセルなので、論理サイズ(style.width)を使う
+    const logW = parseFloat(wc.style.width)  || r.width;
+    const logH = parseFloat(wc.style.height) || r.height;
     return {
-      x:(pt.clientX-r.left)*(wc.width/r.width),
-      y:(pt.clientY-r.top)*(wc.height/r.height)
+      x:(pt.clientX-r.left)*(logW/r.width),
+      y:(pt.clientY-r.top)*(logH/r.height)
     };
   };
 
@@ -15305,6 +15576,8 @@ function _initWallCanvasEvents(wc){
   }
   const penDown=(e)=>{
     if(!_penModeOn) return;
+    // 仮想コントローラーON中はタッチ描画を無効（コントローラーカーソルで描く）
+    if(e.type&&e.type.startsWith('touch')&&typeof window.gpGetVpadOn==='function'&&window.gpGetVpadOn()) return;
     e.preventDefault();
     _wallPenActive=true;
     _strokeSlots.clear();
@@ -15706,10 +15979,12 @@ function renderDoraCanvas(){
 function _initDoraCanvasEvents(dc){
   const getPos=(e)=>{
     const rect=dc.getBoundingClientRect();
-    const pt=e.touches?e.touches[0]:e;
+    const pt=e.touches?e.touches[0]:(e.changedTouches?e.changedTouches[0]:e);
+    const logW = parseFloat(dc.style.width)  || rect.width;
+    const logH = parseFloat(dc.style.height) || rect.height;
     return {
-      x:(pt.clientX-rect.left)*(dc.width/rect.width),
-      y:(pt.clientY-rect.top)*(dc.height/rect.height)
+      x:(pt.clientX-rect.left)*(logW/rect.width),
+      y:(pt.clientY-rect.top)*(logH/rect.height)
     };
   };
   const getDI=(x,y)=>{
@@ -15725,6 +16000,8 @@ function _initDoraCanvasEvents(dc){
 
   const down=(e)=>{
     if(!_penModeOn) return;
+    // 仮想コントローラーON中はタッチ描画を無効（コントローラーカーソルで描く）
+    if(e.type&&e.type.startsWith('touch')&&typeof window.gpGetVpadOn==='function'&&window.gpGetVpadOn()) return;
     e.preventDefault();
     _doraPenActive=true; _doraStrokeSet.clear();
     const p=getPos(e); _doraPenLX=p.x; _doraPenLY=p.y;
@@ -16099,8 +16376,18 @@ function renderTable(){
     scoreRow.appendChild(windBadge);
     const scoreBadge = document.createElement('div');
     const scoreColor=p.score<0?'#44ccff':'var(--gold)';
-    scoreBadge.style.cssText='display:flex;align-items:center;justify-content:center;height:48px;min-width:60px;font-size:.85rem;color:'+scoreColor+';font-weight:700;background:#0a0a00;border:1px solid #3a3010;border-radius:4px;padding:0 6px;white-space:nowrap;';
-    scoreBadge.textContent=p.score.toLocaleString()+'点';
+    scoreBadge.style.cssText='display:flex;align-items:center;justify-content:center;height:48px;min-width:60px;font-size:.85rem;color:'+scoreColor+';font-weight:700;background:#0a0a00;border:1px solid #3a3010;border-radius:4px;padding:0 6px;white-space:nowrap;cursor:pointer;user-select:none;';
+    scoreBadge.title='📳 押し続けで振動攻撃';
+    scoreBadge.innerHTML='<span>'+p.score.toLocaleString()+'点</span><span style="font-size:.55rem;opacity:.45;margin-left:3px;line-height:1;">📳</span>';
+    // ── 振動攻撃: 押し続けでそのプレイヤーを振動 ──
+    (function(_pidx){
+      scoreBadge.addEventListener('mousedown',  (e)=>{ e.preventDefault(); if(typeof window._startPlayerRumble==='function') window._startPlayerRumble(_pidx); });
+      scoreBadge.addEventListener('mouseup',    ()=>{                       if(typeof window._stopPlayerRumble ==='function') window._stopPlayerRumble(_pidx);  });
+      scoreBadge.addEventListener('mouseleave', ()=>{                       if(typeof window._stopPlayerRumble ==='function') window._stopPlayerRumble(_pidx);  });
+      scoreBadge.addEventListener('touchstart', (e)=>{ e.preventDefault(); if(typeof window._startPlayerRumble==='function') window._startPlayerRumble(_pidx); }, {passive:false});
+      scoreBadge.addEventListener('touchend',   ()=>{                       if(typeof window._stopPlayerRumble ==='function') window._stopPlayerRumble(_pidx);  });
+      scoreBadge.addEventListener('touchcancel',()=>{                       if(typeof window._stopPlayerRumble ==='function') window._stopPlayerRumble(_pidx);  });
+    })(pidx);
     scoreRow.appendChild(scoreBadge);
     rightPanel.appendChild(scoreRow);
 
@@ -24009,6 +24296,28 @@ function plantMineRinshan(ri){
               <button onclick="gpRefresh()" style="flex:1;background:#030a10;border:1px solid #1a3a4a;border-radius:6px;color:#4a8aaa;font-size:.6rem;padding:6px;cursor:pointer;">🔄 再検出</button>
               <button onclick="gpResetBindings()" style="flex:1;background:#030a10;border:1px solid #2a3a2a;border-radius:6px;color:#5a7a6a;font-size:.6rem;padding:6px;cursor:pointer;">↺ リセット</button>
             </div>
+            <!-- ルームマッチ 振動攻撃 -->
+            <div style="border-top:1px solid #1a3a2a;margin-top:12px;padding-top:10px;">
+              <div style="font-size:.6rem;color:#5a7a6a;margin-bottom:7px;">📳 振動攻撃（押し続けで振動）</div>
+              <div style="display:flex;gap:5px;">
+                <button
+                  onmousedown="_startPlayerRumble(0)" onmouseup="_stopPlayerRumble(0)" onmouseleave="_stopPlayerRumble(0)"
+                  ontouchstart="event.preventDefault();_startPlayerRumble(0)" ontouchend="_stopPlayerRumble(0)" ontouchcancel="_stopPlayerRumble(0)"
+                  style="flex:1;background:#041018;border:1px solid #1a4a2a;border-radius:6px;color:#4acc88;font-size:.58rem;padding:6px 4px;cursor:pointer;user-select:none;">P1</button>
+                <button
+                  onmousedown="_startPlayerRumble(1)" onmouseup="_stopPlayerRumble(1)" onmouseleave="_stopPlayerRumble(1)"
+                  ontouchstart="event.preventDefault();_startPlayerRumble(1)" ontouchend="_stopPlayerRumble(1)" ontouchcancel="_stopPlayerRumble(1)"
+                  style="flex:1;background:#041018;border:1px solid #1a2a4a;border-radius:6px;color:#4a8aff;font-size:.58rem;padding:6px 4px;cursor:pointer;user-select:none;">P2</button>
+                <button
+                  onmousedown="_startPlayerRumble(2)" onmouseup="_stopPlayerRumble(2)" onmouseleave="_stopPlayerRumble(2)"
+                  ontouchstart="event.preventDefault();_startPlayerRumble(2)" ontouchend="_stopPlayerRumble(2)" ontouchcancel="_stopPlayerRumble(2)"
+                  style="flex:1;background:#041018;border:1px solid #3a2a1a;border-radius:6px;color:#ff884a;font-size:.58rem;padding:6px 4px;cursor:pointer;user-select:none;">P3</button>
+                <button
+                  onmousedown="_startPlayerRumble(3)" onmouseup="_stopPlayerRumble(3)" onmouseleave="_stopPlayerRumble(3)"
+                  ontouchstart="event.preventDefault();_startPlayerRumble(3)" ontouchend="_stopPlayerRumble(3)" ontouchcancel="_stopPlayerRumble(3)"
+                  style="flex:1;background:#041018;border:1px solid #3a1a2a;border-radius:6px;color:#ff44aa;font-size:.58rem;padding:6px 4px;cursor:pointer;user-select:none;">P4</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -25259,6 +25568,61 @@ if(_origOpenProfile){
 </html>
 <script>
 // ══════════════════════════════════════════════════════════════════
+// 📳 プレイヤー振動攻撃 (ルームマッチ対応)
+// 設定パネルのP1〜P4ボタンを押し続けると、そのプレイヤーの
+// コントローラー／スマホを最大パワーで振動させる
+// ══════════════════════════════════════════════════════════════════
+(function(){
+  const _rumbleIntervalMs = 380; // 振動コマンドの送信間隔 (ms)
+  const _rumbleIntervals  = {};  // playerIdx → intervalId
+
+  // 指定プレイヤーに振動コマンドを1回送る
+  function _sendRumble(playerIdx){
+    const myIdx  = (typeof NET !== 'undefined') ? NET.myIdx : 0;
+    const isHost = (typeof amIHost === 'function') ? amIHost() : (myIdx === 0);
+
+    // 自分自身
+    if(playerIdx === myIdx){
+      if(typeof window.gpRumble === 'function') window.gpRumble(400, 400, 1.0, 1.0);
+      return;
+    }
+
+    // ホストから直接ゲストへ
+    if(isHost){
+      if(playerIdx === 0){
+        // ホスト自身が対象 (ゲストがホスト宛に中継した場合のルート — 通常ここには来ない)
+        if(typeof window.gpRumble === 'function') window.gpRumble(400, 400, 1.0, 1.0);
+      } else {
+        const conn = typeof NET !== 'undefined' && NET.conns && NET.conns[playerIdx - 1];
+        if(conn && conn.open) conn.send({ type: 'rumble' });
+      }
+      return;
+    }
+
+    // ゲストはホスト経由で中継
+    const hostConn = typeof NET !== 'undefined' && NET.conn;
+    if(hostConn && hostConn.open){
+      hostConn.send({ type: 'rumbleRelay', targetIdx: playerIdx });
+    }
+  }
+
+  // ボタン押し始め: 即時1回 + インターバル
+  window._startPlayerRumble = function(playerIdx){
+    window._stopPlayerRumble(playerIdx); // 二重起動防止
+    _sendRumble(playerIdx);
+    _rumbleIntervals[playerIdx] = setInterval(() => _sendRumble(playerIdx), _rumbleIntervalMs);
+  };
+
+  // ボタン離し: インターバル停止
+  window._stopPlayerRumble = function(playerIdx){
+    if(_rumbleIntervals[playerIdx] !== undefined){
+      clearInterval(_rumbleIntervals[playerIdx]);
+      delete _rumbleIntervals[playerIdx];
+    }
+  };
+})();
+
+// ══════════════════════════════════════════════════════════════════
 // 🎮 ゲームパッドサポート for 手にビじゃん  (v3 – ボタン割り当て)
 // postMessage方式: 親ウィンドウでgetGamepads()→iframeへ転送
 // ══════════════════════════════════════════════════════════════════
@@ -26183,6 +26547,9 @@ if(_origOpenProfile){
   }
 
   function _execAction(actionKey){
+    // ペンモード中はAボタン(select_tile)をゲーム操作に使わない（描画専用）
+    if(actionKey === 'select_tile' && typeof _penModeOn !== 'undefined' && _penModeOn) return;
+
     const tiles = _tiles();
     const acts  = _actBtns();
 
@@ -27151,9 +27518,153 @@ if(_origOpenProfile){
       else if(ax >= -DEAD){ if(_prev['stickL']){ _prev['stickL']=false; clearTimeout(_rptTm['stickL']); } }
       if(ax >  DEAD && !_prev['stickR']){ _prev['stickR']=true;  _sendPhysRepeat('stickR'); }
       else if(ax <=  DEAD){ if(_prev['stickR']){ _prev['stickR']=false; clearTimeout(_rptTm['stickR']); } }
+
+      // ── ペンモード中: アナログスティックでカーソル移動、Aボタンで描画 ──
+      if(typeof _penModeOn !== 'undefined' && _penModeOn){
+        const sx = gp.axes[0] || 0;  // 左スティック横
+        const sy = gp.axes[1] || 0;  // 左スティック縦
+        const PEN_SPEED = 4.5;
+        // カーソル移動（スティックがデッドゾーン外なら常に動かす）
+        if(Math.abs(sx) > DEAD || Math.abs(sy) > DEAD){
+          _penGpCursorX = Math.max(0, Math.min(window.innerWidth,  _penGpCursorX + sx * PEN_SPEED));
+          _penGpCursorY = Math.max(0, Math.min(window.innerHeight, _penGpCursorY + sy * PEN_SPEED));
+          _updatePenGpCursor();
+        }
+        // select_tileにバインドされているボタンインデックスを動的に取得（ハードコード回避）
+        const _penDrawPhys = Object.keys(_bindings).find(k => _bindings[k] === 'select_tile' && !isNaN(Number(k)));
+        const _penDrawIdx  = _penDrawPhys !== undefined ? Number(_penDrawPhys) : 0;
+        const aBtn = gp.buttons[_penDrawIdx] && (gp.buttons[_penDrawIdx].pressed || gp.buttons[_penDrawIdx].value > 0.5);
+        if(aBtn){
+          if(!_penGpDrawing){ _penGpDrawing = true; _penGpFire('mousedown'); }
+          else { _penGpFire('mousemove'); }
+        } else {
+          if(_penGpDrawing){ _penGpEndDraw(); }
+        }
+      } else {
+        // ペンモードでなければカーソルを隠す
+        if(_penGpCursorEl) _penGpCursorEl.style.display = 'none';
+        if(_penGpDrawing){ _penGpEndDraw(); }
+      }
     }
     requestAnimationFrame(_pollLoop);
   }
+
+  // ── ペンモード用コントローラーカーソル ──────────────────────────
+  let _penGpCursorX = window.innerWidth  / 2;
+  let _penGpCursorY = window.innerHeight / 2;
+  let _penGpDrawing = false;
+  let _penGpCursorEl = null;
+
+  function _getPenGpCursorEl(){
+    if(!_penGpCursorEl){
+      _penGpCursorEl = document.createElement('div');
+      _penGpCursorEl.id = 'penGpCursorDot';
+      _penGpCursorEl.style.cssText = [
+        'position:fixed',
+        'z-index:999999',
+        'pointer-events:none',
+        'display:none',
+        'width:18px',
+        'height:18px',
+        'border-radius:50%',
+        'background:rgba(255,255,255,0.92)',
+        'border:2.5px solid #3ada8a',
+        'box-shadow:0 0 6px #3ada8a, 0 0 14px rgba(58,218,138,0.5)',
+        'transform:translate(-50%,-50%)',
+        'transition:none',
+      ].join(';');
+      document.body.appendChild(_penGpCursorEl);
+    }
+    return _penGpCursorEl;
+  }
+
+  function _updatePenGpCursor(){
+    const el = _getPenGpCursorEl();
+    el.style.left    = _penGpCursorX + 'px';
+    el.style.top     = _penGpCursorY + 'px';
+    el.style.display = 'block';
+  }
+
+  // カーソル位置からCanvasとローカル座標を取得
+  function _penGpHitCanvas(){
+    // wallExpandCanvas (優先) → wallCanvas → doraCanvas
+    const ids = ['wallExpandCanvas', 'wallCanvas', 'doraCanvas'];
+    for(const id of ids){
+      const c = document.getElementById(id);
+      if(!c) continue;
+      if(id === 'wallExpandCanvas'){
+        const ov = document.getElementById('wallExpandOverlay');
+        if(!ov || !ov.classList.contains('show')) continue;
+      }
+      const r = c.getBoundingClientRect();
+      if(_penGpCursorX >= r.left && _penGpCursorX <= r.right &&
+         _penGpCursorY >= r.top  && _penGpCursorY <= r.bottom){
+        return { canvas: c, lx: _penGpCursorX - r.left, ly: _penGpCursorY - r.top };
+      }
+    }
+    return null;
+  }
+
+  function _penGpFire(type){
+    const hit = _penGpHitCanvas();
+    if(!hit) return;
+    const { canvas, lx, ly } = hit;
+    // clientX/Y はページ座標（rect.left + local）
+    const r = canvas.getBoundingClientRect();
+    const cx = r.left + lx, cy = r.top + ly;
+    const ev = new MouseEvent(type, {
+      bubbles:true, cancelable:true, view:window,
+      clientX: cx, clientY: cy,
+    });
+    canvas.dispatchEvent(ev);
+  }
+
+  function _penGpDraw(gp){
+    // Aボタン(0) または R2/RT(7) を押している間だけ描画
+    const drawPressed = (gp.buttons[0]&&gp.buttons[0].pressed) ||
+                        (gp.buttons[7]&&gp.buttons[7].pressed);
+    if(drawPressed){
+      if(!_penGpDrawing){
+        _penGpDrawing = true;
+        _penGpFire('mousedown');
+      } else {
+        _penGpFire('mousemove');
+      }
+    } else {
+      if(_penGpDrawing){ _penGpEndDraw(); }
+    }
+  }
+
+  function _penGpEndDraw(){
+    if(!_penGpDrawing) return;
+    _penGpDrawing = false;
+    _penGpFire('mouseup');
+  }
+
+  // カーソルを画面中央にリセット（togglePenModeから呼ぶ）
+  window.__penGpResetCursor = function(){
+    _penGpCursorX = window.innerWidth  / 2;
+    _penGpCursorY = window.innerHeight / 2;
+  };
+
+  // 仮想ジョイスティックからカーソルを動かすAPI（vpadスクリプトから呼ぶ）
+  window.__penGpMoveBy = function(dx, dy){
+    if(typeof _penModeOn === 'undefined' || !_penModeOn) return;
+    _penGpCursorX = Math.max(0, Math.min(window.innerWidth,  _penGpCursorX + dx));
+    _penGpCursorY = Math.max(0, Math.min(window.innerHeight, _penGpCursorY + dy));
+    _updatePenGpCursor();
+  };
+  // 描画開始・継続・終了をvpadから呼ぶAPI
+  window.__penGpFireDown = function(){ if(_penModeOn && !_penGpDrawing){ _penGpDrawing=true; _penGpFire('mousedown'); } };
+  window.__penGpFireMove = function(){ if(_penModeOn &&  _penGpDrawing){                    _penGpFire('mousemove'); } };
+  window.__penGpFireUp   = function(){ if(_penModeOn){                  _penGpEndDraw();                           } };
+  window.__penGpIsDrawing = function(){ return _penGpDrawing; };
+  // ペンカーソルを即座に非表示にするAPI（togglePenMode・コントローラーOFF時から呼ぶ）
+  window.__penGpHideCursor = function(){
+    if(_penGpCursorEl) _penGpCursorEl.style.display = 'none';
+    _penGpEndDraw();
+  };
+  // ──────────────────────────────────────────────────────────────
 
   function _startPolling(){
     if(_rafRunning || _isIframe) return;  // iframe内では絶対起動しない
@@ -27284,11 +27795,49 @@ if(_origOpenProfile){
   let _gpRumbleOn = true; // 振動ONフラグ
   // 外部から参照できるよう公開
   window.gpGetActive    = ()=> _gpActive;
-  window.gpSetActive    = (v)=>{ _gpActive = !!v; _highlight(); };
+  window.gpSetActive    = (v)=>{ _gpActive = !!v; _highlight(); if(!_gpActive && typeof window.__penGpHideCursor==='function') window.__penGpHideCursor(); };
   window.gpGetRumbleOn  = ()=> _gpRumbleOn;
   window.gpSetRumbleOn  = (v)=>{ _gpRumbleOn = !!v; };
   // 仮想パッド用：アクションキーを直接 _execAction へ渡す
   window.__vpadDispatch = (actionKey)=>{ if(_gpActive) _execAction(actionKey); };
+
+  // ── 仮想パッドAボタン長押し用API ──────────────────────────────
+  // touchstart/mousedown 時に呼ぶ: 長押しタイマー開始
+  window.__vpadSelectDown = function(){
+    if(!_gpActive) return;
+    // 手牌フォーカス中のみ長押し（掴みモード）判定
+    if(_gpFocus === 'hand'){
+      _gpGrabHoldStart = Date.now();
+      clearTimeout(_gpGrabHoldTimer);
+      _gpGrabHoldTimer = setTimeout(()=>{
+        if(_gpGrabHoldStart){   // まだ押し続けているか
+          _gpGrabMode = true;
+          _highlight();
+          _hud('🤏 牌を掴み中 — ←→で入れ替え、Aを離すと解除');
+        }
+      }, GP_GRAB_HOLD_MS);
+    }
+    // 他フォーカスは押した瞬間に発火（従来どおり）
+    else {
+      _execAction('select_tile');
+    }
+  };
+  // touchend/mouseup 時に呼ぶ: 短押し or 掴みモード解除
+  window.__vpadSelectUp = function(){
+    if(!_gpActive) return;
+    if(_gpFocus !== 'hand'){ return; }   // 他フォーカスは down 側で処理済み
+    clearTimeout(_gpGrabHoldTimer);
+    if(_gpGrabMode){
+      _gpGrabMode = false;
+      _highlight();
+      _hud('✅ 配置確定');
+      _rumble(80, 80, 0.3, 0.2);
+    } else if(_gpGrabHoldStart && (Date.now() - _gpGrabHoldStart) < GP_GRAB_HOLD_MS){
+      // 短押し → 通常の select_tile
+      _execAction('select_tile');
+    }
+    _gpGrabHoldStart = 0;
+  };
   // 仮想パッドON/OFF（状態はDOMで管理）
   // 仮想パッドはゲーム画面中のみ表示。設定値は _vpadUserWantsOn で保持。
   let _vpadUserWantsOn = false;
@@ -27302,7 +27851,7 @@ if(_origOpenProfile){
     el.style.display = (_vpadUserWantsOn && _isGameScreenActive()) ? 'block' : 'none';
   }
   window.gpGetVpadOn = ()=> _vpadUserWantsOn;
-  window.gpSetVpadOn = (v)=>{ _vpadUserWantsOn = !!v; _applyVpadVisibility(); };
+  window.gpSetVpadOn = (v)=>{ _vpadUserWantsOn = !!v; _applyVpadVisibility(); if(!_vpadUserWantsOn && typeof window.__penGpHideCursor==='function') window.__penGpHideCursor(); };
   window._applyVpadVisibility = _applyVpadVisibility;
   // gameScreen の active クラス変化を監視して自動的に表示/非表示切替
   setTimeout(()=>{

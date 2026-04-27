@@ -17599,6 +17599,7 @@ function loadProfile(){
         abilities:  data.abilities  ?? PROFILE.abilities,
         totalPulls: data.totalPulls ?? PROFILE.totalPulls,
         gachaIcons: data.gachaIcons ?? PROFILE.gachaIcons,
+        gachaIconCounts: data.gachaIconCounts ?? PROFILE.gachaIconCounts ?? {},
         iconId:          data.iconId          || PROFILE.iconId,
         vcIconId:        data.vcIconId        ?? PROFILE.vcIconId      ?? '',
         displayIconId:   data.displayIconId   ?? PROFILE.displayIconId ?? '',
@@ -18329,8 +18330,13 @@ function renderProfileGachaIcons(){
     const isVC   = vcId   === id;
     const isDisp = dispId === id;
     const borderColor = (isVC&&isDisp)?'#ffd700':isVC?'#88aaff':isDisp?'#ffaa44':rd.border;
+    const cnt = (PROFILE.gachaIconCounts||{})[id] || 1;
+    const cntBadge = cnt >= 2
+      ? `<div style="position:absolute;bottom:18px;right:2px;background:rgba(100,70,0,.92);color:#ffd966;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`
+      : '';
     html+=`<div onclick="pickGachaIcon('${id}');renderProfileGachaIcons();" style="cursor:pointer;text-align:center;border:2px solid ${borderColor};border-radius:8px;padding:3px;background:${rd.bg};position:relative;">
       <img src="${gachaIconUrl(id)}" style="width:80px;height:112px;object-fit:contain;border-radius:6px;display:block;margin:0 auto;background:#fff;" alt="${id}">
+      ${cntBadge}
       <div style="font-size:.42rem;color:${rd.color};margin-top:1px;">${info?info.label:id}</div>
       ${isVC?'<div style="position:absolute;top:2px;left:3px;font-size:.38rem;background:#0a0a30;color:#88aaff;border:1px solid #4466ff;border-radius:3px;padding:1px 3px;">🎤VC</div>':''}
       ${isDisp?'<div style="position:absolute;top:2px;right:3px;font-size:.38rem;background:#1a0a00;color:#ffcc66;border:1px solid #ff8800;border-radius:3px;padding:1px 3px;">🖼見た目</div>':''}
@@ -20321,6 +20327,8 @@ const _itm = {
   phase: 'WAIT',        // WAIT / SELECT / CONFIRM / DONE
   iConfirmed: false,    // 自分が「はい」を押したか
   chatRendered: new Set(), // チャット重複防止
+  myIconCounts:   {},      // 自分のアイコン枚数 { id: count }
+  theirIconCounts: {},     // 相手のアイコン枚数 { id: count }
 };
 
 // エモート送信履歴（重複防止）
@@ -20424,10 +20432,14 @@ async function _itmLoadIconsAndEnterSelect() {
     const meData = await meRes.json();
 
     // 自分のレジェンドアイコン
+    _itm.myIconCounts = {};
     _itm.myIcons = Object.keys(meData.gachaIconCounts || {})
       .filter(id => /^L\d{2}$/.test(id) && (meData.gachaIconCounts[id] || 0) >= 1);
     if (!_itm.myIcons.length)
       _itm.myIcons = (meData.gachaIcons || []).filter(id => /^L\d{2}$/.test(id));
+    _itm.myIcons.forEach(id => {
+      _itm.myIconCounts[id] = (meData.gachaIconCounts || {})[id] || 1;
+    });
 
     // 相手のレジェンドアイコン（offerId 経由エンドポイントから）
     _itm.theirIcons = [];
@@ -20435,6 +20447,7 @@ async function _itmLoadIconsAndEnterSelect() {
       const theirData = await theirIconsRes.json();
       if (theirData && theirData.ok !== false && Array.isArray(theirData.legendIcons)) {
         _itm.theirIcons = theirData.legendIcons;
+        _itm.theirIconCounts = theirData.legendIconCounts || {};
       }
     }
 
@@ -20446,6 +20459,7 @@ async function _itmLoadIconsAndEnterSelect() {
           const fallbackData = await fallbackRes.json();
           if (fallbackData && fallbackData.ok !== false && Array.isArray(fallbackData.legendIcons)) {
             _itm.theirIcons = fallbackData.legendIcons;
+            _itm.theirIconCounts = fallbackData.legendIconCounts || {};
           }
         }
       } catch(_) {}
@@ -20472,7 +20486,12 @@ function _itmRenderSelectGrids() {
   const tg = document.getElementById('itm-sel-theirGrid');
   if (tg) {
     if (_itm.theirIcons.length > 0) {
-      tg.innerHTML = _itm.theirIcons.map(id => `
+      tg.innerHTML = _itm.theirIcons.map(id => {
+        const cnt = (_itm.theirIconCounts || {})[id] || 1;
+        const badge = cnt >= 2
+          ? `<div style="position:absolute;top:2px;right:2px;background:rgba(30,80,180,.92);color:#aaccff;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`
+          : '';
+        return `
         <div id="itm-th-${id}" onclick="itmToggleWant('${id}')" style="
           aspect-ratio:3/4;border-radius:8px;border:2px solid #1a2a4a;background:#04080f;
           cursor:pointer;overflow:hidden;position:relative;
@@ -20480,12 +20499,14 @@ function _itmRenderSelectGrids() {
           transition:transform .12s;
         ">
           <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
+          ${badge}
           <div id="itm-th-tag-${id}" style="
             position:absolute;bottom:0;left:0;right:0;
             background:rgba(20,80,200,.88);color:#fff;font-size:.36rem;text-align:center;
             padding:2px 0;display:none;font-weight:900;letter-spacing:.05em;
           ">🙏 欲しい！</div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     } else {
       tg.innerHTML = '<div style="grid-column:1/-1;font-size:.5rem;color:#2a4a7a;text-align:center;padding:14px 0;">レジェンドアイコンなし</div>';
     }
@@ -20495,7 +20516,12 @@ function _itmRenderSelectGrids() {
   const mg = document.getElementById('itm-sel-myGrid');
   if (mg) {
     mg.innerHTML = _itm.myIcons.length
-      ? _itm.myIcons.map(id => `
+      ? _itm.myIcons.map(id => {
+          const cnt = (_itm.myIconCounts || {})[id] || 1;
+          const badge = cnt >= 2
+            ? `<div style="position:absolute;top:2px;right:2px;background:rgba(100,70,0,.92);color:#ffd966;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`
+            : '';
+          return `
           <div id="itm-my-${id}" onclick="itmToggleOffer('${id}')" style="
             aspect-ratio:3/4;border-radius:8px;border:2px solid #2a2a1a;background:#0a0800;
             cursor:pointer;overflow:hidden;position:relative;
@@ -20503,12 +20529,14 @@ function _itmRenderSelectGrids() {
             transition:transform .12s;
           ">
             <img src="${gachaIconUrl(id)}" style="width:100%;height:100%;object-fit:contain;padding:2px;">
+            ${badge}
             <div id="itm-my-tag-${id}" style="
               position:absolute;bottom:0;left:0;right:0;
               background:rgba(160,120,0,.9);color:#fff;font-size:.36rem;text-align:center;
               padding:2px 0;display:none;font-weight:900;letter-spacing:.05em;
             ">💎 渡す</div>
-          </div>`).join('')
+          </div>`;
+        }).join('')
       : '<div style="grid-column:1/-1;font-size:.5rem;color:#5a4a2a;text-align:center;padding:14px 0;">レジェンドアイコンなし</div>';
   }
 

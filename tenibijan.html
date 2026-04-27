@@ -18236,7 +18236,7 @@ function renderIconCollection(){
     if(isVC2)   b += '<div class="ic-vc-badge">🎤VC</div>';
     if(isDisp2) b += '<div class="ic-disp-badge">🖼見た目</div>';
     const cnt = (PROFILE.gachaIconCounts||{})[id] || 1;
-    if(cnt >= 2) b += `<div style="position:absolute;bottom:18px;right:2px;background:rgba(100,70,0,.92);color:#ffd966;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`;
+    if(cnt >= 2) b += `<div style="position:absolute;bottom:18px;right:2px;background:rgba(0,40,100,.92);color:#66ccff;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`;
     return b;
   }
   function _cardBorderColor(id, fallback){
@@ -18334,7 +18334,7 @@ function renderProfileGachaIcons(){
     const borderColor = (isVC&&isDisp)?'#ffd700':isVC?'#88aaff':isDisp?'#ffaa44':rd.border;
     const cnt = (PROFILE.gachaIconCounts||{})[id] || 1;
     const cntBadge = cnt >= 2
-      ? `<div style="position:absolute;bottom:18px;right:2px;background:rgba(100,70,0,.92);color:#ffd966;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`
+      ? `<div style="position:absolute;bottom:18px;right:2px;background:rgba(0,40,100,.92);color:#66ccff;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`
       : '';
     html+=`<div onclick="pickGachaIcon('${id}');renderProfileGachaIcons();" style="cursor:pointer;text-align:center;border:2px solid ${borderColor};border-radius:8px;padding:3px;background:${rd.bg};position:relative;">
       <img src="${gachaIconUrl(id)}" style="width:80px;height:112px;object-fit:contain;border-radius:6px;display:block;margin:0 auto;background:#fff;" alt="${id}">
@@ -20533,7 +20533,7 @@ function _itmRenderSelectGrids() {
       ? _itm.myIcons.map(id => {
           const cnt = (_itm.myIconCounts || {})[id] || 1;
           const badge = cnt >= 2
-            ? `<div style="position:absolute;top:2px;right:2px;background:rgba(100,70,0,.92);color:#ffd966;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`
+            ? `<div style="position:absolute;top:2px;right:2px;background:rgba(0,40,100,.92);color:#66ccff;font-size:.38rem;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1.4;pointer-events:none;">×${cnt}</div>`
             : '';
           return `
           <div id="itm-my-${id}" onclick="itmToggleOffer('${id}')" style="

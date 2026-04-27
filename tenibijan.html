@@ -20584,27 +20584,34 @@ function _itmShowReceivedEmote(emoteType, iconId) {
 
   // ── アイコングリッドのセルを直接光らせる ──
   if (iconId) {
-    // want: 相手エリア(itm-th-)のアイコンを青く / question: 相手エリア(itm-th-)のアイコンをピンクに
-    const cellId = 'itm-th-' + iconId;
+    // want: 自分エリア(itm-my-)のアイコンを青く（相手が欲しがっているのは自分のアイコン）
+    // question: 相手エリア(itm-th-)のアイコンをピンクに（相手が提示しているのは相手のアイコン）
+    const isWant = emoteType === 'want';
+    const cellPrefix = isWant ? 'itm-my-' : 'itm-th-';
+    const tagPrefix  = isWant ? 'itm-my-tag-' : 'itm-th-tag-';
+    const defaultBorderColor = isWant ? '#2a2a1a' : '#1a2a4a';
+    const cellId = cellPrefix + iconId;
     const cell = document.getElementById(cellId);
     if (cell) {
       // 前回のハイライトをリセット
       if (_itmShowReceivedEmote._prevCell && _itmShowReceivedEmote._prevCell !== cell) {
         const pc = _itmShowReceivedEmote._prevCell;
         pc.style.animation = '';
-        pc.style.borderColor = pc.dataset.origBorderColor || '#1a2a4a';
-        const pt = document.getElementById(pc.id.replace('itm-th-','itm-th-tag-'));
+        pc.style.borderColor = pc.dataset.origBorderColor || defaultBorderColor;
+        const prevIsWant = pc.id.startsWith('itm-my-');
+        const prevTagId = pc.id.replace(prevIsWant ? 'itm-my-' : 'itm-th-', prevIsWant ? 'itm-my-tag-' : 'itm-th-tag-');
+        const pt = document.getElementById(prevTagId);
         if (pt) { pt.style.display = 'none'; pt.style.background = ''; pt.textContent = ''; }
       }
       // 点灯（want→青, question→ピンク）
-      cell.dataset.origBorderColor = cell.style.borderColor || '#1a2a4a';
-      const glowAnim   = emoteType === 'want' ? '_itmWantGlow' : '_itmQuestionGlow';
-      const glowColor  = emoteType === 'want' ? '#4488ff' : '#ff66aa';
-      const tagBg      = emoteType === 'want' ? 'rgba(20,80,200,.92)' : 'rgba(160,20,70,.92)';
+      cell.dataset.origBorderColor = cell.style.borderColor || defaultBorderColor;
+      const glowAnim   = isWant ? '_itmWantGlow' : '_itmQuestionGlow';
+      const glowColor  = isWant ? '#4488ff' : '#ff66aa';
+      const tagBg      = isWant ? 'rgba(20,80,200,.92)' : 'rgba(160,20,70,.92)';
       cell.style.borderColor = glowColor;
       cell.style.animation = glowAnim + ' 1.2s ease-in-out infinite';
       // タグラベル
-      const tag = document.getElementById('itm-th-tag-' + iconId);
+      const tag = document.getElementById(tagPrefix + iconId);
       if (tag) {
         tag.textContent = emoji + ' ' + label;
         tag.style.background = tagBg;
@@ -20617,8 +20624,7 @@ function _itmShowReceivedEmote(emoteType, iconId) {
         const isMyWant = _itm.selectedWant === iconId;
         if (!isMyWant) {
           cell.style.animation = '';
-          cell.style.animation = '';
-          cell.style.borderColor = cell.dataset.origBorderColor || '#1a2a4a';
+          cell.style.borderColor = cell.dataset.origBorderColor || defaultBorderColor;
           if (tag) { tag.style.display = 'none'; tag.textContent = ''; }
         }
         _itmShowReceivedEmote._prevCell = null;
@@ -20740,11 +20746,14 @@ function _itmUpdateSelectBtn() {
     emoteWantBtn.style.pointerEvents = hasWant ? '' : 'none';
   }
 
-  // 「欲しい？と送る」ボタンのON/OFF（渡すアイコン選択時に有効）
+  // 「欲しい？と送る」ボタンのON/OFF
+  // 渡すアイコン選択済み OR 欲しいアイコン選択済みの場合に有効
+  // （レジェンドアイコンを持たないゲスト側でも、欲しいアイコンを選んだら送れるようにする）
   const emoteQuestionBtn = document.getElementById('itm-emote-question-btn');
   if (emoteQuestionBtn) {
-    emoteQuestionBtn.style.opacity       = hasOffer ? '1' : '.5';
-    emoteQuestionBtn.style.pointerEvents = hasOffer ? '' : 'none';
+    const questionEnabled = hasOffer || hasWant;
+    emoteQuestionBtn.style.opacity       = questionEnabled ? '1' : '.5';
+    emoteQuestionBtn.style.pointerEvents = questionEnabled ? '' : 'none';
   }
 }
 

@@ -26088,6 +26088,10 @@ if(_origOpenProfile){
         const el=items[f]; if(el){ _playBotanSe(); el.click(); setTimeout(_onlineHighlight,100); }
       } else if(actionKey==='skip'){
         _onlineIn=false; _onlineHighlight();
+        // サブパネルも閉じる
+        _llSubClearHighlight();
+        if(typeof _llCloseSubPanel==='function') _llCloseSubPanel();
+        _lobbyIn = true; _lobbyHighlight();
       }
       return;
     }
@@ -27304,14 +27308,11 @@ function _gameScreenOffsetReset() {
         'align-items:center',
         'justify-content:center',
         'flex-direction:column',
-        'gap:4px',
         'background:rgba(3,10,18,0.94)',
         'border:2px solid #f0d47a',
         'border-radius:12px',
-        'padding:10px 16px',
+        'padding:6px',
         'box-shadow:0 0 24px #f0d47a66,0 4px 32px #000a',
-        'min-width:72px',
-        'text-align:center',
       ].join(';');
       document.body.appendChild(el);
     }
@@ -27319,15 +27320,12 @@ function _gameScreenOffsetReset() {
   }
 
   function _positionPopup(pop, anchorRect){
-    // アンカーの上に出す（はみ出す場合は下）
+    // アンカーの中央に重ねる
     requestAnimationFrame(()=>{
       const pw = pop.offsetWidth  || 100;
       const ph = pop.offsetHeight || 100;
-      const M  = 12;
-      let lx = anchorRect.left + anchorRect.width / 2 - pw / 2;
-      lx = Math.max(M, Math.min(window.innerWidth  - pw - M, lx));
-      let ly = anchorRect.top - ph - M;
-      if(ly < M) ly = anchorRect.top + anchorRect.height + M;
+      const lx = anchorRect.left + anchorRect.width  / 2 - pw / 2;
+      const ly = anchorRect.top  + anchorRect.height / 2 - ph / 2;
       pop.style.left = lx + 'px';
       pop.style.top  = ly + 'px';
     });
@@ -27349,7 +27347,7 @@ function _gameScreenOffsetReset() {
 
     const clone = document.createElement('div');
     clone.innerHTML = tileEl.innerHTML;
-    clone.style.cssText = 'font-size:5rem;line-height:1;display:flex;align-items:center;justify-content:center;';
+    clone.style.cssText = 'font-size:7.5rem;line-height:1;display:flex;align-items:center;justify-content:center;';
     clone.querySelectorAll('img').forEach(img=>{
       img.style.cssText = 'width:2.8em;height:2.8em;object-fit:contain;display:block;';
     });
@@ -27374,45 +27372,39 @@ function _gameScreenOffsetReset() {
     if(!tile) return _hidePopup();
 
     const myIdx    = typeof NET !== 'undefined' ? NET.myIdx : 0;
-    const isMyDraw = G.phase === 'draw_wait' && G.current === myIdx;
     const isReveal = !!(G.lightRevealedSlots?.[slotIdx]);
 
     const pop = _getOrCreatePopup();
 
-    if(isMyDraw || isReveal){
+    if(isReveal){
       // 牌を表示
       let tileHTML = '';
       if(typeof emj === 'function') tileHTML = emj(tile);
-      let labelText = '';
-      if(typeof tileLabel === 'function'){
-        labelText = tileLabel(tile) + (tile._isAka ? ' 赤' : '');
-      }
       pop.innerHTML =
-        `<div style="font-size:5rem;line-height:1;display:flex;align-items:center;justify-content:center;">${tileHTML}</div>` +
-        (labelText ? `<div style="font-size:.7rem;color:#c9a84c;letter-spacing:.06em;">${labelText}</div>` : '');
+        `<div style="font-size:7.5rem;line-height:1;display:flex;align-items:center;justify-content:center;">${tileHTML}</div>`;
       // img があれば拡大
       pop.querySelectorAll('img').forEach(img=>{
         img.style.cssText = 'width:2.8em;height:2.8em;object-fit:contain;display:block;';
       });
     } else {
       // 裏牌
-      pop.innerHTML = '<div style="font-size:4rem;line-height:1;">🀫</div>' +
-                      '<div style="font-size:.62rem;color:#5a8a7a;">山牌</div>';
+      pop.innerHTML = '<div style="font-size:6rem;line-height:1;">🀫</div>';
     }
     pop.style.display = 'flex';
     _positionPopup(pop, rect);
   }
 
   // ── フックを登録 ──
-  // 捨て牌拡大カーソル移動時
+  // 捨て牌拡大カーソル移動時: ポップアップ不要
   window._onDzHighlight = function(tileEl){
-    const overlay = document.getElementById('discardZoomOverlay');
-    if(!overlay || overlay.style.display !== 'flex') return _hidePopup();
-    _showFromTileEl(tileEl);
+    _hidePopup();
   };
 
   // 山牌カーソル移動時（_highlight経由 & 山牌拡大キー操作経由）
   window._onWallHighlight = function(slotIdx){
+    // 🔎山オーバーレイが開いている間はポップアップ不要
+    const wallOv = document.getElementById('wallExpandOverlay');
+    if(wallOv && wallOv.classList.contains('show')) return _hidePopup();
     _showFromWallSlot(slotIdx);
   };
 

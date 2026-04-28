@@ -26320,6 +26320,13 @@ if(_origOpenProfile){
   function _isLobbyOnlineVisible(){
     const el=document.getElementById('lobbyOnline');
     if(!el||getComputedStyle(el).display==='none') return false;
+    // ★修正: 親の #lobby が非表示 or gameScreen がアクティブなら false
+    // getComputedStyle は親の display:none を考慮しないため、親を明示的にチェックする必要がある
+    // （showRoomLobby()→startOnlineGame()の遷移後に #lobbyOnline の inline style が '' のまま
+    //   残り、ゲーム画面でもこの関数が true を返してコントローラー操作を横取りするバグの修正）
+    const lobby=document.getElementById('lobby');
+    if(!lobby||lobby.style.display==='none') return false;
+    if(document.getElementById('gameScreen')?.classList.contains('active')) return false;
     // 横画面: lobbyOnlineがllSubPanelInner内にある場合、llSubPanelがopenのときだけ有効とする
     const inner=document.getElementById('llSubPanelInner');
     if(inner&&inner.contains(el)){

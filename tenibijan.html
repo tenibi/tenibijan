@@ -7580,7 +7580,7 @@ function _rankForceConnectAndStart(otherPeerId){
           ];
           // ★修正: ゲストに gameStart を送信してからゲームを開始する
           // 未送信だとゲスト役が10秒後に _forceStartRankCPUGame() を呼び「自分以外がCPU代打」になるバグを修正
-          NET.conns.forEach((c,ci)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true,myIdx:ci+1}); });
+          NET.conns.forEach((c,ci)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true,myIdx:ci+1,isRankMatch:true,matchId:RANK.matchId}); });
           setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
         }, 1200);
       };
@@ -7719,7 +7719,7 @@ function _onRankMatched(data){
                   {name: NET.guestNames[1]||'ゲスト2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
                 ];
                 console.log('ホスト: 3人全員接続確認 → ゲームスタート:', membersInfoFull);
-                NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfoFull,myIdx:NET.conns.indexOf(c)+1}); });
+                NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfoFull,myIdx:NET.conns.indexOf(c)+1,isRankMatch:true,matchId:RANK.matchId}); });
                 setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
               }, 3000);
               return;
@@ -7749,7 +7749,7 @@ function _onRankMatched(data){
               {name: NET.guestNames[1]||'CPU', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
             ];
             console.log('CPU1体補填スタート:', membersInfo1);
-            NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfo1,isCpuFill:true,myIdx:NET.conns.indexOf(c)+1}); });
+            NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfo1,isCpuFill:true,myIdx:NET.conns.indexOf(c)+1,isRankMatch:true,matchId:RANK.matchId}); });
             setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
           }, remainingMs1);
         }
@@ -7767,7 +7767,7 @@ function _onRankMatched(data){
             ];
             console.log('ホストからgameStart送信:', membersInfo);
             NET.conns.forEach((c)=>{
-              if(c&&c.open) c.send({type:'gameStart', totalPlayers:3, abilityMode:true, timeMode:true, tobiMode:true, tonpuuMode:false, membersInfo, myIdx:NET.conns.indexOf(c)+1});
+              if(c&&c.open) c.send({type:'gameStart', totalPlayers:3, abilityMode:true, timeMode:true, tobiMode:true, tonpuuMode:false, membersInfo, myIdx:NET.conns.indexOf(c)+1, isRankMatch:true, matchId:RANK.matchId});
             });
             setTimeout(()=>{
               G_TIME_MODE = true;
@@ -7805,7 +7805,7 @@ function _onRankMatched(data){
               {name: NET.guestNames[1]||'ゲスト2', iconId: NET.guestIconIds[1]||'', ability: NET.guestAbilities[1]||'', isCpu: !!NET.guestIsCpu[1]},
             ];
             console.log('ホスト: タイムアウト時に全員揃っていたためCPU補填なしでスタート:', membersInfoAll);
-            NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfoAll,myIdx:NET.conns.indexOf(c)+1}); });
+            NET.conns.forEach((c)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo:membersInfoAll,myIdx:NET.conns.indexOf(c)+1,isRankMatch:true,matchId:RANK.matchId}); });
             setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
           }, 1200);
           return;
@@ -7839,7 +7839,7 @@ function _onRankMatched(data){
           ];
           console.log('CPU埋めスタート membersInfo:', membersInfo, 'connectedGuests:', RANK.connectedGuests);
           // 接続中のゲスト全員に送信（CPUスロット=nullは除外）
-          NET.conns.forEach((c,i)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true,myIdx:i+1}); });
+          NET.conns.forEach((c,i)=>{ if(c&&c.open) c.send({type:'gameStart',totalPlayers:3,abilityMode:true,timeMode:true,tobiMode:true,tonpuuMode:false,membersInfo,isCpuFill:true,myIdx:i+1,isRankMatch:true,matchId:RANK.matchId}); });
           setTimeout(()=>{ G_TIME_MODE=true; startOnlineGame(); }, 300);
         };
         // 接続中ゲストがいる場合は少し待ってからスタート（myName受信猶予）
@@ -9025,6 +9025,11 @@ function onNetData(msg, senderIdx){
       
       NET.online=true;
       if(msg.isCpuFill) RANK._isCpuFill = true; // CPUで埋めたランクマッチフラグをゲストにも反映
+      // ★修正: ランクマッチフラグとmatchIdをゲスト側にも反映（切断通知に必要）
+      if(msg.isRankMatch){
+        NET.isRankMatch = true;
+        if(msg.matchId) RANK.matchId = msg.matchId;
+      }
       bgmToGame();
       hideRoomLobby();
       document.getElementById('lobby').style.display='none';
@@ -13903,6 +13908,7 @@ function showFinalResult(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({matchId:RANK.matchId, scores}),
     }).then(r=>r.json()).then(d=>{
+      RANK._disconnectNotifySent = true; // ★修正: 正常終了後の二重送信防止
       if(d.ok && d.changes) _showRatingChanges(d.changes);
     }).catch(()=>{});
   } else if(NET.isRankMatch && RANK._isCpuFill){
@@ -26509,6 +26515,13 @@ if(_origOpenProfile){
   }
   let _lobbyFocus = 0;      // 現在フォーカス中のインデックス
   let _lobbyIn    = false;  // ロビー操作モード中フラグ
+  let _gameStartPending = false;      // ★競合ガード: ゲーム開始処理中フラグ
+  let _gameStartPendingTimer = null;  // ★競合ガード: 自動解除タイマー
+  // 外部（initGame 等）からも操作できるよう公開
+  window._setGameStartPending = (v) => {
+    _gameStartPending = !!v;
+    if (!v) { clearTimeout(_gameStartPendingTimer); _gameStartPendingTimer = null; }
+  };
 
   // ── ゾーン別ボタンリスト取得 ──
   function _llMainBtns(){
@@ -26537,6 +26550,8 @@ if(_origOpenProfile){
   }
   // ロビーが表示されているか
   function _isLobbyVisible(){
+    // ★競合ガード: ゲーム開始処理中（gameScreen.active セット前の非同期ウィンドウ含む）はロビーとみなさない
+    if(_gameStartPending) return false;
     const lobby = document.getElementById('lobby');
     return lobby && lobby.style.display !== 'none' && !document.getElementById('gameScreen')?.classList.contains('active');
   }
@@ -26628,6 +26643,15 @@ if(_origOpenProfile){
   }
 
   function _execAction(actionKey){
+    // ★競合ガード: ゲーム画面がアクティブな場合はロビー系処理をスキップ
+    // （gameScreen.active が立った瞬間に _gameStartPending も解除する）
+    if(document.getElementById('gameScreen')?.classList.contains('active')){
+      if(_gameStartPending){
+        _gameStartPending = false;
+        clearTimeout(_gameStartPendingTimer); _gameStartPendingTimer = null;
+      }
+    }
+
     // ペンモード中はAボタン(select_tile)をゲーム操作に使わない（描画専用）
     if(actionKey === 'select_tile' && typeof _penModeOn !== 'undefined' && _penModeOn) return;
 
@@ -26761,7 +26785,14 @@ if(_origOpenProfile){
 
       // ─── ロビー操作モード中 ───
       // 決定・キャンセルは方向キーより先に処理
-      if(actionKey==='select_tile'){ _lobbySelect(); return; }
+      if(actionKey==='select_tile'){
+        // ★競合ガード: vpad の次の touchend が gameScreen.active セット前に来ても
+        //   _isLobbyVisible() が false を返すよう、フラグを立ててから決定操作を行う
+        _gameStartPending = true;
+        clearTimeout(_gameStartPendingTimer);
+        _gameStartPendingTimer = setTimeout(()=>{ _gameStartPending = false; }, 500);
+        _lobbySelect(); return;
+      }
       if(actionKey==='skip'){ _lobbyExit(); return; }
 
       if(landscape){

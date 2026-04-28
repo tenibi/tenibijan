@@ -168,12 +168,14 @@ function _sendRankDisconnectNotify(){
       }).catch(()=>{});
     }
 
-    if(RANK._isCpuFill){
-      _beaconOrFetch(BACKEND+'/rank/cpu-result',
-        {rank:3, score:-9999, numPlayers:3, token});
-    } else if(RANK.matchId){
+    if(RANK.matchId){
+      // matchIdがある場合は常にdisconnect-notifyを優先（_isCpuFill=trueでも同様）
       _beaconOrFetch(BACKEND+'/rank/disconnect-notify',
         {matchId:RANK.matchId, token});
+    } else if(RANK._isCpuFill){
+      // matchIdがない純CPU戦のみcpu-resultにフォールバック
+      _beaconOrFetch(BACKEND+'/rank/cpu-result',
+        {rank:3, score:-9999, numPlayers:3, token});
     }
   }catch(e){}
 }

@@ -168,14 +168,12 @@ function _sendRankDisconnectNotify(){
       }).catch(()=>{});
     }
 
-    if(RANK.matchId){
-      // matchIdがある場合は常にdisconnect-notifyを優先（_isCpuFill=trueでも同様）
-      _beaconOrFetch(BACKEND+'/rank/disconnect-notify',
-        {matchId:RANK.matchId, token});
-    } else if(RANK._isCpuFill){
-      // matchIdがない純CPU戦のみcpu-resultにフォールバック
+    if(RANK._isCpuFill){
       _beaconOrFetch(BACKEND+'/rank/cpu-result',
         {rank:3, score:-9999, numPlayers:3, token});
+    } else if(RANK.matchId){
+      _beaconOrFetch(BACKEND+'/rank/disconnect-notify',
+        {matchId:RANK.matchId, token});
     }
   }catch(e){}
 }
@@ -7219,8 +7217,7 @@ function _forceStartRankCPUGame(){
   });
   document.getElementById('lobby').style.display='none';
   // RANKリセット（フラグは保持したまま画面だけ移行）
-  // ★修正: matchIdは切断通知に必要なため保持する（nullにしない）
-  RANK.searchStartAt=null; RANK.peerId=null;
+  RANK.searchStartAt=null; RANK.peerId=null; RANK.matchId=null;
   RANK._isCpuFill=true; // CPUで埋めてスタートしたランクマッチフラグ
   // ゲーム設定（ランクマッチ相当）
   NET.myIdx=0; NET.isHost=true; // ★修正: ゲスト役だった場合にmyIdxが1のままになるバグを修正
@@ -7603,14 +7600,15 @@ function _rankForceConnectAndStart(otherPeerId){
   } else {
     // ── ゲスト役: ホスト役の相手のPeerIDに接続 ──
     if(RANK.polling){clearInterval(RANK.polling);RANK.polling=null;}
-    authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{});
-    authFetch('/rank/done',{method:'DELETE'}).catch(()=>{});
+    // ★修正: /rank/cancel を即座に送るとホスト側のポーリングでゲストが消え、
+    //   ホストが others.length===0 と判定して CPU2体でスタートしてしまうバグを修正。
+    //   /rank/cancel と /rank/done は接続確立後（conn.open）に送るよう _rankGuestConnect 側で行う。
     NET.isHost = false;
     NET.isRankMatch = true;
     NET.myIdx = 1;
     RANK._gameStartFired = false;
     setRankStatus('ホストに接続中…');
-    _rankGuestConnect(otherPeerId, 0);
+    _rankGuestConnect(otherPeerId, 0, true);
     // 5〜15秒ランダムでgameStart未受信の場合にCPU2体でスタート
     {
       const _guestRandomWait = Math.floor(Math.random() * 11000) + 5000; // 5000〜15000ms ランダム
@@ -7861,7 +7859,7 @@ function _onRankMatched(data){
   }
 }
 
-function _rankGuestConnect(hostPeerId, attempt){
+function _rankGuestConnect(hostPeerId, attempt, sendCancelOnOpen){
   if(attempt > 8){ setRankStatus('接続に失敗しました。再試行してください。'); return; }
   // 既に接続済みか gameStart 受信済みなら中止
   if(NET.online) return;
@@ -7882,6 +7880,12 @@ function _rankGuestConnect(hostPeerId, attempt){
       opened = true;
       // ★修正: 接続確立時点でCPU埋めタイマーをクリア（gameStart受信前の競合対策）
       if(RANK._cpuFillTimer){ clearTimeout(RANK._cpuFillTimer); RANK._cpuFillTimer = null; }
+      // ★修正: 接続確立後に /rank/cancel と /rank/done を送ることで、
+      //   ホスト側のポーリングが「ゲストがキューにいない」と誤判定するのを防ぐ
+      if(sendCancelOnOpen){
+        authFetch('/rank/cancel',{method:'DELETE'}).catch(()=>{});
+        authFetch('/rank/done',{method:'DELETE'}).catch(()=>{});
+      }
       // ★ランクマッチゲスト: 接続先ホストのPeerIDを記録（復帰時に使う）
       NET.currentHostPeerId = hostPeerId;
       setRankStatus('ホストに接続しました！ゲーム開始を待っています…');
@@ -7891,7 +7895,7 @@ function _rankGuestConnect(hostPeerId, attempt){
 
     // 接続タイムアウト: openされない場合はリトライ
     setTimeout(()=>{
-      if(!opened && !NET.online) _rankGuestConnect(hostPeerId, attempt+1);
+      if(!opened && !NET.online) _rankGuestConnect(hostPeerId, attempt+1, sendCancelOnOpen);
     }, 4000);
   }, delay);
 }
@@ -26233,6 +26237,7 @@ if(_origOpenProfile){
   let _roomFocus      = 0; let _roomIn      = false;
   let _recordFocus    = 0; let _recordIn    = false;
   let _friendFocus    = 0; let _friendIn    = false;
+  let _itmFocus       = 0; let _itmIn       = false; // アイコン交換モーダル
   let _matFocus       = 0; let _matIn       = false;
   let _abilityBkFocus = 0; let _abilityBkIn = false;
   let _iconFocus      = 0; let _iconIn      = false;
@@ -26356,7 +26361,87 @@ if(_origOpenProfile){
 
   // ── フレンド ──
   function _isFriendVisible(){ const s=document.getElementById('friendScreen'); return s&&s.classList.contains('active'); }
-  function _friendItems(){ return Array.from(document.querySelectorAll('#friendScreen button')).filter(b=>getComputedStyle(b).display!=='none'&&!b.disabled); }
+  function _friendItems(){
+    const items = [];
+    document.querySelectorAll('#friendScreen > button').forEach(b=>{
+      if(getComputedStyle(b).display!=='none'&&!b.disabled&&!items.includes(b)) items.push(b);
+    });
+    document.querySelectorAll('#friendPendingList button, #giftInboxList button, #friendSearchResult button').forEach(b=>{
+      if(getComputedStyle(b).display!=='none'&&!b.disabled&&!items.includes(b)) items.push(b);
+    });
+    document.querySelectorAll('#friendScreen .friend-card > div button, #friendScreen .friend-card button').forEach(b=>{
+      if(getComputedStyle(b).display!=='none'&&!b.disabled&&!items.includes(b)) items.push(b);
+    });
+    document.querySelectorAll('#friendList .friend-row').forEach(row=>{
+      if(getComputedStyle(row).display==='none') return;
+      if(row.style.cursor==='pointer'||row.getAttribute('onclick')||typeof row.onclick==='function'){
+        if(!items.includes(row)) items.push(row);
+      }
+    });
+    return items;
+  }
+  function _friendHighlight(){
+    _friendItems().forEach((el,i)=>{
+      const on = i===_friendFocus&&_friendIn;
+      el.style.outline   = on?'3px solid #f0d47a':'';
+      el.style.boxShadow = on?'0 0 18px #c9a84c88':'';
+      if(on) el.scrollIntoView({block:'nearest',behavior:'smooth'});
+    });
+  }
+
+  // ── アイコン交換モーダル ──
+  function _isITMVisible(){
+    const m = document.getElementById('iconTradeModal');
+    return m && m.style.display === 'flex';
+  }
+  function _itmItems(){
+    const phase = (typeof _itm !== 'undefined') ? _itm.phase : 'WAIT';
+    const items = [];
+    if(phase === 'WAIT'){
+      // WAITフェーズ: キャンセルボタンのみ
+      const phaseEl = document.getElementById('itm-phase-WAIT');
+      if(phaseEl) phaseEl.querySelectorAll('button').forEach(b=>{
+        if(getComputedStyle(b).display!=='none'&&!b.disabled) items.push(b);
+      });
+    } else if(phase === 'SELECT'){
+      // SELECTフェーズ: 相手グリッド → 自分グリッド → エモートボタン → 決定ボタン
+      const theirGrid = document.getElementById('itm-sel-theirGrid');
+      if(theirGrid) theirGrid.querySelectorAll(':scope > div').forEach(el=>{
+        const cs = getComputedStyle(el);
+        if(cs.display!=='none'&&cs.pointerEvents!=='none') items.push(el);
+      });
+      const myGrid = document.getElementById('itm-sel-myGrid');
+      if(myGrid) myGrid.querySelectorAll(':scope > div').forEach(el=>{
+        const cs = getComputedStyle(el);
+        if(cs.display!=='none'&&cs.pointerEvents!=='none') items.push(el);
+      });
+      ['itm-emote-want-btn','itm-emote-question-btn','itm-sel-confirmBtn'].forEach(id=>{
+        const b = document.getElementById(id);
+        if(b&&getComputedStyle(b).display!=='none'&&getComputedStyle(b).pointerEvents!=='none'&&!b.disabled) items.push(b);
+      });
+    } else if(phase === 'CONFIRM'){
+      // CONFIRMフェーズ: はい/いいえボタン
+      ['itm-conf-yesBtn','itm-conf-noBtn'].forEach(id=>{
+        const b = document.getElementById(id);
+        if(b&&getComputedStyle(b).display!=='none'&&!b.disabled) items.push(b);
+      });
+    } else if(phase === 'DONE'){
+      // DONEフェーズ: 閉じるボタン（✕）
+      const modal = document.getElementById('iconTradeModal');
+      if(modal) modal.querySelectorAll('button').forEach(b=>{
+        if(getComputedStyle(b).display!=='none'&&!b.disabled) items.push(b);
+      });
+    }
+    return items;
+  }
+  function _itmHighlight(){
+    _itmItems().forEach((el,i)=>{
+      const on = i===_itmFocus&&_itmIn;
+      el.style.outline   = on?'3px solid #f0d47a':'';
+      el.style.boxShadow = on?'0 0 18px #c9a84c88':'';
+      if(on) el.scrollIntoView({block:'nearest',behavior:'smooth'});
+    });
+  }
 
   // ── 図鑑系共通: 操作可能なアイテムを取得（div[onclick]もbutton も対象）──
   // onclick属性が存在して空でない もしくは button で disabled でない ものを取得
@@ -26974,7 +27059,57 @@ if(_origOpenProfile){
     if(_gpScreenAction(actionKey, _isRecordVisible, _recordItems, ()=>_recordFocus, v=>{_recordFocus=v;}, ()=>_recordIn, v=>{_recordIn=v;}, 'skip', typeof closeRecordScreen==='function'?closeRecordScreen:null)) return;
 
     // ══════════ フレンド画面の操作 ══════════
-    if(_gpScreenAction(actionKey, _isFriendVisible, _friendItems, ()=>_friendFocus, v=>{_friendFocus=v;}, ()=>_friendIn, v=>{_friendIn=v;}, 'skip', typeof closeFriendScreen==='function'?closeFriendScreen:null)) return;
+    // アイコン交換モーダルが開いている場合は先に処理
+    if(_isITMVisible()){
+      const items = _itmItems();
+      if(actionKey==='skip'){
+        _itmIn=false; _itmHighlight();
+        if(typeof closeIconTradeModal==='function') closeIconTradeModal();
+        return;
+      }
+      if(!_itmIn){
+        if(actionKey==='up'||actionKey==='down'||actionKey==='left'||actionKey==='right'){
+          _itmIn=true; _itmFocus=0; _itmHighlight();
+        }
+        return;
+      }
+      if(actionKey==='up'||actionKey==='left'){
+        _itmFocus=_itmFocus>0?_itmFocus-1:items.length-1; _itmHighlight();
+      } else if(actionKey==='down'||actionKey==='right'){
+        _itmFocus=_itmFocus<items.length-1?_itmFocus+1:0; _itmHighlight();
+      } else if(actionKey==='select_tile'){
+        const el=items[_itmFocus];
+        if(el){ _playBotanSe(); el.click(); setTimeout(_itmHighlight,150); }
+      }
+      return;
+    }
+    if(_itmIn){ _itmIn=false; _itmHighlight(); }
+
+    if(_isFriendVisible()){
+      const items = _friendItems();
+      if(actionKey==='skip'){
+        // ★修正: _friendInに関わらずBボタンで必ず閉じる
+        _friendIn=false; _friendHighlight();
+        if(typeof closeFriendScreen==='function') closeFriendScreen();
+        return;
+      }
+      if(!_friendIn){
+        if(actionKey==='up'||actionKey==='down'||actionKey==='left'||actionKey==='right'){
+          _friendIn=true; _friendFocus=0; _friendHighlight();
+        }
+        return;
+      }
+      if(actionKey==='up'||actionKey==='left'){
+        _friendFocus=_friendFocus>0?_friendFocus-1:items.length-1; _friendHighlight();
+      } else if(actionKey==='down'||actionKey==='right'){
+        _friendFocus=_friendFocus<items.length-1?_friendFocus+1:0; _friendHighlight();
+      } else if(actionKey==='select_tile'){
+        const el=items[_friendFocus];
+        if(el){ _playBotanSe(); el.click(); setTimeout(_friendHighlight,100); }
+      }
+      return;
+    }
+    if(_friendIn){ _friendIn=false; _friendHighlight(); }
 
     // ══════════ 卓布図鑑・各種図鑑の操作はロビーブロック前に移動済み ══════════
 

@@ -3412,7 +3412,7 @@ body{
       <span id="portraitFullscreenIcon" style="font-size:1rem;">⛶</span>
       <span id="portraitFullscreenLabel">全画面</span>
     </button>
-    <button onclick="toggleTitleSettings()" style="
+    <button onclick="toggleTitleSettings(event)" style="
       background:#030a10;border:1px solid #1a3a2a;border-radius:7px;
       color:#5a8a6a;font-size:.65rem;padding:0;cursor:pointer;
       transition:all .15s;flex:1;aspect-ratio:1/1;
@@ -11394,22 +11394,30 @@ function toggleTitleSettings(e){
       if(p._origParent) p._origParent.insertBefore(p,p._origNext||null);
       return;
     }
-    const btn=(e&&(e.currentTarget||e.target))||document.querySelector('.ll-trb[title="設定"]');
-    const r=btn?btn.getBoundingClientRect():{bottom:60,right:window.innerWidth};
+    const btn=(e&&(e.currentTarget||e.target))||null;
+    const r=btn?btn.getBoundingClientRect():null;
+    // ボタン位置が有効か確認（非表示ボタンはwidth/height=0になる）
+    const btnValid = r && r.width>0 && r.height>0;
     p._portraitOpen=true;
     p._origParent=p.parentNode;
     p._origNext=p.nextSibling;
     p._origStyle=p.getAttribute('style')||'display:none;';
     document.body.appendChild(p);
+    const panelW = Math.min(340, window.innerWidth*0.92);
+    const topVal = btnValid ? (r.bottom+4) : 60;
+    const maxH   = window.innerHeight - topVal - 8;
+    // 左右: ボタン右端に揃えるが、画面外にはみ出さないようクランプ
+    const rightEdge = btnValid ? r.right : window.innerWidth;
+    const leftPos   = Math.max(4, Math.min(rightEdge - panelW, window.innerWidth - panelW - 4));
     p.style.cssText=[
       'display:block','position:fixed','z-index:2000',
-      'top:'+(r.bottom+4)+'px',
-      'right:'+(window.innerWidth-r.right)+'px',
-      'width:min(340px,92vw)',
-      'max-height:'+(window.innerHeight-r.bottom-8)+'px',
+      'top:'+topVal+'px',
+      'left:'+leftPos+'px',
+      'width:'+panelW+'px',
+      'max-height:'+maxH+'px',
       'overflow-y:auto',
       'background:#030a10','border:1px solid #1a3a2a',
-      'border-radius:12px 0 12px 12px','padding:14px 18px',
+      'border-radius:12px','padding:14px 18px',
       'box-shadow:0 8px 32px rgba(0,0,0,.85)',
     ].join(';');
     showTitleTab('audio');
@@ -29089,18 +29097,47 @@ function _gameScreenOffsetReset() {
     resetBtn.textContent = 'リセット';
     resetBtn.style.cssText = 'background:transparent;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;border:1px solid rgba(255,255,255,0.4);border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;';
     resetBtn.onclick = () => {
-      for (const k in P) {
-        const item = P[k];
-        item.val = item._default;
-        const slider = document.getElementById('_sl_' + k);
-        const disp = document.getElementById('_vd_' + k);
-        if (slider) slider.value = item.val;
-        if (disp) disp.textContent = item.val;
-      }
-      applyPortraitCss();
-      applyTableOffset();
-      applyWallSettings();
-      applyDiscardCss();    };
+      // 確認ダイアログを表示
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'background:#0a1a10;border:1px solid #2a5a3a;border-radius:10px;padding:18px 22px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.8);min-width:180px;';
+      const msg = document.createElement('div');
+      msg.textContent = 'リセットしますか？';
+      msg.style.cssText = 'color:#fff;font-size:13px;font-weight:700;margin-bottom:14px;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;';
+      const btnRow2 = document.createElement('div');
+      btnRow2.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+      const yesBtn = document.createElement('button');
+      yesBtn.textContent = 'はい';
+      yesBtn.style.cssText = 'background:#1a4a2a;color:#88ffbb;border:1px solid #3a8a5a;border-radius:6px;padding:5px 18px;font-size:12px;cursor:pointer;font-weight:700;';
+      yesBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        for (const k in P) {
+          const item = P[k];
+          item.val = item._default;
+          const slider = document.getElementById('_sl_' + k);
+          const disp = document.getElementById('_vd_' + k);
+          if (slider) slider.value = item.val;
+          if (disp) disp.textContent = item.val;
+        }
+        applyPortraitCss();
+        applyTableOffset();
+        applyWallSettings();
+        applyDiscardCss();
+      };
+      const noBtn = document.createElement('button');
+      noBtn.textContent = 'いいえ';
+      noBtn.style.cssText = 'background:#1a1a2a;color:#aaa;border:1px solid #3a3a5a;border-radius:6px;padding:5px 18px;font-size:12px;cursor:pointer;';
+      noBtn.onclick = () => { document.body.removeChild(overlay); };
+      btnRow2.appendChild(yesBtn);
+      btnRow2.appendChild(noBtn);
+      dialog.appendChild(msg);
+      dialog.appendChild(btnRow2);
+      overlay.appendChild(dialog);
+      // オーバーレイ外クリックでキャンセル
+      overlay.onclick = (e) => { if(e.target===overlay) document.body.removeChild(overlay); };
+      document.body.appendChild(overlay);
+    };
     btnRow.appendChild(resetBtn);
 
     // 閉じるボタン

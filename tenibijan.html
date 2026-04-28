@@ -3240,7 +3240,7 @@ body{
       <button class="ll-trb" id="llFullscreenBtn" onclick="toggleFullscreen()" title="全画面" style="display:none;">
         <span id="llFullscreenIcon">⛶</span><span class="ll-label" id="llFullscreenLabel">全画面</span>
       </button>
-      <button class="ll-trb" onclick="toggleTitleSettings()" title="設定">
+      <button class="ll-trb" onclick="toggleTitleSettings(event)" title="設定">
         <span>⚙️</span><span class="ll-label">設定</span>
       </button>
       <button class="ll-trb twitch" onclick="_openTwitchAndMission()" title="Twitch">
@@ -3545,23 +3545,23 @@ body{
         </button>
         <div id="legendVoiceSliders" style="display:none;display:flex;flex-direction:column;gap:6px;padding:6px 0;">
           <div style="font-size:.52rem;color:#4a6a5a;margin-bottom:2px;">各アイコンのボイス音量を個別に調整します（全体ボイス音量と掛け合わせ）</div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L01 おはよう 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L01',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L02 添い寝 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L02',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L03 一緒にお風呂 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L03',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L04 愛子</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L04',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L05 マイケル</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L05',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L06 コーン周平スープ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L06',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L07 宣教師 斎藤勇貴</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L07',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L08 成金 斎藤勇貴</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L08',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L09 Ren</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L09',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L10 老拳師 チャン</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L10',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L11 工事現場 れいや</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L11',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L12 手にビの中の人 JAN</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L12',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L13 ダーニャ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L13',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L14 アリス</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L14',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L15 フレア</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L15',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L16 リリス</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L16',+this.value)"></div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L17 エリシア</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L17',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L01" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L01 おはよう 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L01',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L02" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L02 添い寝 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L02',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L03" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L03 一緒にお風呂 手にビ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L03',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L04" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L04 愛子</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L04',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L05" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L05 マイケル</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L05',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L06" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L06 コーン周平スープ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L06',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L07" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L07 宣教師 斎藤勇貴</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L07',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L08" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L08 成金 斎藤勇貴</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L08',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L09" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L09 Ren</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L09',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L10" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L10 老拳師 チャン</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L10',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L11" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L11 工事現場 れいや</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L11',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L12" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L12 手にビの中の人 JAN</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L12',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L13" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L13 ダーニャ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L13',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L14" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L14 アリス</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L14',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L15" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L15 フレア</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L15',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L16" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L16 リリス</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L16',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L17" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L17 エリシア</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L17',+this.value)"></div>
         </div>
       </div>
     </div>
@@ -5281,6 +5281,7 @@ function saveSettings(){
       gachaSeVol: _gachaSeVol,
       oneClickDiscard: oneClickDiscard,
       gpBindings: typeof gpGetBindings === 'function' ? gpGetBindings() : null,
+      kbBindings: typeof kbGetBindings === 'function' ? kbGetBindings() : null,
       discardAnimEnabled: discardAnimEnabled,
       opEnabled: _opEnabled,
       gpActive: typeof window.gpGetActive === 'function' ? window.gpGetActive() : true,
@@ -5404,6 +5405,10 @@ function loadSettings(){
     // gpBindings（ゲームパッドボタン割り当て）
     if(data.gpBindings && typeof gpLoadBindings === 'function'){
       gpLoadBindings(data.gpBindings);
+    }
+    // kbBindings（キーボード/マウスボタン割り当て）
+    if(data.kbBindings && typeof kbLoadBindings === 'function'){
+      kbLoadBindings(data.kbBindings);
     }
     // 捨てアニメ設定
     if(data.discardAnimEnabled != null){
@@ -11309,6 +11314,29 @@ function _applyIconVoiceSliders(){
     const id = ids[i];
     if(id && iconVoiceScale[id] != null) sl.value = iconVoiceScale[id];
   });
+  _updateLegendVoiceLabels();
+}
+// 所持していないレジェンドアイコンのボイスラベルを「じゃ？？？」にする
+function _updateLegendVoiceLabels(){
+  const owned = new Set(PROFILE.gachaIcons || []);
+  const labelMap = {};
+  GACHA_ICONS.filter(ic => ic.rarity === 'legend').forEach(ic => { labelMap[ic.id] = ic.label; });
+  ['legendVoiceSliders','legendVoiceSlidersHdr'].forEach(containerId => {
+    const c = document.getElementById(containerId);
+    if(!c) return;
+    c.querySelectorAll('span[data-lv-id]').forEach(span => {
+      const id = span.getAttribute('data-lv-id');
+      if(!id) return;
+      const label = labelMap[id] || id;
+      if(owned.has(id)){
+        span.textContent = id + ' ' + label;
+        span.style.color = '#c9a84c';
+      } else {
+        span.textContent = id + ' じゃ？？？';
+        span.style.color = '#4a6a5a';
+      }
+    });
+  });
 }
 function toggleDiscardAnim(){
   discardAnimEnabled = !discardAnimEnabled;
@@ -11329,7 +11357,7 @@ function _applyDiscardAnimUI(){
     }
   });
 }
-function toggleTitleSettings(){
+function toggleTitleSettings(e){
   const p=document.getElementById('titleSettingsPanel');
   if(!p) return;
   // 横画面判定: lobbyLandscapeが表示されているか
@@ -11359,8 +11387,32 @@ function toggleTitleSettings(){
     }
     showTitleTab('audio');
   } else {
-    // 縦画面: 従来通りインライン表示
-    p.style.display=p.style.display==='none'?'block':'none';
+    // 縦画面: ボタンの直下にfixedで表示
+    if(p._portraitOpen){
+      p._portraitOpen=false;
+      p.style.cssText=p._origStyle||'display:none;';
+      if(p._origParent) p._origParent.insertBefore(p,p._origNext||null);
+      return;
+    }
+    const btn=(e&&(e.currentTarget||e.target))||document.querySelector('.ll-trb[title="設定"]');
+    const r=btn?btn.getBoundingClientRect():{bottom:60,right:window.innerWidth};
+    p._portraitOpen=true;
+    p._origParent=p.parentNode;
+    p._origNext=p.nextSibling;
+    p._origStyle=p.getAttribute('style')||'display:none;';
+    document.body.appendChild(p);
+    p.style.cssText=[
+      'display:block','position:fixed','z-index:2000',
+      'top:'+(r.bottom+4)+'px',
+      'right:'+(window.innerWidth-r.right)+'px',
+      'width:min(340px,92vw)',
+      'max-height:'+(window.innerHeight-r.bottom-8)+'px',
+      'overflow-y:auto',
+      'background:#030a10','border:1px solid #1a3a2a',
+      'border-radius:12px 0 12px 12px','padding:14px 18px',
+      'box-shadow:0 8px 32px rgba(0,0,0,.85)',
+    ].join(';');
+    showTitleTab('audio');
   }
 }
 function showTitleTab(tab){
@@ -11370,6 +11422,7 @@ function showTitleTab(tab){
     if(c) c.style.display=t===tab?'block':'none';
     if(b){ b.style.background=t===tab?'#081a10':'#030a10'; b.style.borderColor=t===tab?'#2a5a3a':'#1a3a2a'; b.style.color=t===tab?'var(--gold)':'#5a7a6a'; }
   });
+  if(tab==='audio' && typeof _updateLegendVoiceLabels==='function') _updateLegendVoiceLabels();
 }
 function showInGameTab(tab){
   ['audio','operation','rules','yaku'].forEach(t=>{
@@ -11378,6 +11431,7 @@ function showInGameTab(tab){
     if(c) c.style.display=t===tab?'block':'none';
     if(b){ b.style.background=t===tab?'#081a10':'#030a10'; b.style.borderColor=t===tab?'#2a5a3a':'#1a3a2a'; b.style.color=t===tab?'var(--gold)':'#5a7a6a'; }
   });
+  if(tab==='audio' && typeof _updateLegendVoiceLabels==='function') _updateLegendVoiceLabels();
 }
 function toggleInGameSEDetail(){
   const p=document.getElementById('inGameSEDetail');
@@ -11408,27 +11462,8 @@ function toggleSettingsPanel(e){
   const p=document.getElementById('settingsPanel');
   if(!p) return;
   const isOpen=p.style.display==='flex';
-  if(!isOpen){
-    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
-    if(isPortrait){
-      const btn = (e && e.currentTarget) || (e && e.target) || document.querySelector('#settingsBtn');
-      if(btn){
-        const r = btn.getBoundingClientRect();
-        p.style.top = (r.bottom + 4) + 'px';
-        p.style.right = (window.innerWidth - r.right) + 'px';
-        p.style.maxHeight = (window.innerHeight - r.bottom - 8) + 'px';
-        p.style.borderRadius = '12px 0 12px 12px';
-      }
-    } else {
-      p.style.top = '0';
-      p.style.right = '0';
-      p.style.maxHeight = '100vh';
-      p.style.borderRadius = '0 0 0 12px';
-    }
-    showInGameTab('audio');
-    _applySettingsPanelScale();
-  }
   p.style.display=isOpen?'none':'flex';
+  if(!isOpen){ showInGameTab('audio'); _applySettingsPanelScale(); }
   document.querySelectorAll('#settingsBtn').forEach(btn=>{
     btn.style.borderColor=!isOpen?'#55aaff':'#2a3a4a';
     btn.style.color=!isOpen?'#55aaff':'#5a7a8a';
@@ -25812,6 +25847,63 @@ if(_origOpenProfile){
   window.gpLoadBindings = (b)=>{ _bindings = Object.assign({}, DEFAULT_BINDINGS, b); _renderBindTable(); };
   window.gpResetBindings= ()=>{ _bindings = Object.assign({}, DEFAULT_BINDINGS); _renderBindTable(); if(typeof saveSettings==='function') saveSettings(); };
 
+  // ─────────── キーボード/マウス バインディング ───────────
+  let _kbBindings = {}; // physKey(code文字列 or 'Mouse0'等) → actionKey
+  let _kbListening = null; // 割り当て待ち中のアクションキー（KB側）
+
+  // キー表示名
+  function _kbKeyLabel(phys){
+    if(phys.startsWith('Mouse')){
+      return ['左クリック','中クリック','右クリック'][+phys.slice(5)] || 'M'+phys.slice(5);
+    }
+    const MAP = {
+      'Space':'スペース','Enter':'Enter','Escape':'Esc',
+      'ArrowLeft':'←','ArrowRight':'→','ArrowUp':'↑','ArrowDown':'↓',
+      'Backspace':'BS','Delete':'Del','Tab':'Tab',
+      'ShiftLeft':'L-Shift','ShiftRight':'R-Shift',
+      'ControlLeft':'L-Ctrl','ControlRight':'R-Ctrl',
+      'AltLeft':'L-Alt','AltRight':'R-Alt',
+      'Home':'Home','End':'End','PageUp':'PgUp','PageDown':'PgDn',
+      'Insert':'Ins',
+    };
+    if(MAP[phys]) return MAP[phys];
+    if(/^Key[A-Z]$/.test(phys)) return phys.slice(3);
+    if(/^Digit\d$/.test(phys)) return phys.slice(5);
+    if(/^F\d{1,2}$/.test(phys)) return phys;
+    if(/^Numpad(\d)$/.test(phys)) return 'Num'+phys.slice(6);
+    if(phys==='NumpadEnter') return 'Num-Enter';
+    return phys;
+  }
+
+  function _kbStartListening(actionKey){
+    if(_kbListening === actionKey){ _kbListening=null; _renderBindTable(); return; }
+    _kbListening = actionKey;
+    _renderBindTable();
+  }
+  function _kbApplyBinding(phys){
+    if(!_kbListening) return false;
+    const actionKey = _kbListening;
+    // 同じキーが既にこのアクションに割り当て済み → 解除して未割り当てに戻す
+    if(_kbBindings[phys] === actionKey){
+      delete _kbBindings[phys];
+      _kbListening = null;
+      _renderBindTable();
+      if(typeof saveSettings==='function') saveSettings();
+      return true;
+    }
+    // 既存の同アクション割り当てを解除
+    Object.keys(_kbBindings).forEach(p=>{ if(_kbBindings[p]===actionKey) delete _kbBindings[p]; });
+    _kbBindings[phys] = actionKey;
+    _kbListening = null;
+    _renderBindTable();
+    if(typeof saveSettings==='function') saveSettings();
+    return true;
+  }
+  // 外部公開
+  window.kbGetBindings  = ()=> Object.assign({}, _kbBindings);
+  window.kbLoadBindings = (b)=>{ _kbBindings = Object.assign({}, b); _renderBindTable(); };
+  window.kbResetBindings= ()=>{ _kbBindings = {}; _renderBindTable(); if(typeof saveSettings==='function') saveSettings(); };
+
   // ─────────── 状態 ───────────
   let _gpCursor  = 0;
   let _gpActIdx  = 0;
@@ -25875,50 +25967,87 @@ if(_origOpenProfile){
       const tbl = document.getElementById(tblId);
       if(!tbl) return;
 
-      // 逆引きマップ: actionKey → [physicalKeys]
+      // 逆引きマップ: actionKey → [physicalKeys] (GP)
       const rev = {};
       Object.entries(_bindings).forEach(([phys, act])=>{
         if(act){ if(!rev[act]) rev[act]=[]; rev[act].push(phys); }
       });
+      // 逆引きマップ: actionKey → [physicalKeys] (KB)
+      const kbRev = {};
+      Object.entries(_kbBindings).forEach(([phys, act])=>{
+        if(act){ if(!kbRev[act]) kbRev[act]=[]; kbRev[act].push(phys); }
+      });
 
       tbl.innerHTML = '';
+
+      // ヘッダー行
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'display:flex;align-items:center;gap:4px;padding:2px 0 4px;border-bottom:1px solid #1a3a2a;margin-bottom:2px;';
+      hdr.innerHTML =
+        '<span style="font-size:.52rem;color:#3a5a4a;flex:1;min-width:0;">アクション</span>'+
+        '<span style="font-size:.52rem;color:#4a8aff;width:72px;text-align:center;flex-shrink:0;">🎮 コントローラー</span>'+
+        '<span style="font-size:.52rem;color:#aaaaaa;width:14px;flex-shrink:0;"></span>'+
+        '<span style="font-size:.52rem;color:#88cc88;width:72px;text-align:center;flex-shrink:0;">⌨ キーボード</span>'+
+        '<span style="font-size:.52rem;color:#aaaaaa;width:14px;flex-shrink:0;"></span>';
+      tbl.appendChild(hdr);
+
       ACTIONS.forEach(({key, label})=>{
         const physKeys = rev[key] || [];
-        // 重複除去（stickL/stickR + 十字キーが両方登録されている場合）
-        const display = physKeys.map(p=> BTN_LABELS[p]||String(p)).join(' / ') || '─';
+        const gpDisplay = physKeys.map(p=> BTN_LABELS[p]||String(p)).join('/') || '─';
+        const kbPhysKeys = kbRev[key] || [];
+        const kbDisplay  = kbPhysKeys.map(p=> _kbKeyLabel(p)).join('/') || '─';
 
         const row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+        row.style.cssText = 'display:flex;align-items:center;gap:4px;';
 
         // アクション名
         const lbl = document.createElement('span');
-        lbl.style.cssText = 'font-size:.58rem;color:#5a7a6a;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        lbl.style.cssText = 'font-size:.55rem;color:#5a7a6a;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
         lbl.textContent = label;
 
-        // 現在のボタン表示
-        const cur = document.createElement('span');
-        cur.style.cssText = 'font-size:.58rem;color:var(--gold);background:#050d14;border:1px solid #1a3a2a;border-radius:4px;padding:2px 7px;min-width:70px;text-align:center;white-space:nowrap;flex-shrink:0;';
-        cur.textContent = display;
+        // ── GP側 ──
+        const gpCur = document.createElement('span');
+        gpCur.style.cssText = 'font-size:.52rem;color:#4a8aff;background:#050d14;border:1px solid #1a2a4a;border-radius:4px;padding:2px 4px;width:72px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;box-sizing:border-box;';
+        gpCur.textContent = gpDisplay;
+        const gpBtn = document.createElement('button');
+        gpBtn.style.cssText = 'font-size:.48rem;padding:2px 5px;background:#030a10;border:1px solid #1a2a4a;border-radius:4px;color:#3a6aaa;cursor:pointer;flex-shrink:0;white-space:nowrap;';
+        const gpListening = (_listening === key);
+        gpBtn.textContent = gpListening ? '✕' : '変更';
+        gpBtn.style.color = gpListening ? '#ff9944' : '#3a6aaa';
+        gpBtn.style.borderColor = gpListening ? '#ff9944' : '#1a2a4a';
+        if(gpListening){ gpCur.textContent='▶ ボタンを…'; gpCur.style.color='#ff9944'; gpCur.style.borderColor='#ff9944'; }
+        gpBtn.onclick = ()=> _startListening(key);
 
-        // 変更ボタン
-        const btn = document.createElement('button');
-        btn.style.cssText = 'font-size:.55rem;padding:3px 8px;background:#030a10;border:1px solid #1a3a2a;border-radius:4px;color:#4a7a6a;cursor:pointer;flex-shrink:0;';
-        const isListening = (_listening === key);
-        btn.textContent = isListening ? 'キャンセル' : '変更';
-        btn.style.color = isListening ? '#ff9944' : '#4a7a6a';
-        btn.style.borderColor = isListening ? '#ff9944' : '#1a3a2a';
-        if(isListening){
-          cur.textContent = '▶ ボタンを押して…';
-          cur.style.color = '#ff9944';
-          cur.style.borderColor = '#ff9944';
-        }
-        btn.onclick = ()=> _startListening(key);
+        // ── KB側 ──
+        const kbCur = document.createElement('span');
+        kbCur.style.cssText = 'font-size:.52rem;color:#88cc88;background:#050d14;border:1px solid #1a3a1a;border-radius:4px;padding:2px 4px;width:72px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;box-sizing:border-box;';
+        kbCur.textContent = kbDisplay;
+        const kbBtn = document.createElement('button');
+        kbBtn.style.cssText = 'font-size:.48rem;padding:2px 5px;background:#030a10;border:1px solid #1a3a1a;border-radius:4px;color:#4a8a4a;cursor:pointer;flex-shrink:0;white-space:nowrap;';
+        const kbListeningThis = (_kbListening === key);
+        kbBtn.textContent = kbListeningThis ? '✕' : '変更';
+        kbBtn.style.color = kbListeningThis ? '#ff9944' : '#4a8a4a';
+        kbBtn.style.borderColor = kbListeningThis ? '#ff9944' : '#1a3a1a';
+        if(kbListeningThis){ kbCur.textContent='▶ キーを…'; kbCur.style.color='#ff9944'; kbCur.style.borderColor='#ff9944'; }
+        kbBtn.onclick = ()=> _kbStartListening(key);
 
         row.appendChild(lbl);
-        row.appendChild(cur);
-        row.appendChild(btn);
+        row.appendChild(gpCur);
+        row.appendChild(gpBtn);
+        row.appendChild(kbCur);
+        row.appendChild(kbBtn);
         tbl.appendChild(row);
       });
+
+      // KB リセットボタン
+      const kbResetRow = document.createElement('div');
+      kbResetRow.style.cssText = 'display:flex;justify-content:flex-end;margin-top:4px;';
+      const kbResetBtn = document.createElement('button');
+      kbResetBtn.textContent = '⌨ KBリセット';
+      kbResetBtn.style.cssText = 'font-size:.5rem;padding:3px 8px;background:#030a10;border:1px solid #1a3a1a;border-radius:4px;color:#4a7a4a;cursor:pointer;';
+      kbResetBtn.onclick = ()=> window.kbResetBindings();
+      kbResetRow.appendChild(kbResetBtn);
+      tbl.appendChild(kbResetRow);
     });
   }
 
@@ -25943,11 +26072,19 @@ if(_origOpenProfile){
   function _applyBinding(physKey){
     if(!_listening) return false;
     const actionKey = _listening;
+    // 同じキーが既にこのアクションに割り当て済み → 解除して未割り当てに戻す
+    if(_bindings[physKey] === actionKey){
+      delete _bindings[physKey];
+      _listening = null;
+      _renderBindTable();
+      if(typeof saveSettings==='function') saveSettings();
+      _hud('✅ 割り当てを解除しました');
+      return true;
+    }
     // 既存の同じアクションへの割り当てをすべて解除
     Object.keys(_bindings).forEach(p=>{ if(_bindings[p]===actionKey) delete _bindings[p]; });
     // 新しい物理キーに割り当て
     _bindings[physKey] = actionKey;
-    const prevAction = _bindings[physKey]; // 上書き前に別アクションが入っていた場合は消える（意図的）
     _listening = null;
     _renderBindTable();
     if(typeof saveSettings==='function') saveSettings();
@@ -27791,6 +27928,94 @@ if(_origOpenProfile){
     const actionKey = _bindings[phys];
     if(actionKey) _execAction(actionKey);
   }
+
+  // ─────────── キーボード/マウス 入力ハンドラ ───────────
+  // 入力要素にフォーカス中は無効化（テキスト入力の邪魔をしない）
+  function _kbInputFocused(){
+    const el = document.activeElement;
+    if(!el) return false;
+    const tag = el.tagName.toLowerCase();
+    return tag==='input'||tag==='textarea'||tag==='select'||el.isContentEditable;
+  }
+
+  // KB側の割り当て待ち or アクション実行
+  function _dispatchKb(phys){
+    if(_kbListening){ _kbApplyBinding(phys); return; }
+    if(_kbInputFocused()) return;
+    const actionKey = _kbBindings[phys];
+    if(actionKey) _execAction(actionKey);
+  }
+
+  // vibration release map for keyboard rumble
+  const _kbRumbleActive = {};
+
+  window.addEventListener('keydown', function(e){
+    // 割り当て待ち中: 特殊キーも含めてどのキーでも割り当てに使う
+    if(_kbListening){
+      // Escはキャンセル扱い
+      if(e.code === 'Escape'){ _kbListening=null; _renderBindTable(); e.preventDefault(); return; }
+      e.preventDefault();
+      _dispatchKb(e.code);
+      return;
+    }
+    if(_kbInputFocused()) return;
+    const actionKey = _kbBindings[e.code];
+    if(!actionKey) return;
+    // rumble系はキーダウンで開始
+    if(actionKey.startsWith('rumble_p')){
+      if(_kbRumbleActive[e.code]) return; // 長押しリピート防止
+      _kbRumbleActive[e.code] = true;
+      const idx = +actionKey.slice(-1);
+      if(typeof window._startPlayerRumble === 'function') window._startPlayerRumble(idx);
+      e.preventDefault();
+      return;
+    }
+    // リピートは無視（最初の押下のみ）
+    if(e.repeat) return;
+    e.preventDefault();
+    _execAction(actionKey);
+  }, true);
+
+  window.addEventListener('keyup', function(e){
+    const actionKey = _kbBindings[e.code];
+    if(actionKey && actionKey.startsWith('rumble_p') && _kbRumbleActive[e.code]){
+      _kbRumbleActive[e.code] = false;
+      const idx = +actionKey.slice(-1);
+      if(typeof window._stopPlayerRumble === 'function') window._stopPlayerRumble(idx);
+    }
+  }, true);
+
+  window.addEventListener('mousedown', function(e){
+    const phys = 'Mouse' + e.button;
+    if(_kbListening){
+      // 左クリックで「変更」ボタンを押した場合は除外（ボタン自体のクリックと区別）
+      if(e.button===0 && e.target && e.target.tagName==='BUTTON') return;
+      e.preventDefault();
+      _dispatchKb(phys);
+      return;
+    }
+    if(_kbInputFocused()) return;
+    const actionKey = _kbBindings[phys];
+    if(!actionKey) return;
+    if(actionKey.startsWith('rumble_p')){
+      const idx = +actionKey.slice(-1);
+      if(typeof window._startPlayerRumble === 'function') window._startPlayerRumble(idx);
+      return;
+    }
+    // 左クリック(Mouse0)は通常のUI操作と競合するため慎重に
+    if(e.button===0) return;
+    e.preventDefault();
+    _execAction(actionKey);
+  }, true);
+
+  window.addEventListener('mouseup', function(e){
+    const phys = 'Mouse' + e.button;
+    const actionKey = _kbBindings[phys];
+    if(actionKey && actionKey.startsWith('rumble_p')){
+      const idx = +actionKey.slice(-1);
+      if(typeof window._stopPlayerRumble === 'function') window._stopPlayerRumble(idx);
+    }
+  }, true);
 
   // ─────────── ローカルモード：自前ポーリング ───────────
   const DEAD   = 0.4;

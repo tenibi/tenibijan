@@ -170,7 +170,9 @@ function _sendRankDisconnectNotify(){
 
     if(RANK._isCpuFill){
       _beaconOrFetch(BACKEND+'/rank/cpu-result',
-        {rank:3, score:-9999, numPlayers:3, token});
+        {rank:3, score:-9999, numPlayers:3,
+         cpuNames: RANK._cpuNames || [],
+         token});
     } else if(RANK.matchId){
       _beaconOrFetch(BACKEND+'/rank/disconnect-notify',
         {matchId:RANK.matchId, token});
@@ -7140,6 +7142,7 @@ const RANK = {
   _gameStartFired: false, // ゲームスタート二重発火防止
   _cpuFillTimer: null,   // 1分タイムアウトでCPU埋めするタイマー
   _isCpuFill: false,     // CPUで埋めてスタートしたランクマッチフラグ
+  _cpuNames: [],         // CPU埋めマッチのCPU名（切断通知・開始通知で使用）
   _forceTried: false,    // 15秒CPU補填接続を試みたフラグ
   buttonCooldown: false, // ボタンクールタイム
   buttonClickCount: 0,   // 3人カウント用
@@ -7230,6 +7233,14 @@ function _forceStartRankCPUGame(){
   const cpu2=_getRankCpuConfig();
   cpuSelectedAbilities[0]=cpu1.ability;
   cpuSelectedAbilities[1]=cpu2.ability;
+  // CPU名をRANKオブジェクトに保存（切断通知・ゲーム開始通知で使用）
+  RANK._cpuNames=[cpu1.name, cpu2.name];
+  // サーバーへ「CPU埋めランクマッチ開始」を通知
+  authFetch('/rank/cpu-start',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({cpuNames:RANK._cpuNames})
+  }).catch(()=>{});
   // ゲーム開始
   bgmToGame();
   // 💣 爆弾数表示を非表示（ランクCPU戦は手にボムなし）
@@ -7263,6 +7274,7 @@ function _rankReset(){
   RANK.connectedGuests=0;
   RANK._gameStartFired=false;
   RANK._isCpuFill=false;
+  RANK._cpuNames=[];
   RANK._forceTried=false;
   RANK._disconnectNotifySent=false;
   RANK.buttonCooldown=false;

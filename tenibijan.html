@@ -3379,10 +3379,6 @@ body{
 
 <!-- ===== 縦画面用ロビー (既存) ===== -->
 <div id="lobbyInner">
-  <div class="lobby-title">
-    <img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/logo.png" alt="手にビじゃん" style="max-width:320px;width:80%;height:auto;display:block;margin:0 auto;">
-  </div>
-
   <!-- プレイヤーカード -->
   <div style="display:flex;justify-content:center;align-items:center;gap:8px;">
     <div id="lobbyPlayerCard" onclick="openProfile()" title="プロフィールを編集">
@@ -24187,10 +24183,16 @@ function plantMineRinshan(ri){
 ">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <span style="font-size:.8rem;font-weight:700;color:var(--gold);">⚙️ 設定</span>
-          <button onclick="confirmBackToTitle()" style="
-            background:#030a10;border:1px solid #3a2a1a;border-radius:6px;
-            color:#8a6a3a;font-size:.65rem;padding:5px 10px;cursor:pointer;
-          ">← タイトルへ</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button onclick="toggleSettingsPanel()" style="
+              background:#030a10;border:1px solid #1a3a4a;border-radius:6px;
+              color:#5a8a9a;font-size:.65rem;padding:5px 10px;cursor:pointer;
+            ">✕ 閉じる</button>
+            <button onclick="confirmBackToTitle()" style="
+              background:#030a10;border:1px solid #3a2a1a;border-radius:6px;
+              color:#8a6a3a;font-size:.65rem;padding:5px 10px;cursor:pointer;
+            ">← タイトルへ</button>
+          </div>
         </div>
         <!-- タブ -->
         <div style="display:flex;gap:6px;border-bottom:1px solid #1a3a2a;padding-bottom:8px;">
@@ -27354,13 +27356,14 @@ if(_origOpenProfile){
         const idx=parseInt(tile.dataset.idx,10);
         if(isNaN(idx)) break;
         if(typeof selIdx!=='undefined'){
-          if(typeof oneClickDiscard!=='undefined' && oneClickDiscard && typeof G!=='undefined' && G.phase==='discard'){
-            // 1クリックモード: Aボタン1回で即捨て
+          if(typeof G!=='undefined' && G.phase==='discard'){
+            // ★修正: コントローラー操作は常に1クリックモード相当（Aボタン1回で即捨て）
+            // 選択捨てモード(2回押し)はルームマッチ等でselIdxがrenderAll後にリセットされ
+            // 2回目のAが効かなくなるバグがあるため、コントローラーは常に即捨てにする
             selIdx=idx; if(typeof humanDiscard==='function') humanDiscard();
           } else {
-            // 選択捨てモード: 選択 → 再押しで捨て
-            if(selIdx===idx){ if(typeof humanDiscard==='function') humanDiscard(); }
-            else { selIdx=idx; if(typeof renderAll==='function') renderAll(); }
+            // discard以外のフェーズ（リーチ中ツモ切りなど）は従来どおり
+            selIdx=idx; if(typeof renderAll==='function') renderAll();
           }
         }
         break;
@@ -28047,9 +28050,11 @@ if(_origOpenProfile){
 
           // アクションボタンが出たら自動的にアクションへフォーカス（パネル操作中は維持）
           // ただしリーチ・オープンリーチボタンのみの場合は手牌操作を優先して切り替えない
+          // ★修正: discardフェーズで自分の手番中は手牌フォーカスを維持（myName受信等のrenderAllで_gpFocusがactionに切り替わるバグ修正）
           const _panelFocused = ['corner','emote','settings','automenu'].includes(_gpFocus);
           const _onlyRiichi = a.length>0 && a.every(b=>b.classList.contains('btn-riichi')||b.classList.contains('btn-open-riichi'));
-          if(a.length>0 && _gpFocus==='hand' && !_onlyRiichi){
+          const _inDiscardTurn = typeof G!=='undefined' && G.phase==='discard' && typeof NET!=='undefined' && G.current===NET.myIdx;
+          if(a.length>0 && _gpFocus==='hand' && !_onlyRiichi && !_inDiscardTurn){
             _gpFocus='action'; _gpActIdx=0;
           } else if(a.length===0 && _gpFocus==='action'){
             _gpFocus='hand';

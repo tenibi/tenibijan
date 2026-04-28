@@ -90,8 +90,8 @@ function scaleTable(){
     // 下: (58 + 200 - 130)v ※130px下に移動
     ps.textContent=
       '.seat-top .seat-inner{top:'+Math.round((168 + 100 - 80)*v + 30)+'px !important;}'+
-      '.seat-right .seat-inner{top:calc(50% + 300px) !important;transform:rotate(-90deg) translateY(-50%) !important;transform-origin:0 0;}'+
-      '.seat-left .seat-inner{top:calc(50% - 300px) !important;transform:rotate(90deg) translateY(-50%) !important;transform-origin:0 0;}'+
+      '.seat-right .seat-inner{left:1300px !important;top:calc(50% + 300px) !important;transform:rotate(-90deg) translateY(-50%) !important;transform-origin:0 0;}'+
+      '.seat-left .seat-inner{left:105px !important;top:calc(50% - 300px) !important;transform:rotate(90deg) translateY(-50%) !important;transform-origin:0 0;}'+
       '.seat-bottom .seat-inner{bottom:'+Math.round((58 + 200 - 130)*v)+'px !important; left: calc(391px - 180px) !important;}'+ /* 手牌全体を左に180px移動 */
       /* 下プレイヤーの手牌を3倍に拡大 (36x48 -> 108x144) */
       '.seat-bottom .tile { width: 108px !important; height: 144px !important; font-size: 8.4rem !important; border-width: 4.5px !important; border-radius: 12px !important; }' +
@@ -108,7 +108,7 @@ function scaleTable(){
       '.seat-top .player-icon-panel { transform: rotate(180deg) scale(2) !important; transform-origin: center top !important; position: relative !important; top: '+Math.round((100 + 100 - 80)*v)+'px !important; }'+
       '.seat-right .player-icon-panel { transform: translateX(50px) translateY(-100px) rotate(90deg) scale(2) !important; transform-origin: left center !important; }'+
       '.seat-left .player-icon-panel { transform: translateX(-100px) translateY(-100px) rotate(-90deg) scale(2) !important; transform-origin: right center !important; }'+
-      '.bottom-score-panel { position: absolute !important; left: 850px !important; top: 36px !important; margin-left: 0 !important; transform-origin: left top !important; }'+
+      '.bottom-score-panel { position: absolute !important; left: 835px !important; top: 36px !important; margin-left: 0 !important; transform-origin: left top !important; }'+
       /* 縦画面: 能力ボタン(右下)を5倍スケール・手牌より下に配置 */
       '#tableInfoBox { transform: scale(2) !important; transform-origin: top left !important; }'+
       '#doraPileFixed { transform: scale(1.5) !important; transform-origin: top right !important; }'+
@@ -119,9 +119,9 @@ function scaleTable(){
       /* 縦画面: リーチ・オープンリーチボタンだけ2倍（action-areaの1.667倍に対し追加で×1.2） */
       '.btn-riichi, .btn-open-riichi { transform: scale(1.2) !important; transform-origin: center center !important; margin: 0 12px !important; }'+
       /* 縦画面: 手牌上リーチ・離席ラベルを2.5倍スケール・位置調整 */
-      '.seat-bottom .hand-outer-riichi-label { font-size: 3.4375rem !important; }'+
+      '.seat-bottom .hand-outer-riichi-label { font-size: 1.375rem !important; }'+
       '.seat-bottom .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; left: 570px !important; }'+
-      '.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label { font-size: 3.4375rem !important; }'+
+      '.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label { font-size: 1.375rem !important; }'+
       '.seat-top .hand-outer-afk-label,.seat-left .hand-outer-afk-label,.seat-right .hand-outer-afk-label { font-size: 4.6875rem !important; top: -110px !important; }'+
       '#humanMeldArea { left: 50% !important; transform: translateX(-50%) !important; bottom: 8px !important; }'+
       '#humanMeldArea .meld-group .tile { width: 80px !important; height: 106px !important; font-size: 5.5rem !important; border-width: 3px !important; border-radius: 8px !important; }'+
@@ -15288,16 +15288,16 @@ function _wallSlotAt(x,y){
   const tw=_wTW(),th=_wTH(),gap=_wGAP();
   const col=Math.floor(x/(tw+gap));
   const row=Math.floor(y/(th+gap));
-  if(col<0||col>=W_COLS) return -1;
-  const idx=row*W_COLS+col;
+  if(col<0||col>=(window._debugWCols||W_COLS)) return -1;
+  const idx=row*(window._debugWCols||W_COLS)+col;
   if(idx<0||!G.deckSlots||idx>=G.deckSlots.length) return -1;
   return idx;
 }
 
 function _wallTileRect(idx){
   const tw=_wTW(),th=_wTH(),gap=_wGAP();
-  const col=idx%W_COLS;
-  const row=Math.floor(idx/W_COLS);
+  const col=idx%(window._debugWCols||W_COLS);
+  const row=Math.floor(idx/(window._debugWCols||W_COLS));
   return {
     x: col*(tw+gap),
     y: row*(th+gap),
@@ -15347,8 +15347,9 @@ function _applyTileImgExtUI(){
   if(!wc||!G.deckSlots) return;
 
   const total=G.deckSlots.length;
-  const rows=Math.ceil(total/W_COLS);
-  const cw=W_COLS*(_wTW()+_wGAP())-_wGAP();
+  const _WC=window._debugWCols||W_COLS;
+  const rows=Math.ceil(total/_WC);
+  const cw=_WC*(_wTW()+_wGAP())-_wGAP();
   const ch=rows*(_wTH()+_wGAP())-_wGAP();
 
   // canvasサイズ設定（devicePixelRatio対応で高解像度ディスプレイでも鮮明に）
@@ -15379,15 +15380,15 @@ function _applyTileImgExtUI(){
     if(slot===null){
       // 引き済み: 黒で塗りつぶし＋周囲爆弾数を表示（0は非表示）
       if(numPlayers===1 && G._soloStage){
-        const rows2=Math.ceil(total/W_COLS);
-        const col2=i%W_COLS, row2=Math.floor(i/W_COLS);
+        const rows2=Math.ceil(total/_WC);
+        const col2=i%_WC, row2=Math.floor(i/_WC);
         let bombHint=0;
         if(G.mineSlots && G.mineSlots.length>0){
           for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
             if(dr===0&&dc===0) continue;
             const nr=row2+dr, nc=col2+dc;
-            if(nr<0||nr>=rows2||nc<0||nc>=W_COLS) continue;
-            const ni=nr*W_COLS+nc;
+            if(nr<0||nr>=rows2||nc<0||nc>=_WC) continue;
+            const ni=nr*_WC+nc;
             if(G.mineSlots.includes(ni)&&G.deckSlots[ni]!==null) bombHint++;
           }
         }
@@ -16384,10 +16385,15 @@ function renderTable(){
       windOrb2.textContent=p.wind;
     }
     const nameEl2 = document.createElement('span');
-    nameEl2.style.cssText='font-size:1.1rem;color:var(--gold);font-weight:700;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;';
+    nameEl2.style.cssText='font-size:1.1rem;color:var(--gold);font-weight:700;white-space:nowrap;text-align:center;display:inline-block;transform-origin:center center;';
     nameEl2.textContent=(p.name||'').slice(0,10);
     leftPanel.appendChild(windOrb2);
     leftPanel.appendChild(nameEl2);
+    // アイコン幅(80px)に収まるよう横スケールで縮小
+    requestAnimationFrame(()=>{
+      const nw=nameEl2.offsetWidth;
+      nameEl2.style.transform=nw>80?'scaleX('+(80/nw)+')':'';
+    });
     // ★ ターンプレイヤーのアイコンをグロー
     {
       const _isTurnPlayer = G && G.current === pidx &&
@@ -23863,6 +23869,7 @@ function doTwitchLogout(){
     document.getElementById('lobby').style.display='';
     loadSettings();
     loadCpuGameSettings();
+    numPlayers = 4;
     renderCpuSlots();
     // 少し待ってからCPU戦を即開始
     setTimeout(()=>{ initGame(); }, 300);
@@ -24221,6 +24228,10 @@ function plantMineRinshan(ri){
               background:#030a10;border:1px solid #3a2a1a;border-radius:6px;
               color:#8a6a3a;font-size:.65rem;padding:5px 10px;cursor:pointer;
             ">← タイトルへ</button>
+            <button id="_settingsDebugBtn" onclick="(function(){const btn=document.getElementById('_debugToggleBtn');if(btn){const sp=document.getElementById('settingsPanel');if(sp){sp.style.display='none';document.querySelectorAll('#settingsBtn').forEach(b=>{b.style.borderColor='#2a3a4a';b.style.color='#5a7a8a';});}btn.click();}else{alert('縦画面で対戦中のみ表示されます');}})();" style="
+              background:#030a10;border:1px solid #2a4a2a;border-radius:6px;
+              color:#88cc88;font-size:.65rem;padding:5px 10px;cursor:pointer;
+            ">🔧 調整</button>
           </div>
         </div>
         <!-- タブ -->
@@ -28528,5 +28539,459 @@ function _gameScreenOffsetReset() {
   }, 500);
 
   window._hideGpTilePopup = _hidePopup;
+})();
+</script>
+
+
+<!-- ★ 縦画面レイアウト調整パネル (テスト用) -->
+<script>
+(function(){
+  const _v = 1900 / 933;
+
+  // ── 調整パラメータ定義 ──────────────────────────────────────
+  const P = {
+    // 左右席
+    seatRightLeft:     { g:'左右席の位置', label:'右席 left',          val:1300, min:1100, max:1500, step:5 },
+    seatLeftLeft:      { g:'左右席の位置', label:'左席 left',          val:105,  min:-100, max:300,  step:5 },
+    seatRightTopOff:   { g:'左右席の位置', label:'右席 縦位置 +',      val:300,  min:0,    max:700,  step:10 },
+    seatLeftTopOff:    { g:'左右席の位置', label:'左席 縦位置 -',      val:300,  min:0,    max:700,  step:10 },
+    // 上下席
+    seatTopTop:        { g:'上下席の位置', label:'上席 top',           val:Math.round((168+100-80)*_v+30), min:0,  max:900, step:5 },
+    seatBottomBottom:  { g:'上下席の位置', label:'下席 bottom',        val:Math.round((58+200-130)*_v),    min:0,  max:700, step:5 },
+    seatBottomLeft:    { g:'上下席の位置', label:'下席 leftオフセット',val:180,  min:-300, max:700,  step:5 },
+    // 下席アイコン
+    bottomIconScale:   { g:'アイコン(下)', label:'下席アイコン scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    bottomIconTransY:  { g:'アイコン(下)', label:'下席アイコン Y',     val:-20,  min:-300, max:200,  step:5 },
+    bottomIconLeft:    { g:'アイコン(下)', label:'下席アイコン left',  val:40,   min:-300, max:600,  step:5 },
+    // 上席アイコン
+    topIconScale:      { g:'アイコン(上)', label:'上席アイコン scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    topIconTop:        { g:'アイコン(上)', label:'上席アイコン top',   val:Math.round((100+100-80)*_v), min:0, max:700, step:5 },
+    // 右左席アイコン
+    rightIconTransX:   { g:'アイコン(右左)', label:'右席アイコン X',   val:50,   min:-400, max:500,  step:5 },
+    rightIconTransY:   { g:'アイコン(右左)', label:'右席アイコン Y',   val:-100, min:-500, max:200,  step:5 },
+    leftIconTransX:    { g:'アイコン(右左)', label:'左席アイコン X',   val:-100, min:-500, max:200,  step:5 },
+    leftIconTransY:    { g:'アイコン(右左)', label:'左席アイコン Y',   val:-100, min:-500, max:200,  step:5 },
+    // 牌サイズ(下席)
+    bottomTileW:       { g:'牌サイズ(下)', label:'下席 牌 width',     val:108,  min:50,   max:200,  step:2 },
+    bottomTileH:       { g:'牌サイズ(下)', label:'下席 牌 height',    val:144,  min:70,   max:270,  step:2 },
+    bottomTileFontSize:{ g:'牌サイズ(下)', label:'下席 牌 font-size', val:8.4,  min:2,    max:20,   step:0.1 },
+    bottomHandHeight:  { g:'牌サイズ(下)', label:'下席 手牌 height',  val:160,  min:80,   max:320,  step:5 },
+    bottomMeldTileW:   { g:'牌サイズ(下)', label:'下席 副露牌 width', val:80,   min:30,   max:160,  step:2 },
+    bottomMeldTileH:   { g:'牌サイズ(下)', label:'下席 副露牌 height',val:106,  min:40,   max:210,  step:2 },
+    // スコアパネル
+    scorePanelScale:   { g:'スコア', label:'スコアパネル scale',       val:2.3,  min:0.5,  max:6,    step:0.05 },
+    bottomScoreLeft:   { g:'スコア', label:'下席スコア left',          val:835,  min:0,    max:1500, step:10 },
+    bottomScoreTop:    { g:'スコア', label:'下席スコア top',           val:36,   min:-200, max:500,  step:5 },
+    // 卓情報・ドラ
+    tableInfoScale:    { g:'卓情報・ドラ', label:'卓情報 scale',       val:2.0,  min:0.5,  max:5,    step:0.1 },
+    doraPileScale:     { g:'卓情報・ドラ', label:'ドラ山 scale',       val:1.5,  min:0.5,  max:4,    step:0.05 },
+    // コーナーボタン
+    cornerLeftBottom:  { g:'コーナーボタン', label:'左下 bottom',      val:35,   min:0,    max:400,  step:5 },
+    cornerLeftLeft_:   { g:'コーナーボタン', label:'左下 left',        val:12,   min:0,    max:400,  step:5 },
+    cornerLeftScale:   { g:'コーナーボタン', label:'左下 scale',       val:3.0,  min:0.5,  max:8,    step:0.1 },
+    cornerRightBottom: { g:'コーナーボタン', label:'右下 bottom',      val:55,   min:0,    max:400,  step:5 },
+    cornerRightRight_: { g:'コーナーボタン', label:'右下 right',       val:12,   min:0,    max:400,  step:5 },
+    cornerRightScale:  { g:'コーナーボタン', label:'右下 scale',       val:2.5,  min:0.5,  max:8,    step:0.1 },
+    // アクション
+    actionAreaScale:   { g:'アクション', label:'アクション scale',     val:1.667,min:0.5,  max:5,    step:0.05 },
+    actionAreaBottom:  { g:'アクション', label:'アクション bottom',    val:120,  min:0,    max:600,  step:5 },
+    riichiScale:       { g:'アクション', label:'リーチBtn scale',      val:1.2,  min:0.5,  max:4,    step:0.05 },
+    // テーブルスケール補正
+    tableTopOffset:    { g:'テーブル', label:'テーブル top offset',    val:150,  min:0,    max:400,  step:5 },
+    // 山牌
+    wallTileScale:     { g:'山牌',   label:'山牌 tile scale',         val:1.0,  min:0.3,  max:4.0,  step:0.05 },
+    wallCols:          { g:'山牌',   label:'山牌 列数(折り返し)',      val:15,   min:3,    max:30,   step:1 },
+    // 捨て牌
+    discardTileW:      { g:'捨て牌', label:'捨て牌 幅',                val:36,   min:10,   max:100,  step:1 },
+    discardTileH:      { g:'捨て牌', label:'捨て牌 高さ',              val:48,   min:14,   max:130,  step:1 },
+    discardFontSize:   { g:'捨て牌', label:'捨て牌 font-size',         val:2.8,  min:0.5,  max:8,    step:0.1 },
+    discardColsBT:     { g:'捨て牌', label:'上下席 列数(折り返し)',    val:15,   min:3,    max:30,   step:1 },
+    discardColsRL:     { g:'捨て牌', label:'左右席 列数(折り返し)',    val:8,    min:3,    max:20,   step:1 },
+    // 捨て牌の位置
+    discardBottomTop:  { g:'捨て牌の位置', label:'下席 捨て牌 top',    val:0,    min:-400, max:400,  step:5 },
+    discardBottomLeft: { g:'捨て牌の位置', label:'下席 捨て牌 left',   val:0,    min:-400, max:400,  step:5 },
+    discardTopTop:     { g:'捨て牌の位置', label:'上席 捨て牌 top',    val:0,    min:-400, max:400,  step:5 },
+    discardTopLeft:    { g:'捨て牌の位置', label:'上席 捨て牌 left',   val:0,    min:-400, max:400,  step:5 },
+    discardRightLeft:  { g:'捨て牌の位置', label:'右席 捨て牌 left',   val:0,    min:-200, max:400,  step:5 },
+    discardRightTop:   { g:'捨て牌の位置', label:'右席 捨て牌 top',    val:0,    min:-400, max:400,  step:5 },
+    discardLeftLeft:   { g:'捨て牌の位置', label:'左席 捨て牌 left',   val:0,    min:-400, max:200,  step:5 },
+    discardLeftTop:    { g:'捨て牌の位置', label:'左席 捨て牌 top',    val:0,    min:-400, max:400,  step:5 },
+    // アイコン向き
+    iconRotateBottom:  { g:'アイコン向き', label:'下席 アイコン 回転', val:0,    min:-180, max:180,  step:5 },
+    iconRotateTop:     { g:'アイコン向き', label:'上席 アイコン 回転', val:180,  min:-180, max:360,  step:5 },
+    iconRotateRight:   { g:'アイコン向き', label:'右席 アイコン 回転', val:90,   min:-180, max:360,  step:5 },
+    iconRotateLeft:    { g:'アイコン向き', label:'左席 アイコン 回転', val:-90,  min:-360, max:180,  step:5 },
+  };
+
+  // ── localStorage 保存・読み込み ──────────────────────────────
+  const _LS_KEY = 'tenibijan_portrait_adjustments';
+  function _saveP() {
+    try {
+      const saved = {};
+      for (const k in P) saved[k] = P[k].val;
+      localStorage.setItem(_LS_KEY, JSON.stringify(saved));
+    } catch(e) {}
+  }
+  function _loadP() {
+    try {
+      const raw = localStorage.getItem(_LS_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      for (const k in saved) {
+        if (P[k] !== undefined) P[k].val = saved[k];
+      }
+    } catch(e) {}
+  }
+  _loadP();
+
+  // ── CSS生成 ──────────────────────────────────────────────────
+  function buildCss() {
+    const p = {};
+    for (const k in P) p[k] = P[k].val;
+    return [
+      `.seat-top .seat-inner{top:${p.seatTopTop}px !important;}`,
+      `.seat-right .seat-inner{left:${p.seatRightLeft}px !important;top:calc(50% + ${p.seatRightTopOff}px) !important;transform:rotate(-90deg) translateY(-50%) !important;transform-origin:0 0;}`,
+      `.seat-left .seat-inner{left:${p.seatLeftLeft}px !important;top:calc(50% - ${p.seatLeftTopOff}px) !important;transform:rotate(90deg) translateY(-50%) !important;transform-origin:0 0;}`,
+      `.seat-bottom .seat-inner{bottom:${p.seatBottomBottom}px !important;left:calc(391px - ${p.seatBottomLeft}px) !important;}`,
+      `.seat-bottom .tile{width:${p.bottomTileW}px !important;height:${p.bottomTileH}px !important;font-size:${p.bottomTileFontSize}rem !important;border-width:4.5px !important;border-radius:12px !important;}`,
+      `.seat-bottom .hand-wrap{height:${p.bottomHandHeight}px !important;gap:6px !important;padding:10px 15px !important;}`,
+      `.seat-bottom .drawn-sep{width:12px !important;}`,
+      `.seat-bottom .melds-wrap{gap:6px !important;}`,
+      `.seat-bottom .meld-group .tile{width:${p.bottomMeldTileW}px !important;height:${p.bottomMeldTileH}px !important;font-size:5.5rem !important;border-width:3px !important;border-radius:8px !important;}`,
+      `.seat-bottom .kita-wrap .tile{width:${p.bottomMeldTileW}px !important;height:${p.bottomMeldTileH}px !important;font-size:5.5rem !important;border-width:3px !important;border-radius:8px !important;}`,
+      `.player-score-panel{transform:scale(${p.scorePanelScale}) !important;transform-origin:left center !important;}`,
+      `.seat-bottom .player-icon-panel{transform:rotate(${p.iconRotateBottom}deg) scale(${p.bottomIconScale}) translateY(${p.bottomIconTransY}px) !important;transform-origin:center bottom !important;position:relative !important;left:${p.bottomIconLeft}px !important;}`,
+      `.seat-top .player-icon-panel{transform:rotate(${p.iconRotateTop}deg) scale(${p.topIconScale}) !important;transform-origin:center top !important;position:relative !important;top:${p.topIconTop}px !important;}`,
+      `.seat-right .player-icon-panel{transform:translateX(${p.rightIconTransX}px) translateY(${p.rightIconTransY}px) rotate(${p.iconRotateRight}deg) scale(2) !important;transform-origin:left center !important;}`,
+      `.seat-left .player-icon-panel{transform:translateX(${p.leftIconTransX}px) translateY(${p.leftIconTransY}px) rotate(${p.iconRotateLeft}deg) scale(2) !important;transform-origin:right center !important;}`,
+      `.bottom-score-panel{position:absolute !important;left:${p.bottomScoreLeft}px !important;top:${p.bottomScoreTop}px !important;margin-left:0 !important;transform-origin:left top !important;}`,
+      `#tableInfoBox{transform:scale(${p.tableInfoScale}) !important;transform-origin:top left !important;}`,
+      `#doraPileFixed{transform:scale(${p.doraPileScale}) !important;transform-origin:top right !important;}`,
+      `#tableCornerLeft{bottom:${p.cornerLeftBottom}px !important;left:${p.cornerLeftLeft_}px !important;transform:scale(${p.cornerLeftScale}) !important;transform-origin:bottom left !important;}`,
+      `#tableCornerRight{bottom:${p.cornerRightBottom}px !important;right:${p.cornerRightRight_}px !important;transform:scale(${p.cornerRightScale}) !important;transform-origin:bottom right !important;}`,
+      `.action-area{transform:translateX(-50%) scale(${p.actionAreaScale}) !important;transform-origin:bottom center !important;bottom:${p.actionAreaBottom}px !important;}`,
+      `.btn-riichi,.btn-open-riichi{transform:scale(${p.riichiScale}) !important;transform-origin:center center !important;margin:0 12px !important;}`,
+      `.seat-bottom .hand-outer-riichi-label{font-size:1.375rem !important;}`,
+      `.seat-bottom .hand-outer-afk-label{font-size:4.6875rem !important;top:-110px !important;left:570px !important;}`,
+      `.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label{font-size:1.375rem !important;}`,
+      `.seat-top .hand-outer-afk-label,.seat-left .hand-outer-afk-label,.seat-right .hand-outer-afk-label{font-size:4.6875rem !important;top:-110px !important;}`,
+      `#humanMeldArea{left:50% !important;transform:translateX(-50%) !important;bottom:8px !important;}`,
+      `#humanMeldArea .meld-group .tile{width:${p.bottomMeldTileW}px !important;height:${p.bottomMeldTileH}px !important;font-size:5.5rem !important;border-width:3px !important;border-radius:8px !important;}`,
+      `#humanMeldArea .kita-wrap .tile{width:${p.bottomMeldTileW}px !important;height:${p.bottomMeldTileH}px !important;font-size:5.5rem !important;border-width:3px !important;border-radius:8px !important;}`,
+    ].join('');
+  }
+
+  function applyPortraitCss() {
+    const ps = document.getElementById('_portraitSeatStyle');
+    if (ps) ps.textContent = buildCss();
+  }
+
+  // テーブルのtop offsetも更新
+  function applyTableOffset() {
+    const w = document.getElementById('tableWrapper');
+    if (!w) return;
+    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    if (!isPortrait) return;
+    const s = window.innerWidth / 1400;
+    w.style.top = P.tableTopOffset.val + 'px';
+  }
+
+  // 山牌サイズ・列数を反映
+  function applyWallSettings() {
+    window._wScaleOverride = P.wallTileScale.val;
+    window._debugWCols = P.wallCols.val;
+    if (typeof renderWall === 'function') renderWall();
+  }
+
+  // 捨て牌スタイルを反映
+  function applyDiscardCss() {
+    let st = document.getElementById('_debugDiscardStyle');
+    if (!st) { st = document.createElement('style'); st.id = '_debugDiscardStyle'; document.head.appendChild(st); }
+    const tw = P.discardTileW.val, th = P.discardTileH.val;
+    const fs = P.discardFontSize.val;
+    const cbt = P.discardColsBT.val, crl = P.discardColsRL.val;
+    const gap = 2;
+    const widthBT = cbt * (tw + gap) - gap;
+    const widthRL = crl * (tw + gap) - gap;
+    st.textContent = [
+      `.discard-abs .tile{width:${tw}px !important;height:${th}px !important;font-size:${fs}rem !important;}`,
+      `.discard-abs-bottom .discard-grid,.discard-abs-top .discard-grid{grid-template-columns:repeat(${cbt},${tw}px) !important;width:${widthBT}px !important;}`,
+      `.discard-abs-right .discard-grid,.discard-abs-left .discard-grid{grid-template-columns:repeat(${crl},${tw}px) !important;width:${widthRL}px !important;}`,
+    ].join('');
+
+    // 位置オフセット付きで _positionDiscards をオーバーライド
+    window._positionDiscards = function(table) {
+      const tc = document.getElementById('tableCenter');
+      if (!tc || !table) return;
+      const tcLeft   = tc.offsetLeft;
+      const tcTop    = tc.offsetTop;
+      const tcW2     = tc.offsetWidth;
+      const tcH2     = tc.offsetHeight;
+      const tcBottom = tcTop + tcH2;
+      const GAP = 4;
+      const DW2 = cbt * (tw + gap) - gap + 12; // padding+border込み
+
+      table.querySelectorAll('.discard-abs').forEach(dw => {
+        const si = parseInt(dw.dataset.discardSide);
+        const dh = dw.offsetHeight;
+        if (si === 0) {
+          dw.style.left = (tcLeft + 5 + P.discardBottomLeft.val) + 'px';
+          dw.style.top  = (tcBottom + GAP + P.discardBottomTop.val) + 'px';
+          dw.style.transform = '';
+        } else if (si === 2) {
+          dw.style.left = (tcLeft + tcW2 - 5 - DW2 + P.discardTopLeft.val) + 'px';
+          dw.style.top  = (tcTop - GAP - dh + P.discardTopTop.val) + 'px';
+          dw.style.transform = 'rotate(180deg)';
+        }
+      });
+
+      const tcW = tc.offsetWidth;
+      const GRID_W = crl * (tw + gap) - gap + 12;
+      tc.querySelectorAll('.discard-abs-right').forEach(dw => {
+        dw.style.left = (tcW + GAP + P.discardRightLeft.val) + 'px';
+        dw.style.top  = (GRID_W - 2 + P.discardRightTop.val) + 'px';
+        dw.style.transform = 'rotate(-90deg)';
+        dw.style.transformOrigin = '0 0';
+      });
+      tc.querySelectorAll('.discard-abs-left').forEach(dw => {
+        dw.style.left = (-GAP + P.discardLeftLeft.val) + 'px';
+        dw.style.top  = (0 + P.discardLeftTop.val) + 'px';
+        dw.style.transform = 'rotate(90deg)';
+        dw.style.transformOrigin = '0 0';
+      });
+    };
+
+    const table = document.getElementById('mahjongTable');
+    if (table) window._positionDiscards(table);
+  }
+
+  // ── コピー用テキスト生成 ──────────────────────────────────────
+  function buildCopyText() {
+    const lines = ['// ★ 縦画面レイアウト調整パネル - 現在の値', ''];
+    const groups = {};
+    for (const k in P) {
+      const g = P[k].g;
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(k);
+    }
+    for (const g in groups) {
+      lines.push(`// ${g}`);
+      for (const k of groups[g]) lines.push(`//   ${P[k].label}: ${P[k].val}`);
+      lines.push('');
+    }
+    return lines.join('\n');
+  }
+
+  // ── パネルUI構築 ──────────────────────────────────────────────
+  function buildPanel() {
+    const groups = {};
+    for (const k in P) {
+      const g = P[k].g;
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(k);
+    }
+
+    const panel = document.createElement('div');
+    panel.id = '_debugLayoutPanel';
+    Object.assign(panel.style, {
+      position:'fixed', top:'0', right:'0', zIndex:'999999',
+      width:'290px', maxHeight:'100dvh', overflowY:'auto',
+      background:'transparent', borderLeft:'none',
+      fontFamily:'system-ui,sans-serif', fontSize:'12px', color:'#c0d4f0',
+      paddingBottom:'12px', display:'none',
+      boxShadow:'-6px 0 24px rgba(0,0,0,0.8)',
+    });
+
+    // ── ヘッダー ──
+    const header = document.createElement('div');
+    Object.assign(header.style, {
+      background:'transparent',
+      padding:'10px 10px', display:'flex', alignItems:'center',
+      justifyContent:'space-between', position:'sticky', top:'0', zIndex:'1',
+      borderBottom:'1px solid #2a4a7a',
+    });
+    const hTitle = document.createElement('span');
+    hTitle.innerHTML = '🔧&nbsp;<b>縦画面 サイズ調整</b>';
+    hTitle.style.cssText = 'font-size:13px;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;';
+    header.appendChild(hTitle);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:6px;align-items:center;';
+
+    // リセットボタン
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'リセット';
+    resetBtn.style.cssText = 'background:transparent;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;border:1px solid rgba(255,255,255,0.4);border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;';
+    resetBtn.onclick = () => {
+      for (const k in P) {
+        const item = P[k];
+        item.val = item._default;
+        const slider = document.getElementById('_sl_' + k);
+        const disp = document.getElementById('_vd_' + k);
+        if (slider) slider.value = item.val;
+        if (disp) disp.textContent = item.val;
+      }
+      applyPortraitCss();
+      applyTableOffset();
+      applyWallSettings();
+      applyDiscardCss();    };
+    btnRow.appendChild(resetBtn);
+
+    // コピーボタン
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'コピー';
+    copyBtn.style.cssText = 'background:transparent;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;border:1px solid rgba(255,255,255,0.4);border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;';
+    copyBtn.onclick = () => {
+      const txt = buildCopyText();
+      navigator.clipboard?.writeText(txt)
+        .then(() => { copyBtn.textContent = '✓ Done'; setTimeout(() => copyBtn.textContent = 'コピー', 1500); })
+        .catch(() => { prompt('現在の値:', txt); });
+    };
+    btnRow.appendChild(copyBtn);
+    header.appendChild(btnRow);
+    panel.appendChild(header);
+
+    // デフォルト値を保存
+    for (const k in P) P[k]._default = P[k].val;
+
+    // ── グループ & スライダー生成 ──
+    for (const gName in groups) {
+      const gWrap = document.createElement('div');
+      gWrap.style.borderBottom = '1px solid #141e30';
+
+      let collapsed = true;
+      const gHeader = document.createElement('div');
+      gHeader.style.cssText = 'background:transparent;padding:6px 10px;font-size:11px;font-weight:700;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;';
+      const gArrow = document.createElement('span');
+      gArrow.textContent = '▶';
+      gHeader.appendChild(document.createTextNode(gName));
+      gHeader.appendChild(gArrow);
+      const gBody = document.createElement('div');
+      gBody.style.display = 'none';
+      gHeader.onclick = () => {
+        collapsed = !collapsed;
+        gBody.style.display = collapsed ? 'none' : '';
+        gArrow.textContent = collapsed ? '▶' : '▼';
+      };
+      gWrap.appendChild(gHeader);
+      gWrap.appendChild(gBody);
+
+      for (const k of groups[gName]) {
+        const item = P[k];
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:5px 8px 4px;border-bottom:1px solid rgba(255,255,255,0.06);';
+
+        const topRow = document.createElement('div');
+        topRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;';
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;font-size:11px;';
+        lbl.textContent = item.label;
+        const valDisp = document.createElement('span');
+        valDisp.id = '_vd_' + k;
+        valDisp.style.cssText = 'color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;font-weight:700;font-size:12px;min-width:50px;text-align:right;font-variant-numeric:tabular-nums;';
+        valDisp.textContent = item.val;
+        topRow.appendChild(lbl);
+        topRow.appendChild(valDisp);
+        row.appendChild(topRow);
+
+        const ctrlRow = document.createElement('div');
+        ctrlRow.style.cssText = 'display:flex;align-items:center;gap:4px;';
+
+        const mkBtn = (txt, delta) => {
+          const b = document.createElement('button');
+          b.textContent = txt;
+          b.style.cssText = 'background:transparent;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;border:1px solid rgba(255,255,255,0.3);border-radius:3px;width:26px;height:22px;font-size:14px;cursor:pointer;flex-shrink:0;line-height:1;padding:0;touch-action:manipulation;';
+          b.onclick = () => {
+            item.val = parseFloat(Math.min(item.max, Math.max(item.min, item.val + delta)).toFixed(4));
+            const s = document.getElementById('_sl_' + k);
+            if (s) s.value = item.val;
+            valDisp.textContent = item.val;
+            applyPortraitCss();
+            if (k === 'tableTopOffset') applyTableOffset();
+            if (item.g === '山牌') applyWallSettings();
+            if (item.g === '捨て牌' || item.g === '捨て牌の位置') applyDiscardCss();
+            if (item.g === 'アイコン向き') applyPortraitCss();
+            _saveP();
+          };
+          return b;
+        };
+
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.id = '_sl_' + k;
+        slider.min = item.min;
+        slider.max = item.max;
+        slider.step = item.step;
+        slider.value = item.val;
+        slider.style.cssText = 'flex:1;height:20px;accent-color:#4488cc;cursor:pointer;';
+        slider.oninput = () => {
+          item.val = parseFloat(slider.value);
+          valDisp.textContent = item.val;
+          applyPortraitCss();
+          if (k === 'tableTopOffset') applyTableOffset();
+          if (item.g === '山牌') applyWallSettings();
+          if (item.g === '捨て牌' || item.g === '捨て牌の位置') applyDiscardCss();
+          if (item.g === 'アイコン向き') applyPortraitCss();
+          _saveP();
+        };
+
+        ctrlRow.appendChild(mkBtn('−', -item.step));
+        ctrlRow.appendChild(slider);
+        ctrlRow.appendChild(mkBtn('+', item.step));
+        row.appendChild(ctrlRow);
+        gBody.appendChild(row);
+      }
+
+      panel.appendChild(gWrap);
+    }
+
+    document.body.appendChild(panel);
+
+    // ── トグルボタン ──
+    const toggleBtn = document.createElement('button');
+    toggleBtn.id = '_debugToggleBtn';
+    toggleBtn.innerHTML = '🔧';
+    toggleBtn.style.cssText = [
+      'position:fixed', 'top:6px', 'right:6px', 'z-index:1000000',
+      'background:transparent', 'color:#fff',
+      'text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000',
+      'border:1px solid #3a6aaa', 'border-radius:8px',
+      'width:38px', 'height:38px', 'font-size:19px',
+      'cursor:pointer', 'display:flex', 'align-items:center', 'justify-content:center',
+      'box-shadow:0 2px 10px rgba(0,0,0,0.7)', 'touch-action:manipulation',
+    ].join(';');
+    let panelOpen = false;
+    toggleBtn.onclick = () => {
+      panelOpen = !panelOpen;
+      panel.style.display = panelOpen ? '' : 'none';
+      toggleBtn.style.right = panelOpen ? '294px' : '6px';
+      toggleBtn.innerHTML = panelOpen ? '✕' : '🔧';
+    };
+    document.body.appendChild(toggleBtn);
+  }
+
+  function tryInit() {
+    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    if (!isPortrait) return;
+    if (document.getElementById('_debugLayoutPanel')) return;
+    if (!document.getElementById('gameScreen')?.classList.contains('active')) return;
+    buildPanel();
+  }
+
+  setTimeout(() => {
+    const gs = document.getElementById('gameScreen');
+    if (gs) {
+      new MutationObserver(tryInit).observe(gs, { attributes: true, attributeFilter: ['class'] });
+    }
+    tryInit();
+  }, 600);
+
+  window.addEventListener('resize', () => {
+    const btn = document.getElementById('_debugToggleBtn');
+    const pnl = document.getElementById('_debugLayoutPanel');
+    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    if (btn) btn.style.display = isPortrait ? '' : 'none';
+    if (pnl && !isPortrait) pnl.style.display = 'none';
+  });
 })();
 </script>

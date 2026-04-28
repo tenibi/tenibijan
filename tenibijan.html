@@ -168,7 +168,10 @@ function _sendRankDisconnectNotify(){
       }).catch(()=>{});
     }
 
-    if(RANK._isCpuFill){
+    // ★修正: matchId がある場合は通常の disconnect-notify を優先する
+    // （ゲスト1人+CPU1人のケースで _isCpuFill=true かつ matchId が存在する場合、
+    //   /rank/cpu-result のみ送ると人間ゲストの切断レートが更新されないバグを修正）
+    if(RANK._isCpuFill && !RANK.matchId){
       _beaconOrFetch(BACKEND+'/rank/cpu-result',
         {rank:3, score:-9999, numPlayers:3,
          cpuNames: RANK._cpuNames || [],
@@ -13944,6 +13947,7 @@ function showFinalResult(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({rank:myRank, score:myScore, numPlayers, cpuNames, cpuRanks}),
     }).then(r=>r.json()).then(d=>{
+      RANK._disconnectNotifySent = true; // ★修正: 正常終了後の二重送信防止
       if(d.ok && d.changes) _showRatingChanges(d.changes);
     }).catch(()=>{});
   }

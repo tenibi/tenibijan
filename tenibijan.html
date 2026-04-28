@@ -158,7 +158,11 @@ function _sendRankDisconnectNotify(){
     const token = localStorage.getItem('jwt_token') || '';
 
     function _beaconOrFetch(url, body){
-      const blob = new Blob([JSON.stringify(body)], { type: 'application/json' });
+      // ★修正: application/json だとブラウザがプリフライト(OPTIONS)を送り、
+      // ページ閉じのタイミングでプリフライトがキャンセルされてリクエスト全体が届かない。
+      // text/plain は CORS 単純リクエスト扱いになりプリフライトなしで確実に届く。
+      // サーバー側は body.token でフォールバック認証済みなので問題なし。
+      const blob = new Blob([JSON.stringify(body)], { type: 'text/plain' });
       if(navigator.sendBeacon && navigator.sendBeacon(url, blob)) return;
       // sendBeacon失敗時のフォールバック（keepalive fetch）
       fetch(url, {
@@ -168,10 +172,7 @@ function _sendRankDisconnectNotify(){
       }).catch(()=>{});
     }
 
-    // ★修正: matchId がある場合は通常の disconnect-notify を優先する
-    // （ゲスト1人+CPU1人のケースで _isCpuFill=true かつ matchId が存在する場合、
-    //   /rank/cpu-result のみ送ると人間ゲストの切断レートが更新されないバグを修正）
-    if(RANK._isCpuFill && !RANK.matchId){
+    if(RANK._isCpuFill){
       _beaconOrFetch(BACKEND+'/rank/cpu-result',
         {rank:3, score:-9999, numPlayers:3,
          cpuNames: RANK._cpuNames || [],
@@ -13947,7 +13948,6 @@ function showFinalResult(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({rank:myRank, score:myScore, numPlayers, cpuNames, cpuRanks}),
     }).then(r=>r.json()).then(d=>{
-      RANK._disconnectNotifySent = true; // ★修正: 正常終了後の二重送信防止
       if(d.ok && d.changes) _showRatingChanges(d.changes);
     }).catch(()=>{});
   }

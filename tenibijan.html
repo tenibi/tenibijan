@@ -7219,7 +7219,8 @@ function _forceStartRankCPUGame(){
   });
   document.getElementById('lobby').style.display='none';
   // RANKリセット（フラグは保持したまま画面だけ移行）
-  RANK.searchStartAt=null; RANK.peerId=null; RANK.matchId=null;
+  // ★修正: matchIdは切断通知に必要なため保持する（nullにしない）
+  RANK.searchStartAt=null; RANK.peerId=null;
   RANK._isCpuFill=true; // CPUで埋めてスタートしたランクマッチフラグ
   // ゲーム設定（ランクマッチ相当）
   NET.myIdx=0; NET.isHost=true; // ★修正: ゲスト役だった場合にmyIdxが1のままになるバグを修正

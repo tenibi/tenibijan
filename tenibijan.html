@@ -28911,9 +28911,12 @@ function _gameScreenOffsetReset() {
     // 牌サイズ(相手席: 上・左・右 共通)
     opponentTileSize:  { g:'🀄相手席 牌サイズ', label:'相手席 牌サイズ', val:66,   min:-1000,   max:2000,  step:2 },
     // スコアパネル
-    scorePanelScale:   { g:'スコア', label:'スコアパネル scale',       val:2.3,  min:-1000,  max:2000,    step:0.05 },
-    bottomScoreLeft:   { g:'スコア', label:'下席スコア left',          val:835,  min:-1000,    max:2000, step:10 },
-    bottomScoreTop:    { g:'スコア', label:'下席スコア top',           val:36,   min:-1000, max:2000, step:5 },
+    scorePanelScale:   { g:'スコア', label:'全員スコア 共通scale',     val:1.0,  min:-1000,  max:2000,    step:0.05 },
+    // 下席スコア（他席と同様に独立制御）
+    bottomScoreAbsLeft:  { g:'📊下席 スコア', label:'下席 Left',       val:835,  min:-1000,    max:2000, step:10 },
+    bottomScoreAbsTop:   { g:'📊下席 スコア', label:'下席 Top',        val:36,   min:-1000, max:2000, step:5 },
+    bottomScoreScale:    { g:'📊下席 スコア', label:'下席 scale',      val:2.3,  min:-1000,  max:2000,    step:0.1 },
+    bottomScoreRotate:   { g:'📊下席 スコア', label:'下席 回転',       val:0,    min:-270, max:360,  step:90 },
     // 卓情報・ドラ
     tableInfoScale:    { g:'卓情報・ドラ', label:'卓情報 scale',       val:2.0,  min:-1000,  max:2000,    step:0.1 },
     tableInfoTop:      { g:'卓情報・ドラ', label:'卓情報 top',         val:8,    min:-1000,    max:2000, step:5 },
@@ -29004,10 +29007,10 @@ function _gameScreenOffsetReset() {
       `.seat-top .player-icon-panel{position:absolute !important;left:${p.topIconAbsLeft}px !important;top:${p.topIconAbsTop}px !important;transform:rotate(${p.iconRotateTop}deg) scale(${p.topIconScale}) !important;transform-origin:center center !important;margin:0 !important;}`,
       `.seat-right .player-icon-panel{position:absolute !important;left:${p.rightIconAbsLeft}px !important;top:${p.rightIconAbsTop}px !important;transform:rotate(${p.iconRotateRight}deg) scale(${p.rightIconScale}) !important;transform-origin:center center !important;margin:0 !important;}`,
       `.seat-left .player-icon-panel{position:absolute !important;left:${p.leftIconAbsLeft}px !important;top:${p.leftIconAbsTop}px !important;transform:rotate(${p.iconRotateLeft}deg) scale(${p.leftIconScale}) !important;transform-origin:center center !important;margin:0 !important;}`,
-      `.seat-top .player-score-panel{position:absolute !important;left:${p.topScoreAbsLeft}px !important;top:${p.topScoreAbsTop}px !important;transform:rotate(${p.topScoreRotate}deg) scale(${p.topScoreScale}) !important;transform-origin:left top !important;margin:0 !important;}`,
-      `.seat-right .player-score-panel{position:absolute !important;left:${p.rightScoreAbsLeft}px !important;top:${p.rightScoreAbsTop}px !important;transform:rotate(${p.rightScoreRotate}deg) scale(${p.rightScoreScale}) !important;transform-origin:left top !important;margin:0 !important;}`,
-      `.seat-left .player-score-panel{position:absolute !important;left:${p.leftScoreAbsLeft}px !important;top:${p.leftScoreAbsTop}px !important;transform:rotate(${p.leftScoreRotate}deg) scale(${p.leftScoreScale}) !important;transform-origin:left top !important;margin:0 !important;}`,
-      `.bottom-score-panel{position:absolute !important;left:${p.bottomScoreLeft}px !important;top:${p.bottomScoreTop}px !important;margin-left:0 !important;transform-origin:left top !important;}`,
+      `.seat-top .player-score-panel{position:absolute !important;left:${p.topScoreAbsLeft}px !important;top:${p.topScoreAbsTop}px !important;transform:rotate(${p.topScoreRotate}deg) scale(${(p.topScoreScale * p.scorePanelScale).toFixed(4)}) !important;transform-origin:left top !important;margin:0 !important;}`,
+      `.seat-right .player-score-panel{position:absolute !important;left:${p.rightScoreAbsLeft}px !important;top:${p.rightScoreAbsTop}px !important;transform:rotate(${p.rightScoreRotate}deg) scale(${(p.rightScoreScale * p.scorePanelScale).toFixed(4)}) !important;transform-origin:left top !important;margin:0 !important;}`,
+      `.seat-left .player-score-panel{position:absolute !important;left:${p.leftScoreAbsLeft}px !important;top:${p.leftScoreAbsTop}px !important;transform:rotate(${p.leftScoreRotate}deg) scale(${(p.leftScoreScale * p.scorePanelScale).toFixed(4)}) !important;transform-origin:left top !important;margin:0 !important;}`,
+      (()=>{ const bsl = p.bottomScoreAbsLeft !== undefined ? p.bottomScoreAbsLeft : (p.bottomScoreLeft||835); const bst = p.bottomScoreAbsTop !== undefined ? p.bottomScoreAbsTop : (p.bottomScoreTop||36); const bss = p.bottomScoreScale !== undefined ? p.bottomScoreScale : p.scorePanelScale; const bsr = p.bottomScoreRotate || 0; return `.bottom-score-panel{position:absolute !important;left:${bsl}px !important;top:${bst}px !important;margin-left:0 !important;transform:rotate(${bsr}deg) scale(${(bss).toFixed(4)}) !important;transform-origin:left top !important;}`; })(),
       `#tableInfoBox{position:absolute !important;top:${p.tableInfoTop}px !important;left:${p.tableInfoLeft}px !important;transform:scale(${p.tableInfoScale}) !important;transform-origin:top left !important;}`,
       `#doraPileFixed{position:absolute !important;top:${p.doraPileTop}px !important;right:${p.doraPileRight}px !important;transform:scale(${p.doraPileScale}) !important;transform-origin:top right !important;}`,
       `#tableCornerLeft{bottom:${p.cornerLeftBottom}px !important;left:${p.cornerLeftLeft_}px !important;transform:scale(${p.cornerLeftScale}) !important;transform-origin:bottom left !important;}`,

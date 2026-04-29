@@ -106,13 +106,16 @@ function scaleTable(){
         '.seat-top .player-icon-panel{position:absolute !important;left:620px !important;top:150px !important;transform:rotate(180deg) scale(2) !important;transform-origin:center center !important;margin:0 !important;}'+
         '.seat-right .player-icon-panel{position:absolute !important;left:1180px !important;top:420px !important;transform:scale(2) !important;transform-origin:center center !important;margin:0 !important;}'+
         '.seat-left .player-icon-panel{position:absolute !important;left:170px !important;top:420px !important;transform:scale(2) !important;transform-origin:center center !important;margin:0 !important;}'+
+        '.seat-top .player-score-panel{position:absolute !important;left:550px !important;top:220px !important;transform:scale(2) !important;transform-origin:left top !important;margin:0 !important;}'+
+        '.seat-right .player-score-panel{position:absolute !important;left:1200px !important;top:540px !important;transform:scale(2) !important;transform-origin:left top !important;margin:0 !important;}'+
+        '.seat-left .player-score-panel{position:absolute !important;left:100px !important;top:540px !important;transform:scale(2) !important;transform-origin:left top !important;margin:0 !important;}'+
         '.bottom-score-panel{position:absolute !important;left:835px !important;top:36px !important;margin-left:0 !important;transform-origin:left top !important;}'+
         '#tableInfoBox{position:absolute !important;top:8px !important;left:8px !important;transform:scale(2) !important;transform-origin:top left !important;}'+
         '#doraPileFixed{position:absolute !important;top:8px !important;right:8px !important;transform:scale(1.5) !important;transform-origin:top right !important;}'+
         '#tableCornerLeft{bottom:35px !important;left:12px !important;transform:scale(3) !important;transform-origin:bottom left !important;}'+
         '#tableCornerRight{bottom:55px !important;right:12px !important;transform:scale(2.5) !important;transform-origin:bottom right !important;}'+
         '.action-area{transform:translateX(-50%) scale(1.667) !important;transform-origin:bottom center !important;bottom:120px !important;}'+
-        '.btn-riichi,.btn-open-riichi{transform:scale(1.2) !important;transform-origin:center center !important;margin:0 12px !important;}'+
+        '.btn-riichi,.btn-open-riichi{transform:translateX(0px) translateY(0px) scale(1.2) !important;transform-origin:center center !important;margin:0 12px !important;}'+
         '.seat-bottom .hand-outer-riichi-label{font-size:1.375rem !important;}'+
         '.seat-bottom .hand-outer-afk-label{font-size:4.6875rem !important;top:-110px !important;left:570px !important;}'+
         '.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label{font-size:1.375rem !important;}'+
@@ -16567,7 +16570,16 @@ function renderTable(){
       abBadge.textContent=(abilityLabels3[_dispAbility3]||'');
       scoreRow.appendChild(abBadge);
     }
-    handOuter.appendChild(rightPanel);
+    // 縦画面の相手席: score panel も seat div直下に追加（seat-innerから独立）
+    if(_isPortraitForIcon && si !== 0){
+      rightPanel.style.position='absolute';
+      rightPanel.style.zIndex='5';
+      rightPanel.style.margin='0';
+      rightPanel.style.pointerEvents='auto';
+      div.appendChild(rightPanel);
+    } else {
+      handOuter.appendChild(rightPanel);
+    }
 
     // stripDiv は使わない（情報をrightPanelに移動）
     stripDiv.style.cssText='display:none;';
@@ -28874,6 +28886,16 @@ function _gameScreenOffsetReset() {
     leftIconAbsTop:    { g:'🙂左席 アイコン', label:'左席 Top',   val:420,  min:0,    max:1000, step:5 },
     leftIconScale:     { g:'🙂左席 アイコン', label:'左席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
     iconRotateLeft:    { g:'🙂左席 アイコン', label:'左席 回転',  val:0,    min:-270, max:360,  step:90 },
+    // スコアパネル（手牌から独立して移動可能）
+    topScoreAbsLeft:   { g:'📊上席 スコア', label:'上席 Left',  val:550,  min:-100, max:1500, step:5 },
+    topScoreAbsTop:    { g:'📊上席 スコア', label:'上席 Top',   val:220,  min:0,    max:1200, step:5 },
+    topScoreScale:     { g:'📊上席 スコア', label:'上席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    rightScoreAbsLeft: { g:'📊右席 スコア', label:'右席 Left',  val:1200, min:-100, max:1500, step:5 },
+    rightScoreAbsTop:  { g:'📊右席 スコア', label:'右席 Top',   val:540,  min:0,    max:1200, step:5 },
+    rightScoreScale:   { g:'📊右席 スコア', label:'右席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    leftScoreAbsLeft:  { g:'📊左席 スコア', label:'左席 Left',  val:100,  min:-100, max:1500, step:5 },
+    leftScoreAbsTop:   { g:'📊左席 スコア', label:'左席 Top',   val:540,  min:0,    max:1200, step:5 },
+    leftScoreScale:    { g:'📊左席 スコア', label:'左席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
     bottomTileW:       { g:'🀄下席 牌サイズ', label:'下席 牌 width',     val:108,  min:50,   max:200,  step:2 },
     bottomTileH:       { g:'🀄下席 牌サイズ', label:'下席 牌 height',    val:144,  min:70,   max:270,  step:2 },
     bottomTileFontSize:{ g:'🀄下席 牌サイズ', label:'下席 牌 font-size', val:8.4,  min:2,    max:20,   step:0.1 },
@@ -28903,7 +28925,10 @@ function _gameScreenOffsetReset() {
     // アクション
     actionAreaScale:   { g:'アクション', label:'アクション scale',     val:1.667,min:0.5,  max:5,    step:0.05 },
     actionAreaBottom:  { g:'アクション', label:'アクション bottom',    val:120,  min:0,    max:600,  step:5 },
+    actionAreaLeft:    { g:'アクション', label:'アクション 左右',      val:0,    min:-400, max:400,  step:5 },
     riichiScale:       { g:'アクション', label:'リーチBtn scale',      val:1.2,  min:0.5,  max:4,    step:0.05 },
+    riichiY:           { g:'アクション', label:'リーチBtn 上下',       val:0,    min:-300, max:300,  step:5 },
+    riichiX:           { g:'アクション', label:'リーチBtn 左右',       val:0,    min:-300, max:300,  step:5 },
     // テーブルスケール補正
     tableTopOffset:    { g:'テーブル', label:'テーブル top offset',    val:150,  min:0,    max:400,  step:5 },
     // 山牌
@@ -28973,13 +28998,16 @@ function _gameScreenOffsetReset() {
       `.seat-top .player-icon-panel{position:absolute !important;left:${p.topIconAbsLeft}px !important;top:${p.topIconAbsTop}px !important;transform:rotate(${p.iconRotateTop}deg) scale(${p.topIconScale}) !important;transform-origin:center center !important;margin:0 !important;}`,
       `.seat-right .player-icon-panel{position:absolute !important;left:${p.rightIconAbsLeft}px !important;top:${p.rightIconAbsTop}px !important;transform:rotate(${p.iconRotateRight}deg) scale(${p.rightIconScale}) !important;transform-origin:center center !important;margin:0 !important;}`,
       `.seat-left .player-icon-panel{position:absolute !important;left:${p.leftIconAbsLeft}px !important;top:${p.leftIconAbsTop}px !important;transform:rotate(${p.iconRotateLeft}deg) scale(${p.leftIconScale}) !important;transform-origin:center center !important;margin:0 !important;}`,
+      `.seat-top .player-score-panel{position:absolute !important;left:${p.topScoreAbsLeft}px !important;top:${p.topScoreAbsTop}px !important;transform:scale(${p.topScoreScale}) !important;transform-origin:left top !important;margin:0 !important;}`,
+      `.seat-right .player-score-panel{position:absolute !important;left:${p.rightScoreAbsLeft}px !important;top:${p.rightScoreAbsTop}px !important;transform:scale(${p.rightScoreScale}) !important;transform-origin:left top !important;margin:0 !important;}`,
+      `.seat-left .player-score-panel{position:absolute !important;left:${p.leftScoreAbsLeft}px !important;top:${p.leftScoreAbsTop}px !important;transform:scale(${p.leftScoreScale}) !important;transform-origin:left top !important;margin:0 !important;}`,
       `.bottom-score-panel{position:absolute !important;left:${p.bottomScoreLeft}px !important;top:${p.bottomScoreTop}px !important;margin-left:0 !important;transform-origin:left top !important;}`,
       `#tableInfoBox{position:absolute !important;top:${p.tableInfoTop}px !important;left:${p.tableInfoLeft}px !important;transform:scale(${p.tableInfoScale}) !important;transform-origin:top left !important;}`,
       `#doraPileFixed{position:absolute !important;top:${p.doraPileTop}px !important;right:${p.doraPileRight}px !important;transform:scale(${p.doraPileScale}) !important;transform-origin:top right !important;}`,
       `#tableCornerLeft{bottom:${p.cornerLeftBottom}px !important;left:${p.cornerLeftLeft_}px !important;transform:scale(${p.cornerLeftScale}) !important;transform-origin:bottom left !important;}`,
       `#tableCornerRight{bottom:${p.cornerRightBottom}px !important;right:${p.cornerRightRight_}px !important;transform:scale(${p.cornerRightScale}) !important;transform-origin:bottom right !important;}`,
-      `.action-area{transform:translateX(-50%) scale(${p.actionAreaScale}) !important;transform-origin:bottom center !important;bottom:${p.actionAreaBottom}px !important;}`,
-      `.btn-riichi,.btn-open-riichi{transform:scale(${p.riichiScale}) !important;transform-origin:center center !important;margin:0 12px !important;}`,
+      `.action-area{transform:translateX(calc(-50% + ${p.actionAreaLeft}px)) scale(${p.actionAreaScale}) !important;transform-origin:bottom center !important;bottom:${p.actionAreaBottom}px !important;}`,
+      `.btn-riichi,.btn-open-riichi{transform:translateX(${p.riichiX}px) translateY(${p.riichiY}px) scale(${p.riichiScale}) !important;transform-origin:center center !important;margin:0 12px !important;}`,
       `.seat-bottom .hand-outer-riichi-label{font-size:1.375rem !important;}`,
       `.seat-bottom .hand-outer-afk-label{font-size:4.6875rem !important;top:-110px !important;left:570px !important;}`,
       `.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label{font-size:1.375rem !important;}`,

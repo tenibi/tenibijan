@@ -28935,18 +28935,15 @@ function _gameScreenOffsetReset() {
     actionAreaScale:   { g:'アクション', label:'アクション scale',     val:1.65,min:0,  max:100,    step:0.05 },
     actionAreaBottom:  { g:'アクション', label:'アクション bottom',    val:210,  min:-1000,    max:2000,  step:5 },
     actionAreaLeft:    { g:'アクション', label:'アクション 左右',      val:50,    min:-1000, max:2000,  step:5 },
-    riichiScale:       { g:'アクション', label:'リーチBtn scale',      val:99.2,  min:0,  max:100,    step:0.05 },
-    riichiY:           { g:'アクション', label:'リーチBtn 上下',       val:0,    min:-1000, max:2000,  step:5 },
-    riichiX:           { g:'アクション', label:'リーチBtn 左右',       val:0,    min:-1000, max:2000,  step:5 },
+    actionBtnScale:    { g:'アクション', label:'ボタン サイズ（北抜き/ポン/カン/ロン/ツモ/リーチ/OR/DOR）', val:1.2, min:0.1, max:5, step:0.05 },
+    actionBtnY:        { g:'アクション', label:'ボタン 上下',                                              val:0,   min:-1000, max:2000, step:5 },
     // テーブルスケール補正
     tableTopOffset:    { g:'テーブル', label:'テーブル top offset',    val:150,  min:-1000,    max:2000,  step:5 },
     // 山牌
     wallTileScale:     { g:'山牌',   label:'山牌 tile scale',         val:1.1,  min:0,  max:100,  step:0.05 },
     wallCols:          { g:'山牌',   label:'山牌 列数(折り返し)',      val:15,   min:-1000,    max:2000,   step:1 },
     // 捨て牌
-    discardTileW:      { g:'捨て牌', label:'捨て牌 幅',                val:36,   min:-1000,   max:2000,  step:1 },
-    discardTileH:      { g:'捨て牌', label:'捨て牌 高さ',              val:48,   min:-1000,   max:2000,  step:1 },
-    discardFontSize:   { g:'捨て牌', label:'捨て牌 font-size',         val:2.8,  min:0,  max:100,    step:0.1 },
+    discardTileSize:   { g:'捨て牌', label:'捨て牌 サイズ（幅基準）',  val:36,   min:10,      max:200,   step:1 },
     discardColsBT:     { g:'捨て牌', label:'上下席 列数(折り返し)',    val:15,   min:-1000,    max:2000,   step:1 },
     discardColsRL:     { g:'捨て牌', label:'左右席 列数(折り返し)',    val:8,    min:-1000,    max:2000,   step:1 },
     // 捨て牌の位置
@@ -29016,7 +29013,7 @@ function _gameScreenOffsetReset() {
       `#tableCornerLeft{bottom:${p.cornerLeftBottom}px !important;left:${p.cornerLeftLeft_}px !important;transform:scale(${p.cornerLeftScale}) !important;transform-origin:bottom left !important;}`,
       `#tableCornerRight{bottom:${p.cornerRightBottom}px !important;right:${p.cornerRightRight_}px !important;transform:scale(${p.cornerRightScale}) !important;transform-origin:bottom right !important;}`,
       `.action-area{transform:translateX(calc(-50% + ${p.actionAreaLeft}px)) scale(${p.actionAreaScale}) !important;transform-origin:bottom center !important;bottom:${p.actionAreaBottom}px !important;}`,
-      `.btn-riichi,.btn-open-riichi{transform:translateX(${p.riichiX}px) translateY(${p.riichiY}px) scale(${p.riichiScale}) !important;transform-origin:center center !important;margin:0 12px !important;}`,
+      `.action-area .btn,.action-area .quick-btn{transform:translateY(${p.actionBtnY}px) scale(${p.actionBtnScale}) !important;transform-origin:bottom center !important;}`,
       `.seat-bottom .hand-outer-riichi-label{font-size:1.375rem !important;}`,
       `.seat-bottom .hand-outer-afk-label{font-size:4.6875rem !important;top:-110px !important;left:570px !important;}`,
       `.seat-top .hand-outer-riichi-label,.seat-left .hand-outer-riichi-label,.seat-right .hand-outer-riichi-label{font-size:1.375rem !important;}`,
@@ -29031,13 +29028,15 @@ function _gameScreenOffsetReset() {
   window._buildPortraitCss = buildCss;
 
   function applyPortraitCss() {
+    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
     let ps = document.getElementById('_portraitSeatStyle');
     if (!ps) {
       ps = document.createElement('style');
       ps.id = '_portraitSeatStyle';
       document.head.appendChild(ps);
     }
-    ps.textContent = buildCss();
+    // 縦画面のみ反映。横画面では強制クリアして干渉しない。
+    ps.textContent = isPortrait ? buildCss() : '';
   }
 
   // テーブルのtop offsetも更新
@@ -29053,6 +29052,8 @@ function _gameScreenOffsetReset() {
 
   // 山牌サイズ・列数を反映
   function applyWallSettings() {
+    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    if (!isPortrait) return;
     window._wScaleOverride = P.wallTileScale.val;
     window._debugWCols = P.wallCols.val;
     if (typeof renderWall === 'function') renderWall();
@@ -29060,10 +29061,15 @@ function _gameScreenOffsetReset() {
 
   // 捨て牌スタイルを反映
   function applyDiscardCss() {
+    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
     let st = document.getElementById('_debugDiscardStyle');
     if (!st) { st = document.createElement('style'); st.id = '_debugDiscardStyle'; document.head.appendChild(st); }
-    const tw = P.discardTileW.val, th = P.discardTileH.val;
-    const fs = P.discardFontSize.val;
+    // 縦画面のみ反映。横画面ではクリアして干渉しない。
+    if (!isPortrait) { st.textContent = ''; return; }
+    const _ds = P.discardTileSize.val;
+    const tw = _ds;
+    const th = Math.round(_ds * (48 / 36));
+    const fs = parseFloat((_ds * (2.8 / 36)).toFixed(2));
     const cbt = P.discardColsBT.val, crl = P.discardColsRL.val;
     const gap = 2;
     const widthBT = cbt * (tw + gap) - gap;

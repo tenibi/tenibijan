@@ -28859,8 +28859,8 @@ function _gameScreenOffsetReset() {
     seatRightTopOff:   { g:'📍右席 手牌', label:'右席 縦位置 +',       val:300,  min:-400, max:700,  step:10 },
     seatRightRotate:   { g:'📍右席 手牌', label:'右席 角度',           val:0,    min:-360, max:360,  step:90 },
     // 左席
-    seatLeftLeft:      { g:'📍左席 手牌', label:'左席 left',           val:105,  min:-200, max:500,  step:5 },
-    seatLeftTopOff:    { g:'📍左席 手牌', label:'左席 縦位置 -',       val:300,  min:-400, max:700,  step:10 },
+    seatLeftLeft:      { g:'📍左席 手牌', label:'左席 left',           val:45,  min:-200, max:500,  step:5 },
+    seatLeftTopOff:    { g:'📍左席 手牌', label:'左席 縦位置 -',       val:140,  min:-400, max:700,  step:10 },
     seatLeftRotate:    { g:'📍左席 手牌', label:'左席 角度',           val:0,    min:-360, max:360,  step:90 },
     // 上席
     seatTopTop:        { g:'📍上席 手牌', label:'上席 top',            val:Math.round((168+100-80)*_v+30), min:0, max:900, step:5 },
@@ -28881,25 +28881,25 @@ function _gameScreenOffsetReset() {
     iconRotateTop:     { g:'🙂上席 アイコン', label:'上席 回転',  val:180,  min:-270, max:360,  step:90 },
     // 右席アイコン（テーブル基準の絶対座標・手牌とは独立）
     rightIconAbsLeft:  { g:'🙂右席 アイコン', label:'右席 Left',  val:1180, min:0,    max:1500, step:5 },
-    rightIconAbsTop:   { g:'🙂右席 アイコン', label:'右席 Top',   val:420,  min:0,    max:1000, step:5 },
+    rightIconAbsTop:   { g:'🙂右席 アイコン', label:'右席 Top',   val:420,  min:-1000, max:1000, step:5 },
     rightIconScale:    { g:'🙂右席 アイコン', label:'右席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
     iconRotateRight:   { g:'🙂右席 アイコン', label:'右席 回転',  val:0,    min:-270, max:360,  step:90 },
     // 左席アイコン（テーブル基準の絶対座標・手牌とは独立）
     leftIconAbsLeft:   { g:'🙂左席 アイコン', label:'左席 Left',  val:170,  min:0,    max:1500, step:5 },
-    leftIconAbsTop:    { g:'🙂左席 アイコン', label:'左席 Top',   val:420,  min:0,    max:1000, step:5 },
+    leftIconAbsTop:    { g:'🙂左席 アイコン', label:'左席 Top',   val:420,  min:-1000, max:1000, step:5 },
     leftIconScale:     { g:'🙂左席 アイコン', label:'左席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
     iconRotateLeft:    { g:'🙂左席 アイコン', label:'左席 回転',  val:0,    min:-270, max:360,  step:90 },
     // スコアパネル（手牌から独立して移動可能）
     topScoreAbsLeft:   { g:'📊上席 スコア', label:'上席 Left',  val:550,  min:-100, max:1500, step:5 },
-    topScoreAbsTop:    { g:'📊上席 スコア', label:'上席 Top',   val:220,  min:0,    max:1200, step:5 },
+    topScoreAbsTop:    { g:'📊上席 スコア', label:'上席 Top',   val:220,  min:-1000, max:2000, step:5 },
     topScoreScale:     { g:'📊上席 スコア', label:'上席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
     topScoreRotate:    { g:'📊上席 スコア', label:'上席 回転',  val:0,    min:-270, max:360,  step:90 },
     rightScoreAbsLeft: { g:'📊右席 スコア', label:'右席 Left',  val:1200, min:-100, max:1500, step:5 },
-    rightScoreAbsTop:  { g:'📊右席 スコア', label:'右席 Top',   val:540,  min:0,    max:1200, step:5 },
+    rightScoreAbsTop:  { g:'📊右席 スコア', label:'右席 Top',   val:540,  min:-1000, max:2000, step:5 },
     rightScoreScale:   { g:'📊右席 スコア', label:'右席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
     rightScoreRotate:  { g:'📊右席 スコア', label:'右席 回転',  val:0,    min:-270, max:360,  step:90 },
     leftScoreAbsLeft:  { g:'📊左席 スコア', label:'左席 Left',  val:100,  min:-100, max:1500, step:5 },
-    leftScoreAbsTop:   { g:'📊左席 スコア', label:'左席 Top',   val:540,  min:0,    max:1200, step:5 },
+    leftScoreAbsTop:   { g:'📊左席 スコア', label:'左席 Top',   val:540,  min:-1000, max:2000, step:5 },
     leftScoreScale:    { g:'📊左席 スコア', label:'左席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
     leftScoreRotate:   { g:'📊左席 スコア', label:'左席 回転',  val:0,    min:-270, max:360,  step:90 },
     bottomTileW:       { g:'🀄下席 牌サイズ', label:'下席 牌 width',     val:108,  min:50,   max:200,  step:2 },
@@ -28909,11 +28909,11 @@ function _gameScreenOffsetReset() {
     bottomMeldTileW:   { g:'🀄下席 牌サイズ', label:'下席 副露牌 width', val:80,   min:30,   max:160,  step:2 },
     bottomMeldTileH:   { g:'🀄下席 牌サイズ', label:'下席 副露牌 height',val:106,  min:40,   max:210,  step:2 },
     // 牌サイズ(相手席: 上・左・右 共通)
-    opponentTileSize:  { g:'🀄相手席 牌サイズ', label:'相手席 牌サイズ', val:36,   min:10,   max:150,  step:2 },
+    opponentTileSize:  { g:'🀄相手席 牌サイズ', label:'相手席 牌サイズ', val:66,   min:10,   max:150,  step:2 },
     // スコアパネル
     scorePanelScale:   { g:'スコア', label:'スコアパネル scale',       val:2.3,  min:0.5,  max:6,    step:0.05 },
     bottomScoreLeft:   { g:'スコア', label:'下席スコア left',          val:835,  min:0,    max:1500, step:10 },
-    bottomScoreTop:    { g:'スコア', label:'下席スコア top',           val:36,   min:-200, max:500,  step:5 },
+    bottomScoreTop:    { g:'スコア', label:'下席スコア top',           val:36,   min:-1000, max:2000, step:5 },
     // 卓情報・ドラ
     tableInfoScale:    { g:'卓情報・ドラ', label:'卓情報 scale',       val:2.0,  min:0.5,  max:5,    step:0.1 },
     tableInfoTop:      { g:'卓情報・ドラ', label:'卓情報 top',         val:8,    min:0,    max:1200, step:5 },
@@ -29217,6 +29217,32 @@ function _gameScreenOffsetReset() {
       document.body.appendChild(overlay);
     };
     btnRow.appendChild(resetBtn);
+
+    // コピーボタン
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = '📋 コピー';
+    copyBtn.style.cssText = 'background:transparent;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;border:1px solid rgba(255,255,255,0.4);border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;';
+    copyBtn.onclick = () => {
+      const vals = {};
+      for (const k in P) vals[k] = P[k].val;
+      const json = JSON.stringify(vals, null, 2);
+      navigator.clipboard.writeText(json).then(() => {
+        copyBtn.textContent = '✅ コピー済';
+        setTimeout(() => { copyBtn.textContent = '📋 コピー'; }, 2000);
+      }).catch(() => {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = json;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        copyBtn.textContent = '✅ コピー済';
+        setTimeout(() => { copyBtn.textContent = '📋 コピー'; }, 2000);
+      });
+    };
+    btnRow.appendChild(copyBtn);
 
     // 閉じるボタン
     const closeBtn = document.createElement('button');

@@ -28855,106 +28855,106 @@ function _gameScreenOffsetReset() {
   // ── 調整パラメータ定義 ──────────────────────────────────────
   const P = {
     // 右席
-    seatRightLeft:     { g:'📍右席 手牌', label:'右席 left',           val:1300, min:800,  max:1600, step:5 },
-    seatRightTopOff:   { g:'📍右席 手牌', label:'右席 縦位置 +',       val:300,  min:-400, max:700,  step:10 },
+    seatRightLeft:     { g:'📍右席 手牌', label:'右席 left',           val:1300, min:-1000,  max:2000, step:5 },
+    seatRightTopOff:   { g:'📍右席 手牌', label:'右席 縦位置 +',       val:300,  min:-1000, max:2000,  step:10 },
     seatRightRotate:   { g:'📍右席 手牌', label:'右席 角度',           val:0,    min:-360, max:360,  step:90 },
     // 左席
-    seatLeftLeft:      { g:'📍左席 手牌', label:'左席 left',           val:45,  min:-200, max:500,  step:5 },
-    seatLeftTopOff:    { g:'📍左席 手牌', label:'左席 縦位置 -',       val:140,  min:-400, max:700,  step:10 },
+    seatLeftLeft:      { g:'📍左席 手牌', label:'左席 left',           val:45,  min:-1000, max:2000,  step:5 },
+    seatLeftTopOff:    { g:'📍左席 手牌', label:'左席 縦位置 -',       val:140,  min:-1000, max:2000,  step:10 },
     seatLeftRotate:    { g:'📍左席 手牌', label:'左席 角度',           val:0,    min:-360, max:360,  step:90 },
     // 上席
-    seatTopTop:        { g:'📍上席 手牌', label:'上席 top',            val:Math.round((168+100-80)*_v+30), min:0, max:900, step:5 },
-    seatTopLeft:       { g:'📍上席 手牌', label:'上席 left',           val:700,  min:0,    max:1400, step:5 },
+    seatTopTop:        { g:'📍上席 手牌', label:'上席 top',            val:Math.round((168+100-80)*_v+30), min:-1000, max:2000, step:5 },
+    seatTopLeft:       { g:'📍上席 手牌', label:'上席 left',           val:700,  min:-1000,    max:2000, step:5 },
     seatTopRotate:     { g:'📍上席 手牌', label:'上席 角度',           val:0,    min:-360, max:360,  step:90 },
     // 下席
-    seatBottomBottom:  { g:'📍下席 手牌', label:'下席 bottom',         val:Math.round((58+200-130)*_v),    min:0, max:700, step:5 },
-    seatBottomLeft:    { g:'📍下席 手牌', label:'下席 leftオフセット', val:180,  min:-300, max:700,  step:5 },
+    seatBottomBottom:  { g:'📍下席 手牌', label:'下席 bottom',         val:Math.round((58+200-130)*_v),    min:-1000, max:2000, step:5 },
+    seatBottomLeft:    { g:'📍下席 手牌', label:'下席 leftオフセット', val:180,  min:-1000, max:2000,  step:5 },
     // 下席アイコン
-    bottomIconScale:   { g:'🙂下席 アイコン', label:'下席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
-    bottomIconTransX:  { g:'🙂下席 アイコン', label:'下席 X',     val:40,   min:-1400, max:1400, step:5 },
-    bottomIconTransY:  { g:'🙂下席 アイコン', label:'下席 Y',     val:-20,  min:-2000, max:2000, step:5 },
+    bottomIconScale:   { g:'🙂下席 アイコン', label:'下席 scale', val:2.0,  min:-1000,  max:2000,    step:0.1 },
+    bottomIconTransX:  { g:'🙂下席 アイコン', label:'下席 X',     val:40,   min:-1000, max:2000, step:5 },
+    bottomIconTransY:  { g:'🙂下席 アイコン', label:'下席 Y',     val:-20,  min:-1000, max:2000, step:5 },
     iconRotateBottom:  { g:'🙂下席 アイコン', label:'下席 回転',  val:0,    min:-270, max:360,  step:90 },
     // 上席アイコン（テーブル基準の絶対座標・手牌とは独立）
-    topIconScale:      { g:'🙂上席 アイコン', label:'上席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
-    topIconAbsLeft:    { g:'🙂上席 アイコン', label:'上席 Left',  val:620,  min:0,    max:1500, step:5 },
-    topIconAbsTop:     { g:'🙂上席 アイコン', label:'上席 Top',   val:150,  min:-1000, max:1000, step:5 },
+    topIconScale:      { g:'🙂上席 アイコン', label:'上席 scale', val:2.0,  min:-1000,  max:2000,    step:0.1 },
+    topIconAbsLeft:    { g:'🙂上席 アイコン', label:'上席 Left',  val:620,  min:-1000,    max:2000, step:5 },
+    topIconAbsTop:     { g:'🙂上席 アイコン', label:'上席 Top',   val:150,  min:-1000, max:2000, step:5 },
     iconRotateTop:     { g:'🙂上席 アイコン', label:'上席 回転',  val:180,  min:-270, max:360,  step:90 },
     // 右席アイコン（テーブル基準の絶対座標・手牌とは独立）
-    rightIconAbsLeft:  { g:'🙂右席 アイコン', label:'右席 Left',  val:1180, min:0,    max:1500, step:5 },
-    rightIconAbsTop:   { g:'🙂右席 アイコン', label:'右席 Top',   val:420,  min:-1000, max:1000, step:5 },
-    rightIconScale:    { g:'🙂右席 アイコン', label:'右席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    rightIconAbsLeft:  { g:'🙂右席 アイコン', label:'右席 Left',  val:1180, min:-1000,    max:2000, step:5 },
+    rightIconAbsTop:   { g:'🙂右席 アイコン', label:'右席 Top',   val:420,  min:-1000, max:2000, step:5 },
+    rightIconScale:    { g:'🙂右席 アイコン', label:'右席 scale', val:2.0,  min:-1000,  max:2000,    step:0.1 },
     iconRotateRight:   { g:'🙂右席 アイコン', label:'右席 回転',  val:0,    min:-270, max:360,  step:90 },
     // 左席アイコン（テーブル基準の絶対座標・手牌とは独立）
-    leftIconAbsLeft:   { g:'🙂左席 アイコン', label:'左席 Left',  val:170,  min:0,    max:1500, step:5 },
-    leftIconAbsTop:    { g:'🙂左席 アイコン', label:'左席 Top',   val:420,  min:-1000, max:1000, step:5 },
-    leftIconScale:     { g:'🙂左席 アイコン', label:'左席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    leftIconAbsLeft:   { g:'🙂左席 アイコン', label:'左席 Left',  val:170,  min:-1000,    max:2000, step:5 },
+    leftIconAbsTop:    { g:'🙂左席 アイコン', label:'左席 Top',   val:420,  min:-1000, max:2000, step:5 },
+    leftIconScale:     { g:'🙂左席 アイコン', label:'左席 scale', val:2.0,  min:-1000,  max:2000,    step:0.1 },
     iconRotateLeft:    { g:'🙂左席 アイコン', label:'左席 回転',  val:0,    min:-270, max:360,  step:90 },
     // スコアパネル（手牌から独立して移動可能）
-    topScoreAbsLeft:   { g:'📊上席 スコア', label:'上席 Left',  val:550,  min:-100, max:1500, step:5 },
+    topScoreAbsLeft:   { g:'📊上席 スコア', label:'上席 Left',  val:550,  min:-1000, max:2000, step:5 },
     topScoreAbsTop:    { g:'📊上席 スコア', label:'上席 Top',   val:220,  min:-1000, max:2000, step:5 },
-    topScoreScale:     { g:'📊上席 スコア', label:'上席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    topScoreScale:     { g:'📊上席 スコア', label:'上席 scale', val:2.0,  min:-1000,  max:2000,    step:0.1 },
     topScoreRotate:    { g:'📊上席 スコア', label:'上席 回転',  val:0,    min:-270, max:360,  step:90 },
-    rightScoreAbsLeft: { g:'📊右席 スコア', label:'右席 Left',  val:1200, min:-100, max:1500, step:5 },
+    rightScoreAbsLeft: { g:'📊右席 スコア', label:'右席 Left',  val:1200, min:-1000, max:2000, step:5 },
     rightScoreAbsTop:  { g:'📊右席 スコア', label:'右席 Top',   val:540,  min:-1000, max:2000, step:5 },
-    rightScoreScale:   { g:'📊右席 スコア', label:'右席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    rightScoreScale:   { g:'📊右席 スコア', label:'右席 scale', val:2.0,  min:-1000,  max:2000,    step:0.1 },
     rightScoreRotate:  { g:'📊右席 スコア', label:'右席 回転',  val:0,    min:-270, max:360,  step:90 },
-    leftScoreAbsLeft:  { g:'📊左席 スコア', label:'左席 Left',  val:100,  min:-100, max:1500, step:5 },
+    leftScoreAbsLeft:  { g:'📊左席 スコア', label:'左席 Left',  val:100,  min:-1000, max:2000, step:5 },
     leftScoreAbsTop:   { g:'📊左席 スコア', label:'左席 Top',   val:540,  min:-1000, max:2000, step:5 },
-    leftScoreScale:    { g:'📊左席 スコア', label:'左席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
+    leftScoreScale:    { g:'📊左席 スコア', label:'左席 scale', val:2.0,  min:-1000,  max:2000,    step:0.1 },
     leftScoreRotate:   { g:'📊左席 スコア', label:'左席 回転',  val:0,    min:-270, max:360,  step:90 },
-    bottomTileW:       { g:'🀄下席 牌サイズ', label:'下席 牌 width',     val:108,  min:50,   max:200,  step:2 },
-    bottomTileH:       { g:'🀄下席 牌サイズ', label:'下席 牌 height',    val:144,  min:70,   max:270,  step:2 },
-    bottomTileFontSize:{ g:'🀄下席 牌サイズ', label:'下席 牌 font-size', val:8.4,  min:2,    max:20,   step:0.1 },
-    bottomHandHeight:  { g:'🀄下席 牌サイズ', label:'下席 手牌 height',  val:160,  min:80,   max:320,  step:5 },
-    bottomMeldTileW:   { g:'🀄下席 牌サイズ', label:'下席 副露牌 width', val:80,   min:30,   max:160,  step:2 },
-    bottomMeldTileH:   { g:'🀄下席 牌サイズ', label:'下席 副露牌 height',val:106,  min:40,   max:210,  step:2 },
+    bottomTileW:       { g:'🀄下席 牌サイズ', label:'下席 牌 width',     val:108,  min:-1000,   max:2000,  step:2 },
+    bottomTileH:       { g:'🀄下席 牌サイズ', label:'下席 牌 height',    val:144,  min:-1000,   max:2000,  step:2 },
+    bottomTileFontSize:{ g:'🀄下席 牌サイズ', label:'下席 牌 font-size', val:8.4,  min:-1000,    max:2000,   step:0.1 },
+    bottomHandHeight:  { g:'🀄下席 牌サイズ', label:'下席 手牌 height',  val:160,  min:-1000,   max:2000,  step:5 },
+    bottomMeldTileW:   { g:'🀄下席 牌サイズ', label:'下席 副露牌 width', val:80,   min:-1000,   max:2000,  step:2 },
+    bottomMeldTileH:   { g:'🀄下席 牌サイズ', label:'下席 副露牌 height',val:106,  min:-1000,   max:2000,  step:2 },
     // 牌サイズ(相手席: 上・左・右 共通)
-    opponentTileSize:  { g:'🀄相手席 牌サイズ', label:'相手席 牌サイズ', val:66,   min:10,   max:150,  step:2 },
+    opponentTileSize:  { g:'🀄相手席 牌サイズ', label:'相手席 牌サイズ', val:66,   min:-1000,   max:2000,  step:2 },
     // スコアパネル
-    scorePanelScale:   { g:'スコア', label:'スコアパネル scale',       val:2.3,  min:0.5,  max:6,    step:0.05 },
-    bottomScoreLeft:   { g:'スコア', label:'下席スコア left',          val:835,  min:0,    max:1500, step:10 },
+    scorePanelScale:   { g:'スコア', label:'スコアパネル scale',       val:2.3,  min:-1000,  max:2000,    step:0.05 },
+    bottomScoreLeft:   { g:'スコア', label:'下席スコア left',          val:835,  min:-1000,    max:2000, step:10 },
     bottomScoreTop:    { g:'スコア', label:'下席スコア top',           val:36,   min:-1000, max:2000, step:5 },
     // 卓情報・ドラ
-    tableInfoScale:    { g:'卓情報・ドラ', label:'卓情報 scale',       val:2.0,  min:0.5,  max:5,    step:0.1 },
-    tableInfoTop:      { g:'卓情報・ドラ', label:'卓情報 top',         val:8,    min:0,    max:1200, step:5 },
-    tableInfoLeft:     { g:'卓情報・ドラ', label:'卓情報 left',        val:8,    min:0,    max:1400, step:5 },
-    doraPileScale:     { g:'卓情報・ドラ', label:'ドラ山 scale',       val:1.5,  min:0.5,  max:4,    step:0.05 },
-    doraPileTop:       { g:'卓情報・ドラ', label:'ドラ山 top',         val:8,    min:0,    max:1200, step:5 },
-    doraPileRight:     { g:'卓情報・ドラ', label:'ドラ山 right',       val:8,    min:0,    max:1400, step:5 },
+    tableInfoScale:    { g:'卓情報・ドラ', label:'卓情報 scale',       val:2.0,  min:-1000,  max:2000,    step:0.1 },
+    tableInfoTop:      { g:'卓情報・ドラ', label:'卓情報 top',         val:8,    min:-1000,    max:2000, step:5 },
+    tableInfoLeft:     { g:'卓情報・ドラ', label:'卓情報 left',        val:8,    min:-1000,    max:2000, step:5 },
+    doraPileScale:     { g:'卓情報・ドラ', label:'ドラ山 scale',       val:1.5,  min:-1000,  max:2000,    step:0.05 },
+    doraPileTop:       { g:'卓情報・ドラ', label:'ドラ山 top',         val:8,    min:-1000,    max:2000, step:5 },
+    doraPileRight:     { g:'卓情報・ドラ', label:'ドラ山 right',       val:8,    min:-1000,    max:2000, step:5 },
     // コーナーボタン
-    cornerLeftBottom:  { g:'コーナーボタン', label:'左下 bottom',      val:35,   min:0,    max:400,  step:5 },
-    cornerLeftLeft_:   { g:'コーナーボタン', label:'左下 left',        val:12,   min:0,    max:400,  step:5 },
-    cornerLeftScale:   { g:'コーナーボタン', label:'左下 scale',       val:3.0,  min:0.5,  max:8,    step:0.1 },
-    cornerRightBottom: { g:'コーナーボタン', label:'右下 bottom',      val:55,   min:0,    max:400,  step:5 },
-    cornerRightRight_: { g:'コーナーボタン', label:'右下 right',       val:12,   min:0,    max:400,  step:5 },
-    cornerRightScale:  { g:'コーナーボタン', label:'右下 scale',       val:2.5,  min:0.5,  max:8,    step:0.1 },
+    cornerLeftBottom:  { g:'コーナーボタン', label:'左下 bottom',      val:35,   min:-1000,    max:2000,  step:5 },
+    cornerLeftLeft_:   { g:'コーナーボタン', label:'左下 left',        val:12,   min:-1000,    max:2000,  step:5 },
+    cornerLeftScale:   { g:'コーナーボタン', label:'左下 scale',       val:3.0,  min:-1000,  max:2000,    step:0.1 },
+    cornerRightBottom: { g:'コーナーボタン', label:'右下 bottom',      val:55,   min:-1000,    max:2000,  step:5 },
+    cornerRightRight_: { g:'コーナーボタン', label:'右下 right',       val:12,   min:-1000,    max:2000,  step:5 },
+    cornerRightScale:  { g:'コーナーボタン', label:'右下 scale',       val:2.5,  min:-1000,  max:2000,    step:0.1 },
     // アクション
-    actionAreaScale:   { g:'アクション', label:'アクション scale',     val:1.667,min:0.5,  max:5,    step:0.05 },
-    actionAreaBottom:  { g:'アクション', label:'アクション bottom',    val:120,  min:0,    max:600,  step:5 },
-    actionAreaLeft:    { g:'アクション', label:'アクション 左右',      val:0,    min:-400, max:400,  step:5 },
-    riichiScale:       { g:'アクション', label:'リーチBtn scale',      val:1.2,  min:0.5,  max:4,    step:0.05 },
-    riichiY:           { g:'アクション', label:'リーチBtn 上下',       val:0,    min:-300, max:300,  step:5 },
-    riichiX:           { g:'アクション', label:'リーチBtn 左右',       val:0,    min:-300, max:300,  step:5 },
+    actionAreaScale:   { g:'アクション', label:'アクション scale',     val:1.667,min:-1000,  max:2000,    step:0.05 },
+    actionAreaBottom:  { g:'アクション', label:'アクション bottom',    val:120,  min:-1000,    max:2000,  step:5 },
+    actionAreaLeft:    { g:'アクション', label:'アクション 左右',      val:0,    min:-1000, max:2000,  step:5 },
+    riichiScale:       { g:'アクション', label:'リーチBtn scale',      val:1.2,  min:-1000,  max:2000,    step:0.05 },
+    riichiY:           { g:'アクション', label:'リーチBtn 上下',       val:0,    min:-1000, max:2000,  step:5 },
+    riichiX:           { g:'アクション', label:'リーチBtn 左右',       val:0,    min:-1000, max:2000,  step:5 },
     // テーブルスケール補正
-    tableTopOffset:    { g:'テーブル', label:'テーブル top offset',    val:150,  min:0,    max:400,  step:5 },
+    tableTopOffset:    { g:'テーブル', label:'テーブル top offset',    val:150,  min:-1000,    max:2000,  step:5 },
     // 山牌
-    wallTileScale:     { g:'山牌',   label:'山牌 tile scale',         val:1.0,  min:0.3,  max:4.0,  step:0.05 },
-    wallCols:          { g:'山牌',   label:'山牌 列数(折り返し)',      val:15,   min:3,    max:30,   step:1 },
+    wallTileScale:     { g:'山牌',   label:'山牌 tile scale',         val:1.0,  min:-1000,  max:2000,  step:0.05 },
+    wallCols:          { g:'山牌',   label:'山牌 列数(折り返し)',      val:15,   min:-1000,    max:2000,   step:1 },
     // 捨て牌
-    discardTileW:      { g:'捨て牌', label:'捨て牌 幅',                val:36,   min:10,   max:100,  step:1 },
-    discardTileH:      { g:'捨て牌', label:'捨て牌 高さ',              val:48,   min:14,   max:130,  step:1 },
-    discardFontSize:   { g:'捨て牌', label:'捨て牌 font-size',         val:2.8,  min:0.5,  max:8,    step:0.1 },
-    discardColsBT:     { g:'捨て牌', label:'上下席 列数(折り返し)',    val:15,   min:3,    max:30,   step:1 },
-    discardColsRL:     { g:'捨て牌', label:'左右席 列数(折り返し)',    val:8,    min:3,    max:20,   step:1 },
+    discardTileW:      { g:'捨て牌', label:'捨て牌 幅',                val:36,   min:-1000,   max:2000,  step:1 },
+    discardTileH:      { g:'捨て牌', label:'捨て牌 高さ',              val:48,   min:-1000,   max:2000,  step:1 },
+    discardFontSize:   { g:'捨て牌', label:'捨て牌 font-size',         val:2.8,  min:-1000,  max:2000,    step:0.1 },
+    discardColsBT:     { g:'捨て牌', label:'上下席 列数(折り返し)',    val:15,   min:-1000,    max:2000,   step:1 },
+    discardColsRL:     { g:'捨て牌', label:'左右席 列数(折り返し)',    val:8,    min:-1000,    max:2000,   step:1 },
     // 捨て牌の位置
-    discardBottomTop:  { g:'捨て牌の位置', label:'下席 捨て牌 top',    val:0,    min:-400, max:400,  step:5 },
-    discardBottomLeft: { g:'捨て牌の位置', label:'下席 捨て牌 left',   val:0,    min:-400, max:400,  step:5 },
-    discardTopTop:     { g:'捨て牌の位置', label:'上席 捨て牌 top',    val:0,    min:-400, max:400,  step:5 },
-    discardTopLeft:    { g:'捨て牌の位置', label:'上席 捨て牌 left',   val:0,    min:-400, max:400,  step:5 },
-    discardRightLeft:  { g:'捨て牌の位置', label:'右席 捨て牌 left',   val:0,    min:-200, max:400,  step:5 },
-    discardRightTop:   { g:'捨て牌の位置', label:'右席 捨て牌 top',    val:0,    min:-400, max:400,  step:5 },
-    discardLeftLeft:   { g:'捨て牌の位置', label:'左席 捨て牌 left',   val:0,    min:-400, max:200,  step:5 },
-    discardLeftTop:    { g:'捨て牌の位置', label:'左席 捨て牌 top',    val:0,    min:-400, max:400,  step:5 },
+    discardBottomTop:  { g:'捨て牌の位置', label:'下席 捨て牌 top',    val:0,    min:-1000, max:2000,  step:5 },
+    discardBottomLeft: { g:'捨て牌の位置', label:'下席 捨て牌 left',   val:0,    min:-1000, max:2000,  step:5 },
+    discardTopTop:     { g:'捨て牌の位置', label:'上席 捨て牌 top',    val:0,    min:-1000, max:2000,  step:5 },
+    discardTopLeft:    { g:'捨て牌の位置', label:'上席 捨て牌 left',   val:0,    min:-1000, max:2000,  step:5 },
+    discardRightLeft:  { g:'捨て牌の位置', label:'右席 捨て牌 left',   val:0,    min:-1000, max:2000,  step:5 },
+    discardRightTop:   { g:'捨て牌の位置', label:'右席 捨て牌 top',    val:0,    min:-1000, max:2000,  step:5 },
+    discardLeftLeft:   { g:'捨て牌の位置', label:'左席 捨て牌 left',   val:0,    min:-1000, max:2000,  step:5 },
+    discardLeftTop:    { g:'捨て牌の位置', label:'左席 捨て牌 top',    val:0,    min:-1000, max:2000,  step:5 },
   };
 
   // ── localStorage 保存・読み込み ──────────────────────────────
@@ -29243,6 +29243,44 @@ function _gameScreenOffsetReset() {
       });
     };
     btnRow.appendChild(copyBtn);
+
+    // 貼り付けボタン
+    const pasteBtn = document.createElement('button');
+    pasteBtn.textContent = '📥 貼付';
+    pasteBtn.style.cssText = 'background:transparent;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;border:1px solid rgba(255,255,255,0.4);border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;';
+    pasteBtn.onclick = () => {
+      navigator.clipboard.readText().then(text => {
+        try {
+          const vals = JSON.parse(text);
+          let count = 0;
+          for (const k in vals) {
+            if (!(k in P)) continue;
+            const v = parseFloat(vals[k]);
+            if (isNaN(v)) continue;
+            P[k].val = Math.min(P[k].max, Math.max(P[k].min, v));
+            const slider = document.getElementById('_sl_' + k);
+            const disp   = document.getElementById('_vd_' + k);
+            if (slider) slider.value = P[k].val;
+            if (disp)   disp.textContent = P[k].val;
+            count++;
+          }
+          applyPortraitCss();
+          applyTableOffset();
+          applyWallSettings();
+          applyDiscardCss();
+          _saveP();
+          pasteBtn.textContent = '✅ ' + count + '件';
+          setTimeout(() => { pasteBtn.textContent = '📥 貼付'; }, 2000);
+        } catch(e) {
+          pasteBtn.textContent = '❌ 失敗';
+          setTimeout(() => { pasteBtn.textContent = '📥 貼付'; }, 2000);
+        }
+      }).catch(() => {
+        pasteBtn.textContent = '❌ 権限なし';
+        setTimeout(() => { pasteBtn.textContent = '📥 貼付'; }, 2500);
+      });
+    };
+    btnRow.appendChild(pasteBtn);
 
     // 閉じるボタン
     const closeBtn = document.createElement('button');

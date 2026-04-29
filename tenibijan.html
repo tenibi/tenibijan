@@ -28844,11 +28844,11 @@ function _gameScreenOffsetReset() {
     iconRotateBottom:  { g:'アイコン(下)', label:'下席 回転',  val:0,    min:-270, max:360,  step:90 },
     // 上席アイコン
     topIconScale:      { g:'アイコン(上)', label:'上席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
-    topIconTop:        { g:'アイコン(上)', label:'上席 top',   val:Math.round((100+100-80)*_v), min:-1000, max:2000, step:5 },
-    topIconLeft:       { g:'アイコン(上)', label:'上席 left',  val:0,    min:-1400, max:1400, step:5 },
+    topIconTransX:     { g:'アイコン(上)', label:'上席 X',     val:0,    min:-2000, max:2000, step:5 },
+    topIconTransY:     { g:'アイコン(上)', label:'上席 Y',     val:Math.round((100+100-80)*_v), min:-2000, max:2000, step:5 },
     iconRotateTop:     { g:'アイコン(上)', label:'上席 回転',  val:180,  min:-270, max:360,  step:90 },
     // 右席アイコン
-    rightIconTransX:   { g:'アイコン(右)', label:'右席 X',     val:50,   min:-1400, max:1400, step:5 },
+    rightIconTransX:   { g:'アイコン(右)', label:'右席 X',     val:50,   min:-2000, max:2000, step:5 },
     rightIconTransY:   { g:'アイコン(右)', label:'右席 Y',     val:-100, min:-2000, max:2000, step:5 },
     rightIconScale:    { g:'アイコン(右)', label:'右席 scale', val:2.0,  min:0.5,  max:6,    step:0.1 },
     iconRotateRight:   { g:'アイコン(右)', label:'右席 回転',  val:90,   min:-270, max:360,  step:90 },
@@ -28948,7 +28948,7 @@ function _gameScreenOffsetReset() {
       ].join(''); })(),
       `.player-score-panel{transform:scale(${p.scorePanelScale}) !important;transform-origin:left center !important;}`,
       `.seat-bottom .player-icon-panel{transform:rotate(${p.iconRotateBottom}deg) scale(${p.bottomIconScale}) translateX(${p.bottomIconTransX}px) translateY(${p.bottomIconTransY}px) !important;transform-origin:center bottom !important;position:relative !important;}`,
-      `.seat-top .player-icon-panel{transform:rotate(${p.iconRotateTop}deg) scale(${p.topIconScale}) !important;transform-origin:center top !important;position:relative !important;top:${p.topIconTop}px !important;left:${p.topIconLeft}px !important;}`,
+      `.seat-top .player-icon-panel{transform:rotate(${p.iconRotateTop}deg) scale(${p.topIconScale}) translateX(${p.topIconTransX}px) translateY(${p.topIconTransY}px) !important;transform-origin:center top !important;position:relative !important;}`,
       `.seat-right .player-icon-panel{transform:translateX(${p.rightIconTransX}px) translateY(${p.rightIconTransY}px) rotate(${p.iconRotateRight}deg) scale(${p.rightIconScale}) !important;transform-origin:left center !important;}`,
       `.seat-left .player-icon-panel{transform:translateX(${p.leftIconTransX}px) translateY(${p.leftIconTransY}px) rotate(${p.iconRotateLeft}deg) scale(${p.leftIconScale}) !important;transform-origin:right center !important;}`,
       `.bottom-score-panel{position:absolute !important;left:${p.bottomScoreLeft}px !important;top:${p.bottomScoreTop}px !important;margin-left:0 !important;transform-origin:left top !important;}`,

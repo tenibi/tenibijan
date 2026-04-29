@@ -16487,22 +16487,29 @@ function renderTable(){
       leftPanel.appendChild(_titleWrap);
     }
     // アイコンパネル配置:
-    // 自席(bottom)はhandOuter内に配置（従来通り）
-    // 相手席(right/top/left)はseat divに直接配置（mahjong-table基準の絶対配置）
-    // → seat-inner(手牌)の位置変更の影響を受けず独立して移動可能
+    // 縦画面: 相手席(right/top/left)はseat divに直接配置（mahjong-table基準の絶対配置）
+    //         → seat-inner(手牌)の位置変更の影響を受けず独立して移動可能
+    // 横画面: 従来通りhandOuter内に配置
+    const _isPortraitForIcon = window.innerWidth < window.innerHeight && window.innerWidth < 768;
     if(si===0){
+      // 自席（下）: 常にhandOuter内に配置
       leftPanel.style.position='relative';
       leftPanel.style.top='-32px';
-      const _isPortrait=window.innerWidth<window.innerHeight&&window.innerWidth<768;
-      if(!_isPortrait) leftPanel.style.left='-100px';
+      if(!_isPortraitForIcon) leftPanel.style.left='-100px';
       handOuter.appendChild(leftPanel);
-    } else {
-      // 相手席: seat div直下に追加（position:absoluteはCSSで制御）
+    } else if(_isPortraitForIcon){
+      // 相手席・縦画面: seat div直下に追加（position:absoluteはCSSで制御）
       leftPanel.style.position='absolute';
       leftPanel.style.zIndex='5';
       leftPanel.style.pointerEvents='auto';
       leftPanel.style.margin='0';
       div.appendChild(leftPanel);
+    } else {
+      // 相手席・横画面: 従来通りhandOuter内に配置、インラインtransformで正立
+      if(si===1) leftPanel.style.transform='rotate(90deg)';
+      else if(si===2){ leftPanel.style.transform='rotate(180deg)'; leftPanel.style.position='relative'; leftPanel.style.top='50px'; leftPanel.style.left='-100px'; }
+      else if(si===3) leftPanel.style.transform='rotate(-90deg)';
+      handOuter.appendChild(leftPanel);
     }
 
     // ── 中央: 手牌 ──

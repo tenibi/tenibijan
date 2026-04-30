@@ -5,19 +5,8 @@
 <title>パチンコ v4 (レイアウト修正版)</title>
 <script>
 // ─── 認証ゲート：jwt_token がなければログイン画面を表示 ───
-(function() {
-  const token = localStorage.getItem('jwt_token') || '';
-  if (!token) {
-    document.addEventListener('DOMContentLoaded', function() {
-      // ゲーム本体を非表示
-      const main = document.getElementById('main-container');
-      if (main) main.style.display = 'none';
-      // 認証ゲートオーバーレイを表示
-      const gate = document.getElementById('auth-gate-overlay');
-      if (gate) gate.style.display = 'flex';
-    });
-  }
-})();
+// ─── 認証ゲート：テストモードのためOFF ───
+// (function() { ... })();
 </script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1113,11 +1102,11 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
     <div id="jackpot-banner">★★★ 777 大当たり！ ★★★</div>
     <div id="video-layer">
       <video id="vid-loop"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/loop.mp4"     preload="auto" playsinline loop muted></video>
-      <video id="vid-reach"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti01.mp4" preload="metadata" playsinline></video>
+      <video id="vid-reach"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti01.mp4" preload="metadata" playsinline muted></video>
       <video id="vid-reach2"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti02.mp4"  preload="metadata" playsinline muted></video>
       <video id="vid-hazure"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hazure01.mp4" preload="metadata" playsinline muted></video>
       <video id="vid-hazure2" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hazure02.mp4" preload="metadata" playsinline muted></video>
-      <video id="vid-atari"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atari01.mp4" preload="metadata" playsinline></video>
+      <video id="vid-atari"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atari01.mp4" preload="metadata" playsinline muted></video>
       <video id="vid-atari2"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atari02.mp4"  preload="metadata" playsinline muted></video>
       <video id="vid-hukatu2" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hukatu02.mp4" preload="metadata" playsinline muted></video>
       <video id="vid-atarigo" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atarigo01.mp4"  preload="metadata" playsinline muted></video>
@@ -1255,7 +1244,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
       </div>
       <div id="exchange-lock-msg" style="margin-top:6px;font-size:11px;color:#4ade80;font-family:sans-serif;text-align:center;min-height:16px;">✅ 交換できます</div>
     </div>
-    <div class="panel-item">
+    <div class="panel-item" style="display:none;">
       <button id="exp-table-btn" onclick="openExpTable()" style="width:100%;padding:9px 16px;font-size:14px;font-weight:700;letter-spacing:1px;background:linear-gradient(135deg,rgba(124,58,237,0.4),rgba(109,40,217,0.3));border:1.5px solid rgba(167,139,250,0.8);border-radius:8px;color:#fbbf24;cursor:pointer;font-family:sans-serif;text-shadow:0 0 8px rgba(251,191,36,0.5);box-shadow:0 0 10px rgba(124,58,237,0.3);transition:all 0.15s;">
         📊 期待値表
       </button>
@@ -2291,6 +2280,12 @@ function showAtarigoResult() {
 
 function hideAtarigoResult() {
   document.getElementById('atarigo-result').classList.remove('visible');
+  // リザルト後に回転数をリセット
+  totalRotations = 0;
+  localStorage.setItem('pachi_totalRotations', '0');
+  document.getElementById('rotations-disp').innerHTML = `0<span>回</span>`;
+  const _rotTop = document.getElementById('rotations-disp-top');
+  if (_rotTop) _rotTop.innerHTML = `0<span>回</span>`;
 }
 let frameCount = 0;
 let autoMode = false;
@@ -3109,7 +3104,14 @@ const oseVc      = document.getElementById('ose-vc');
 const oseEnd     = document.getElementById('ose-end');
 // ─── 弱リーチ演出動画 zyaku01〜06 ───────────────────────────────
 const vidZyakuList = [1,2,3,4,5,6].map(n => document.getElementById('vid-zyaku' + n));
+// ─── zyakuテストモード ───────────────────────────────────────────
+window._zyakuTestMode = false;   // true にするとUIパネルから強制指定
+window._zyakuForceIdx = 0;       // 0〜5 (zyaku01〜06)
 function getRandomZyakuVid() {
+  if (window._zyakuTestMode) {
+    console.log('[ZYAKU TEST] 強制選択: zyaku' + (window._zyakuForceIdx + 1));
+    return vidZyakuList[window._zyakuForceIdx];
+  }
   return vidZyakuList[Math.floor(Math.random() * vidZyakuList.length)];
 }
 // ─── 弱リーチ停止演出 ────────────────────────────────────────────
@@ -7364,5 +7366,75 @@ function _maybeRush(proceedFn) {
   </a>
 </div>
 
+<!-- ─── zyakuテストパネル ─── -->
+<div id="zyaku-test-panel" style="display:none;
+  position: fixed; bottom: 12px; right: 12px; z-index: 99998;
+  background: rgba(0,0,0,0.92); border: 2px solid #f59e0b;
+  border-radius: 10px; padding: 10px 14px; font-family: sans-serif;
+  color: #fbbf24; font-size: 13px; min-width: 200px;
+  box-shadow: 0 0 20px rgba(245,158,11,0.4);">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <span style="font-weight:700;letter-spacing:1px;">🎬 zyakuテスト</span>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" id="zyaku-test-toggle" onchange="
+        window._zyakuTestMode = this.checked;
+        document.getElementById('zyaku-test-controls').style.opacity = this.checked ? '1' : '0.4';
+        console.log('[ZYAKU TEST] テストモード:', this.checked ? 'ON' : 'OFF');
+      ">
+      <span id="zyaku-test-label">OFF</span>
+    </label>
+  </div>
+  <div id="zyaku-test-controls" style="opacity:0.4;">
+    <div style="margin-bottom:6px;color:#a78bfa;font-size:11px;">強制選択する動画：</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
+      <button onclick="setZyakuTest(0)" id="zt-btn-0" style="padding:4px 8px;font-size:12px;border-radius:5px;border:1px solid #f59e0b;background:rgba(245,158,11,0.3);color:#fbbf24;cursor:pointer;">zyaku01</button>
+      <button onclick="setZyakuTest(1)" id="zt-btn-1" style="padding:4px 8px;font-size:12px;border-radius:5px;border:1px solid #6b7280;background:rgba(107,114,128,0.2);color:#9ca3af;cursor:pointer;">zyaku02</button>
+      <button onclick="setZyakuTest(2)" id="zt-btn-2" style="padding:4px 8px;font-size:12px;border-radius:5px;border:1px solid #6b7280;background:rgba(107,114,128,0.2);color:#9ca3af;cursor:pointer;">zyaku03</button>
+      <button onclick="setZyakuTest(3)" id="zt-btn-3" style="padding:4px 8px;font-size:12px;border-radius:5px;border:1px solid #6b7280;background:rgba(107,114,128,0.2);color:#9ca3af;cursor:pointer;">zyaku04</button>
+      <button onclick="setZyakuTest(4)" id="zt-btn-4" style="padding:4px 8px;font-size:12px;border-radius:5px;border:1px solid #6b7280;background:rgba(107,114,128,0.2);color:#9ca3af;cursor:pointer;">zyaku05</button>
+      <button onclick="setZyakuTest(5)" id="zt-btn-5" style="padding:4px 8px;font-size:12px;border-radius:5px;border:1px solid #6b7280;background:rgba(107,114,128,0.2);color:#9ca3af;cursor:pointer;">zyaku06</button>
+    </div>
+    <div style="color:#a78bfa;font-size:11px;margin-bottom:6px;">動画の状態：</div>
+    <div id="zyaku-status-list" style="font-size:11px;line-height:1.8;"></div>
+  </div>
+</div>
+<script>
+// ─── テストパネル制御 ───────────────────────────────────────────
+document.getElementById('zyaku-test-toggle').addEventListener('change', function() {
+  document.getElementById('zyaku-test-label').textContent = this.checked ? 'ON' : 'OFF';
+});
+function setZyakuTest(idx) {
+  window._zyakuForceIdx = idx;
+  for (let i = 0; i < 6; i++) {
+    const btn = document.getElementById('zt-btn-' + i);
+    if (i === idx) {
+      btn.style.border = '1px solid #f59e0b';
+      btn.style.background = 'rgba(245,158,11,0.3)';
+      btn.style.color = '#fbbf24';
+    } else {
+      btn.style.border = '1px solid #6b7280';
+      btn.style.background = 'rgba(107,114,128,0.2)';
+      btn.style.color = '#9ca3af';
+    }
+  }
+}
+// 動画状態を定期更新
+function _updateZyakuStatus() {
+  const list = document.getElementById('zyaku-status-list');
+  if (!list || typeof vidZyakuList === 'undefined') return;
+  list.innerHTML = vidZyakuList.map((v, i) => {
+    let state = '⏸ 未ロード';
+    let col = '#6b7280';
+    if (v.error) { state = '❌ エラー(' + (v.error.code) + ')'; col = '#f87171'; }
+    else if (v.ended) { state = '✅ 再生完了'; col = '#4ade80'; }
+    else if (!v.paused && v.currentTime > 0) { state = '▶ 再生中 ' + v.currentTime.toFixed(1) + 's'; col = '#34d399'; }
+    else if (v.paused && v.currentTime > 0) { state = '⏸ 一時停止 ' + v.currentTime.toFixed(1) + 's'; col = '#fbbf24'; }
+    else if (v.readyState >= 2) { state = '⏹ 準備OK'; col = '#a78bfa'; }
+    else if (v.networkState === 2) { state = '⏳ 読込中'; col = '#60a5fa'; }
+    return `<span style="color:${col};">zyaku0${i+1}: ${state}</span>`;
+  }).join('<br>');
+}
+setInterval(_updateZyakuStatus, 500);
+</script>
 </body>
 </html>

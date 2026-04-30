@@ -3024,13 +3024,22 @@ function startD2FeverEffect() {
 function _seekedPlay(vid, catchFn) {
   catchFn = catchFn || (() => {});
   const _doPlay = () => {
-    // ユーザー操作後であれば muted を解除して音を出す
-    if (audioUnlocked && !_ALWAYS_MUTED_IDS.has(vid.id)) {
-      vid.muted  = false;
-      vid.volume = videoVolume;
-    }
+    // play() は常に muted のまま呼ぶ（Edge の自動再生ブロック回避）
+    // 再生開始後に unmute する
     const p = vid.play();
-    if (p !== undefined) p.catch(catchFn);
+    if (p !== undefined) {
+      p.then(() => {
+        if (audioUnlocked && !_ALWAYS_MUTED_IDS.has(vid.id)) {
+          vid.muted  = false;
+          vid.volume = videoVolume;
+        }
+      }).catch(catchFn);
+    } else {
+      if (audioUnlocked && !_ALWAYS_MUTED_IDS.has(vid.id)) {
+        vid.muted  = false;
+        vid.volume = videoVolume;
+      }
+    }
   };
   if (vid.seeking) {
     let _done = false;
@@ -3754,13 +3763,8 @@ let audioUnlocked = false;
 function _unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-  // 演出動画の muted を解除し、音量を適用
-  document.querySelectorAll('#video-layer video').forEach(el => {
-    if (!_ALWAYS_MUTED_IDS.has(el.id)) {
-      el.muted  = false;
-      el.volume = videoVolume;
-    }
-  });
+  // ※ muted の解除は play() 成功後に行う
+  // （play() 前に unmute すると Edge の自動再生ブロックの原因になる）
   // preload="metadata" の演出動画をここでまとめてバッファリング開始（再生中は除外）
   document.querySelectorAll('#video-layer video').forEach(el => {
     if (!_ALWAYS_MUTED_IDS.has(el.id) && el.paused) {
@@ -4002,14 +4006,18 @@ function playVideo(videoEl) {
   // currentTime=0 のシーク完了を待ってから play() する
   // （シーク中に即 play() すると、バッファ未読み込み時に 0秒で長時間固まるバグを防ぐ）
   const _startPlay = () => {
-    // ユーザー操作後であれば muted を解除して音を出す
-    if (audioUnlocked && !_ALWAYS_MUTED_IDS.has(videoEl.id)) {
-      videoEl.muted  = false;
-      videoEl.volume = videoVolume;
-    }
+    // play() は常に muted のまま呼ぶ（Edge の自動再生ブロック回避）
+    // 再生開始後に unmute する
     const _playPromise = videoEl.play();
     if (_playPromise !== undefined) {
-      _playPromise.catch(_fireFallback);
+      _playPromise
+        .then(() => {
+          if (audioUnlocked && !_ALWAYS_MUTED_IDS.has(videoEl.id)) {
+            videoEl.muted  = false;
+            videoEl.volume = videoVolume;
+          }
+        })
+        .catch(_fireFallback);
     }
   };
   if (videoEl.seeking) {

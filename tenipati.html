@@ -63,6 +63,41 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 .ctrl-row button.active { background: rgba(124,58,237,0.7); color: #fbbf24; border-color: #fbbf24; }
 .ctrl-row button:hover { background: rgba(124,58,237,0.6); color: white; }
 
+/* ─── 弱リーチ停止ボタン画像（botan.png）───────────────────── */
+#zyaku-botan {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  pointer-events: none;
+  max-width: 60%;
+}
+/* ─── 弱リーチ停止テキスト ───────────────────────────────────── */
+#zyaku-text {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 21;
+  pointer-events: none;
+  font-size: 52px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    0 0 12px #ff4400,
+    0 0 30px #ff4400,
+    3px 3px 0 #000,
+    -3px -3px 0 #000,
+    3px -3px 0 #000,
+    -3px 3px 0 #000;
+  white-space: nowrap;
+  letter-spacing: 4px;
+  margin-top: 90px;
+}
+
 /* OSEボタン（円形・canvasオーバーレイ） */
 #ose-overlay {
   position: absolute;
@@ -949,6 +984,111 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 }
 
 #digit2.normal-reach-fever { z-index:10; }
+
+/* ─── 設定モーダル ──────────────────────────────────────────── */
+#settings-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+}
+#settings-overlay.open { display: flex; }
+#settings-modal {
+  background: linear-gradient(160deg, #0e001a 0%, #1a0035 100%);
+  border: 1.5px solid rgba(167,139,250,0.5);
+  border-radius: 14px;
+  box-shadow: 0 0 40px rgba(124,58,237,0.4), 0 0 80px rgba(0,0,0,0.6);
+  padding: 20px 22px 22px;
+  min-width: 280px;
+  max-width: 340px;
+  width: 90vw;
+  font-family: sans-serif;
+  position: relative;
+}
+#settings-modal h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fbbf24;
+  letter-spacing: 2px;
+  margin-bottom: 18px;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(251,191,36,0.4);
+}
+#settings-modal .settings-section {
+  margin-bottom: 18px;
+}
+#settings-modal .settings-section h4 {
+  font-size: 11px;
+  color: #a78bfa;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(167,139,250,0.2);
+  padding-bottom: 5px;
+}
+.vol-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.vol-row span.vol-label {
+  font-size: 11px;
+  color: #a78bfa;
+  min-width: 32px;
+}
+.vol-row input[type=range] {
+  flex: 1;
+  accent-color: #a78bfa;
+  cursor: pointer;
+}
+.vol-row span.vol-val {
+  font-size: 11px;
+  color: #fff;
+  min-width: 32px;
+  text-align: right;
+}
+.waku-fmt-btns {
+  display: flex;
+  gap: 8px;
+}
+.waku-fmt-btn {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1.5px solid rgba(167,139,250,0.5);
+  background: rgba(124,58,237,0.15);
+  color: #a78bfa;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 1px;
+}
+.waku-fmt-btn.active {
+  background: rgba(124,58,237,0.55);
+  border-color: #a78bfa;
+  color: #fbbf24;
+  box-shadow: 0 0 12px rgba(124,58,237,0.5);
+}
+#settings-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #a78bfa;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+#settings-close-btn:hover { color: #fbbf24; }
 </style>
 </head>
 <body>
@@ -957,11 +1097,11 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
     <div id="jackpot-banner">★★★ 777 大当たり！ ★★★</div>
     <div id="video-layer">
       <video id="vid-loop"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/loop.mp4"     preload="auto" playsinline loop muted></video>
-      <video id="vid-reach"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti01.mp4" preload="auto" playsinline muted></video>
+      <video id="vid-reach"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti01.mp4" preload="auto" playsinline></video>
       <video id="vid-reach2"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/riti02.mp4"  preload="auto" playsinline muted></video>
-      <video id="vid-hazure"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hazure01.webm" preload="auto" playsinline muted></video>
+      <video id="vid-hazure"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hazure01.mp4" preload="auto" playsinline muted></video>
       <video id="vid-hazure2" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hazure02.mp4" preload="auto" playsinline muted></video>
-      <video id="vid-atari"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atari01.webm" preload="auto" playsinline muted></video>
+      <video id="vid-atari"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atari01.mp4" preload="auto" playsinline></video>
       <video id="vid-atari2"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atari02.mp4"  preload="auto" playsinline muted></video>
       <video id="vid-hukatu2" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/hukatu02.mp4" preload="auto" playsinline muted></video>
       <video id="vid-atarigo" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atarigo01.mp4"  preload="auto" playsinline muted></video>
@@ -983,16 +1123,31 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
       <video id="vid-rush-ataNouHazu" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/AtaNouHazu01.mp4"  preload="auto" playsinline muted></video>
       <video id="vid-rush-hazuNouAta"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/HazuNouAta01.mp4"  preload="auto" playsinline muted></video>
       <video id="vid-rush-hazuNouHazu" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/HazuNouHazu01.mp4" preload="auto" playsinline muted></video>
+      <!-- 弱リーチ演出動画 zyaku01〜06 -->
+      <video id="vid-zyaku1" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/zyaku01.mp4" preload="auto" playsinline muted></video>
+      <video id="vid-zyaku2" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/zyaku02.mp4" preload="auto" playsinline muted></video>
+      <video id="vid-zyaku3" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/zyaku03.mp4" preload="auto" playsinline muted></video>
+      <video id="vid-zyaku4" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/zyaku04.mp4" preload="auto" playsinline muted></video>
+      <video id="vid-zyaku5" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/zyaku05.mp4" preload="auto" playsinline muted></video>
+      <video id="vid-zyaku6" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/zyaku06.mp4" preload="auto" playsinline muted></video>
       <!-- 保留消費カラーワクオーバーレイ：video-layer内の最後に置き同コンテキスト内で最前面・frameより下に収める -->
       <div id="waku-layer">
         <video id="vid-waku-blue"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/aowaku.webm"     preload="auto" playsinline muted></video>
+        <img   id="vid-waku-blue-apng"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/aowaku.apng"     style="display:none;position:absolute;top:0;left:50%;transform:translateX(-50%);width:auto;height:auto;max-width:none;pointer-events:none;">
         <video id="vid-waku-green" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/midoriwaku.webm" preload="auto" playsinline muted></video>
+        <img   id="vid-waku-green-apng" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/midoriwaku.apng" style="display:none;position:absolute;top:0;left:50%;transform:translateX(-50%);width:auto;height:auto;max-width:none;pointer-events:none;">
         <video id="vid-waku-red"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/akawaku.webm"    preload="auto" playsinline muted></video>
+        <img   id="vid-waku-red-apng"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/akawaku.apng"    style="display:none;position:absolute;top:0;left:50%;transform:translateX(-50%);width:auto;height:auto;max-width:none;pointer-events:none;">
         <video id="vid-waku-gold"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/kinwaku.webm"    preload="auto" playsinline muted></video>
+        <img   id="vid-waku-gold-apng"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/kinwaku.apng"    style="display:none;position:absolute;top:0;left:50%;transform:translateX(-50%);width:auto;height:auto;max-width:none;pointer-events:none;">
       </div>
     </div>
     <audio id="ose-vc"   src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/osevc.mp3"   preload="auto"></audio>
     <audio id="ose-end"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/oseend.mp3"  preload="auto"></audio>
+    <!-- 弱リーチ停止演出 -->
+    <img id="zyaku-botan" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/botan.png" alt="">
+    <div id="zyaku-text"></div>
+    <audio id="ketei-se" src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/ketei.mp3" preload="auto"></audio>
     <!-- RUSH突入ボイスクリップ -->
     <audio id="rush-vc"  src="https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/RUSHvc.mp3"  preload="auto"></audio>
     <!-- atarigo リザルト -->
@@ -1060,6 +1215,10 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
       </a>
     </div>
     <div class="panel-item">
+      <h3>回転数</h3>
+      <div id="rotations-disp-top" class="panel-value">0<span>回</span></div>
+    </div>
+    <div class="panel-item">
       <h3>持ち玉</h3>
       <div id="ball-count-disp" class="panel-value">0<span>個</span></div>
     </div>
@@ -1085,25 +1244,12 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
         📊 期待値表
       </button>
     </div>
-    <div class="panel-item">
-      <h3>🔊 音量</h3>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;color:#a78bfa;min-width:32px;">BGM</span>
-          <input type="range" id="vol-bgm" min="0" max="100" value="20" style="flex:1;accent-color:#a78bfa;cursor:pointer;">
-          <span id="vol-bgm-val" style="font-size:11px;color:#fff;min-width:28px;text-align:right;">20%</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;color:#a78bfa;min-width:32px;">動画</span>
-          <input type="range" id="vol-vid" min="0" max="100" value="80" style="flex:1;accent-color:#a78bfa;cursor:pointer;">
-          <span id="vol-vid-val" style="font-size:11px;color:#fff;min-width:28px;text-align:right;">80%</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;color:#a78bfa;min-width:32px;">SE</span>
-          <input type="range" id="vol-se" min="0" max="100" value="80" style="flex:1;accent-color:#a78bfa;cursor:pointer;">
-          <span id="vol-se-val" style="font-size:11px;color:#fff;min-width:28px;text-align:right;">80%</span>
-        </div>
-      </div>
+    <div class="panel-item" style="padding:0;">
+      <button onclick="openSettings()" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px 12px;font-size:14px;font-weight:700;letter-spacing:1px;background:linear-gradient(135deg,rgba(124,58,237,0.25),rgba(109,40,217,0.2));border:1.5px solid rgba(167,139,250,0.6);border-radius:8px;color:#a78bfa;cursor:pointer;font-family:sans-serif;box-shadow:0 0 10px rgba(124,58,237,0.15);transition:all 0.15s;"
+        onmouseover="this.style.background='linear-gradient(135deg,rgba(124,58,237,0.45),rgba(109,40,217,0.4))'"
+        onmouseout="this.style.background='linear-gradient(135deg,rgba(124,58,237,0.25),rgba(109,40,217,0.2))'">
+        ⚙ 設定
+      </button>
     </div>
   </div>
 
@@ -1167,6 +1313,16 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
         <button id="test-noreach-win-btn" style="background:rgba(15,118,110,0.35);border-color:rgba(45,212,191,0.9);color:#99f6e4;font-weight:700;letter-spacing:1px;">⚡ リーチなし当たり</button>
         <button id="test-fukkatsu-btn" style="background:rgba(126,34,206,0.35);border-color:rgba(192,132,252,0.9);color:#e9d5ff;font-weight:700;letter-spacing:1px;">👻 復活</button>
         <span style="color:rgba(167,139,250,0.5);font-size:11px;font-family:sans-serif;">TEST</span>
+      </div>
+    </div>
+    <div class="panel-item" id="test-pre-btns-row">
+      <div class="ctrl-row" style="flex-wrap:wrap;gap:6px;justify-content:flex-start;">
+        <button id="test-pre-riti01-win-btn"    style="background:rgba(29,78,216,0.35);border-color:rgba(96,165,250,0.8);color:#93c5fd;font-weight:700;">🔵前置き＋中当たり</button>
+        <button id="test-pre-riti01-hazure-btn" style="background:rgba(29,78,216,0.2);border-color:rgba(96,165,250,0.5);color:#bfdbfe;">🔵前置き＋中ハズレ</button>
+        <button id="test-pre-riti02-win-btn"    style="background:rgba(6,78,59,0.35);border-color:rgba(52,211,153,0.8);color:#6ee7b7;font-weight:700;">🟢前置き＋強当たり</button>
+        <button id="test-pre-riti02-fukkatsu-btn" style="background:rgba(126,34,206,0.35);border-color:rgba(192,132,252,0.8);color:#e9d5ff;font-weight:700;">🟢前置き＋強復活</button>
+        <button id="test-pre-riti02-hazure-btn" style="background:rgba(6,78,59,0.2);border-color:rgba(52,211,153,0.5);color:#a7f3d0;">🟢前置き＋強ハズレ</button>
+        <span style="color:rgba(167,139,250,0.5);font-size:11px;font-family:sans-serif;">前置きTEST</span>
       </div>
     </div>
     <div class="panel-item" id="test-hold-btns-row">
@@ -2615,6 +2771,20 @@ function syncNiziOverlay() {
 
 // 保留消費時に対応色のワク動画を透過ループ再生
 // ─ ループ再生し、次の consumeHold / playAtarigoRoute / stopAllVideos まで表示し続ける
+let _wakuFormat = 'webm'; // 'webm' or 'apng'（設定で切り替え・全色共通）
+
+// apng img の src を再セットしてアニメーションをリスタート
+function _restartApng(el) {
+  const src = el.src;
+  el.src = '';
+  el.src = src;
+}
+
+// 全ワク img（apng）を非表示にする
+function _hideAllWakuApng() {
+  document.querySelectorAll('#waku-layer img').forEach(img => { img.style.display = 'none'; });
+}
+
 function playWakuVideo(color) {
   const colorMap = { blue: 'vid-waku-blue', green: 'vid-waku-green', red: 'vid-waku-red', gold: 'vid-waku-gold' };
   const vidId = colorMap[color];
@@ -2624,16 +2794,29 @@ function playWakuVideo(color) {
   const vid  = document.getElementById(vidId);
   if (!waku || !vid) return;
 
-  // 全ワク動画を一旦止める
+  // 全ワク動画・apng を一旦止める
   waku.querySelectorAll('video').forEach(v => { v.pause(); v.currentTime = 0; v.style.display = 'none'; v.onended = null; });
+  _hideAllWakuApng();
 
   waku.style.display = 'block';
+
+  if (_wakuFormat === 'apng') {
+    const apngEl = document.getElementById(vidId + '-apng');
+    if (apngEl) {
+      apngEl.style.display = 'block';
+      _restartApng(apngEl);
+      currentWakuColor = color;
+      return;
+    }
+    // apng ファイルがなければ webm にフォールバック
+  }
+
   vid.style.display  = 'block';
-  vid.loop           = true;  // 明示的に止められるまでループ
+  vid.loop           = true;
   vid.currentTime    = 0;
   vid.volume         = videoVolume;
-  vid.play().catch(() => {});
-  currentWakuColor = color; // 再生中の色を記録
+  _seekedPlay(vid);
+  currentWakuColor = color;
 }
 
 // ワク動画を明示的に停止・非表示にする
@@ -2641,8 +2824,9 @@ function stopWakuVideo() {
   const waku = document.getElementById('waku-layer');
   if (!waku) return;
   waku.querySelectorAll('video').forEach(v => { v.pause(); v.currentTime = 0; v.loop = false; v.style.display = 'none'; });
+  _hideAllWakuApng();
   waku.style.display = 'none';
-  currentWakuColor = null; // クリア
+  currentWakuColor = null;
 }
 
 function rebuildLayout() {
@@ -2824,6 +3008,36 @@ function startD2FeverEffect() {
 // ─── 動画フォールバック共通ユーティリティ ─────────────────────────────────
 // play()失敗・stall・タイムアウト発生時に onDone を確実に呼び出す
 // timeoutMs: 最大待機時間（省略時 90秒）
+// currentTime=0 後に seeked を待ってから play() する汎用ヘルパー
+// catchFn: play() が reject されたときに呼ぶ関数（省略時は no-op）
+function _seekedPlay(vid, catchFn) {
+  catchFn = catchFn || (() => {});
+  const _doPlay = () => {
+    // ユーザー操作後であれば muted を解除して音を出す
+    if (audioUnlocked && !_ALWAYS_MUTED_IDS.has(vid.id)) {
+      vid.muted  = false;
+      vid.volume = videoVolume;
+    }
+    const p = vid.play();
+    if (p !== undefined) p.catch(catchFn);
+  };
+  if (vid.seeking) {
+    let _done = false;
+    const _onSeeked = () => {
+      if (_done) return; _done = true;
+      vid.removeEventListener('seeked', _onSeeked);
+      _doPlay();
+    };
+    vid.addEventListener('seeked', _onSeeked, { once: true });
+    // 2秒以内に seeked が来なければ強制 play（ネットワーク不良時のフォールバック）
+    setTimeout(() => {
+      if (!_done) { _done = true; vid.removeEventListener('seeked', _onSeeked); _doPlay(); }
+    }, 2000);
+  } else {
+    _doPlay();
+  }
+}
+
 function _safePlayVid(vid, onDone, timeoutMs) {
   if (!vid) { onDone(); return; }
   timeoutMs = timeoutMs || 90000;
@@ -2844,6 +3058,8 @@ function _safePlayVid(vid, onDone, timeoutMs) {
 
   function _onStall() {
     // ストール後 5秒以内に再開しなければフォールバック
+    // ただし再生中（currentTime > 0 かつ ended=false）なら無視する
+    if (!vid.ended && !vid.error && vid.currentTime > 0) return;
     clearTimeout(_stallTimer);
     _stallTimer = setTimeout(_fire, 5000);
   }
@@ -2855,8 +3071,9 @@ function _safePlayVid(vid, onDone, timeoutMs) {
 
   vid.onended = _fire;
 
-  const p = vid.play();
-  if (p !== undefined) { p.catch(_fire); }
+  // currentTime=0 のシーク完了を待ってから play()
+  // （シーク中に即 play() すると、バッファ未読み込み時に固まるバグを防ぐ）
+  _seekedPlay(vid, _fire);
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -2874,6 +3091,17 @@ const vidAtarigo = document.getElementById('vid-atarigo');
 const vidOse     = document.getElementById('vid-ose');
 const oseVc      = document.getElementById('ose-vc');
 const oseEnd     = document.getElementById('ose-end');
+// ─── 弱リーチ演出動画 zyaku01〜06 ───────────────────────────────
+const vidZyakuList = [1,2,3,4,5,6].map(n => document.getElementById('vid-zyaku' + n));
+function getRandomZyakuVid() {
+  return vidZyakuList[Math.floor(Math.random() * vidZyakuList.length)];
+}
+// ─── 弱リーチ停止演出 ────────────────────────────────────────────
+const botanImg  = document.getElementById('zyaku-botan');
+const zyakuText = document.getElementById('zyaku-text');
+const keteiSe   = document.getElementById('ketei-se');
+const ZYAKU_TEXT_MAP  = ['救え！', '開けろ！', '避けろ！', '避けろ！', '逃げろ！', '轢くな！'];
+const ZYAKU_PAUSE_MS  = [4000, 1000, 1000, 2000, 4000, 1000]; // 各動画の停止タイミング（ms）
 
 // ─── 通常当たり演出：atariSE + bonus01.mp4 同時再生 → SE終了後 atarigo.mp4 ───
 // RUSH継続時は _playRushContinuationAtarigo() を使うこと。
@@ -2916,7 +3144,7 @@ function _playAtarigoAnimation(proceedFn) {
   vidBonus01.pause();
   vidBonus01.currentTime = 0;
   vidBonus01.style.display = 'block';
-  vidBonus01.play().catch(() => {});
+  _seekedPlay(vidBonus01); // seeked 待ちから play()
 
   function _stopBonus01() {
     vidBonus01.pause();
@@ -3438,7 +3666,7 @@ function _playZenkaitenAnimation(proceedFn) {
   vidZ.style.display = 'block';
   vidZ.currentTime = 0;
   vidZ.volume = (typeof videoVolume === 'number') ? videoVolume : 0.8;
-  vidZ.play().catch(() => {});
+  // ※ play() は _safePlayVid 内で seeked 待ち後に行う（二重再生バグを防ぐため直接 play() しない）
   if (rouletteEndTimeout) { clearTimeout(rouletteEndTimeout); }
   rouletteEndTimeout = setTimeout(proceedFn, 600000);
 
@@ -3494,33 +3722,96 @@ function _applyVideoVolume(v) {
   if (rushVcEl) rushVcEl.volume = v;
 }
 
+// ─── オーディオアンロック機構 ────────────────────────────────────────────
+// ブラウザの自動再生ポリシー対策：
+//   ・起動時は全動画を muted にして自動再生を保証
+//   ・最初のユーザー操作（クリック/タップ）を検出したら演出動画の muted を解除
+// ループ・ワク動画（常時 muted）はそのまま。
+const _ALWAYS_MUTED_IDS = new Set([
+  'vid-loop', 'vid-rush-loop',
+  'vid-waku-blue', 'vid-waku-green', 'vid-waku-red', 'vid-waku-gold'
+]);
+let audioUnlocked = false;
+
+function _unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  // 演出動画の muted を解除し、音量を適用
+  document.querySelectorAll('#video-layer video').forEach(el => {
+    if (!_ALWAYS_MUTED_IDS.has(el.id)) {
+      el.muted  = false;
+      el.volume = videoVolume;
+    }
+  });
+}
+
+// 最初のユーザー操作で一度だけアンロック
+['pointerdown', 'touchstart', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, function _once() {
+    _unlockAudio();
+    document.removeEventListener(evt, _once);
+  }, { once: true });
+});
+// ─────────────────────────────────────────────────────────────────────────
+
 (function initVolumeControls() {
-  const volBgm    = document.getElementById('vol-bgm');
-  const volBgmVal = document.getElementById('vol-bgm-val');
-  const volVid    = document.getElementById('vol-vid');
-  const volVidVal = document.getElementById('vol-vid-val');
-  const volSe     = document.getElementById('vol-se');
-  const volSeVal  = document.getElementById('vol-se-val');
+  // 音量スライダーは設定モーダル内（スクリプトブロックより後）にあるため
+  // DOMContentLoaded 後に要素を取得する
+  function _init() {
+    const volBgm    = document.getElementById('vol-bgm');
+    const volBgmVal = document.getElementById('vol-bgm-val');
+    const volVid    = document.getElementById('vol-vid');
+    const volVidVal = document.getElementById('vol-vid-val');
+    const volSe     = document.getElementById('vol-se');
+    const volSeVal  = document.getElementById('vol-se-val');
 
-  // 初期値を全要素に適用
-  _applyVideoVolume(videoVolume);
+    if (!volBgm || !volVid || !volSe) return; // 要素未生成なら何もしない
 
-  volBgm.addEventListener('input', () => {
-    const v = volBgm.value / 100;
-    bgm.volume = v;
-    rushBgm.volume = v;
-    volBgmVal.textContent = volBgm.value + '%';
-  });
-  volVid.addEventListener('input', () => {
-    videoVolume = volVid.value / 100;
-    volVidVal.textContent = volVid.value + '%';
+    // 初期値を全要素に適用
     _applyVideoVolume(videoVolume);
-  });
-  volSe.addEventListener('input', () => {
-    seVolume = volSe.value / 100;
-    volSeVal.textContent = volSe.value + '%';
-  });
+
+    volBgm.addEventListener('input', () => {
+      const v = volBgm.value / 100;
+      bgm.volume = v;
+      rushBgm.volume = v;
+      volBgmVal.textContent = volBgm.value + '%';
+    });
+    volVid.addEventListener('input', () => {
+      videoVolume = volVid.value / 100;
+      volVidVal.textContent = volVid.value + '%';
+      _applyVideoVolume(videoVolume);
+    });
+    volSe.addEventListener('input', () => {
+      seVolume = volSe.value / 100;
+      volSeVal.textContent = volSe.value + '%';
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _init);
+  } else {
+    _init(); // すでにDOMが準備済みの場合（遅延実行時など）
+  }
 })();
+
+// ─── 設定モーダル ─────────────────────────────────────
+function openSettings() {
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+// ワク形式切り替え（webm / apng・全色共通）
+function setWakuBlueFormat(fmt) {
+  _wakuFormat = fmt;
+  document.getElementById('waku-fmt-webm').classList.toggle('active', fmt === 'webm');
+  document.getElementById('waku-fmt-apng').classList.toggle('active', fmt === 'apng');
+  // 現在ワクが表示中なら即時切り替え
+  if (currentWakuColor) {
+    playWakuVideo(currentWakuColor);
+  }
+}
 
 // 当たりSE
 const atariSE = new Audio('https://raw.githubusercontent.com/tenibi/tenibijan/main/tenipati/atariSE.mp3');
@@ -3539,23 +3830,42 @@ function getRandomRitiSE() {
 let ritiSE = ritiSEList[0]; // ダミー初期値、実際は playVideo 内で都度選択
 
 // ループ動画を再生（他の動画が止まったとき呼ぶ）
+// ループ動画を安全に再生（シーク完了を待ってから play() する）
+// currentTime=0 のシーク中に即 play() すると 0秒で固まるバグを防ぐ
+function _safeLoopPlay(vid) {
+  if (!vid.paused) return; // すでに再生中ならスキップ
+  const _doPlay = () => vid.play().catch(() => {});
+  if (vid.seeking) {
+    let _done = false;
+    const _onSeeked = () => {
+      if (_done) return;
+      _done = true;
+      vid.removeEventListener('seeked', _onSeeked);
+      _doPlay();
+    };
+    vid.addEventListener('seeked', _onSeeked, { once: true });
+    // 2秒以内に seeked が来なければ強制 play
+    setTimeout(() => {
+      if (!_done) { _done = true; vid.removeEventListener('seeked', _onSeeked); _doPlay(); }
+    }, 2000);
+  } else {
+    _doPlay();
+  }
+}
+
 function resumeLoopVideo() {
   if (window._bonusActive) {
     // RUSHモード中はRUSHループ動画を再生
     vidLoop.pause();
     vidLoop.style.display = 'none';
     vidRushLoop.style.display = 'block';
-    if (vidRushLoop.paused) {
-      vidRushLoop.play().catch(() => {});
-    }
+    _safeLoopPlay(vidRushLoop);
   } else {
     // 通常モード
     vidRushLoop.pause();
     vidRushLoop.style.display = 'none';
     vidLoop.style.display = 'block';
-    if (vidLoop.paused) {
-      vidLoop.play().catch(() => {});
-    }
+    _safeLoopPlay(vidLoop);
   }
   if (!rushBgmSuppressed && bgm.paused) {
     bgm.play().catch(() => {});
@@ -3564,7 +3874,7 @@ function resumeLoopVideo() {
 
 function _stopAllVideosCore() {
   document.getElementById('wrap').classList.remove('reach-video-playing', 'hazure-video-playing', 'atarigo-video-playing', 'atari02-video-playing');
-  [vidReach, vidReach2, vidHazure, vidHazure2, vidAtari, vidAtari2, vidHukatu2, vidAtarigo].forEach(v => {
+  [vidReach, vidReach2, vidHazure, vidHazure2, vidAtari, vidAtari2, vidHukatu2, vidAtarigo, ...vidZyakuList].forEach(v => {
     v.pause();
     v.currentTime = 0;
     v.style.display = 'none';
@@ -3625,7 +3935,7 @@ function playVideo(videoEl) {
   vidRushLoop.style.display = 'none';
   bgm.pause();
   // 他の演出動画を停止（ループ動画は再開しない）
-  [vidReach, vidReach2, vidHazure, vidHazure2, vidAtari, vidAtari2, vidHukatu2, vidAtarigo].forEach(v => {
+  [vidReach, vidReach2, vidHazure, vidHazure2, vidAtari, vidAtari2, vidHukatu2, vidAtarigo, ...vidZyakuList].forEach(v => {
     if (v !== videoEl) {
       v.pause();
       v.currentTime = 0;
@@ -3635,7 +3945,7 @@ function playVideo(videoEl) {
   // OSEシーケンス停止（vidOse自体は startOseSequence 側で管理）
   stopOseSequence();
   ritiSEList.forEach(s => { s.pause(); s.currentTime = 0; });
-  document.getElementById('wrap').classList.toggle('reach-video-playing', videoEl === vidReach || videoEl === vidReach2);
+  document.getElementById('wrap').classList.toggle('reach-video-playing', videoEl === vidReach || videoEl === vidReach2 || vidZyakuList.includes(videoEl));
   document.getElementById('wrap').classList.toggle('hazure-video-playing', videoEl === vidHazure || videoEl === vidHazure2);
   document.getElementById('wrap').classList.toggle('atarigo-video-playing', videoEl === vidAtarigo || videoEl === vidHukatu2);
   document.getElementById('wrap').classList.toggle('atari02-video-playing', videoEl === vidAtari2);
@@ -3646,6 +3956,9 @@ function playVideo(videoEl) {
   // stall/error/タイムアウト時に onended を強制呼び出してゲームを進行させる
   let _vidFallbackTimer = null;
   const _fireFallback = () => {
+    // 再生中（途中）のストールによる誤発火を防ぐ：
+    // 動画がまだ再生中（ended=false かつ currentTime>0）なら無視する
+    if (!videoEl.ended && !videoEl.error && videoEl.currentTime > 0) return;
     clearTimeout(_vidFallbackTimer);
     _vidFallbackTimer = null;
     videoEl.removeEventListener('stalled', _onStall);
@@ -3662,9 +3975,38 @@ function playVideo(videoEl) {
   videoEl.addEventListener('error',   _onStall, { once: true  });
 
   // play() 失敗時は即座にフォールバック
-  const _playPromise = videoEl.play();
-  if (_playPromise !== undefined) {
-    _playPromise.catch(_fireFallback);
+  // currentTime=0 のシーク完了を待ってから play() する
+  // （シーク中に即 play() すると、バッファ未読み込み時に 0秒で長時間固まるバグを防ぐ）
+  const _startPlay = () => {
+    // ユーザー操作後であれば muted を解除して音を出す
+    if (audioUnlocked && !_ALWAYS_MUTED_IDS.has(videoEl.id)) {
+      videoEl.muted  = false;
+      videoEl.volume = videoVolume;
+    }
+    const _playPromise = videoEl.play();
+    if (_playPromise !== undefined) {
+      _playPromise.catch(_fireFallback);
+    }
+  };
+  if (videoEl.seeking) {
+    let _seekDone = false;
+    const _onSeeked = () => {
+      if (_seekDone) return;
+      _seekDone = true;
+      videoEl.removeEventListener('seeked', _onSeeked);
+      _startPlay();
+    };
+    videoEl.addEventListener('seeked', _onSeeked, { once: true });
+    // 2秒以内に seeked が来なければ強制 play（ネットワーク不良時のフォールバック）
+    setTimeout(() => {
+      if (!_seekDone) {
+        _seekDone = true;
+        videoEl.removeEventListener('seeked', _onSeeked);
+        _startPlay();
+      }
+    }, 2000);
+  } else {
+    _startPlay();
   }
 
   // onended が設定された後（同期コード完了後）にタイムアウトラッパーを装着
@@ -3683,19 +4025,8 @@ function playVideo(videoEl) {
     };
   });
   // ────────────────────────────────────────────────────────────────
-  if (videoEl === vidReach) {
-    // 中リーチ：riti04固定
-    ritiSE = ritiSEList[3]; // riti04
-    ritiSE.currentTime = 0;
-    ritiSE.volume = seVolume;
-    ritiSE.play().catch(() => {});
-  } else if (videoEl === vidReach2) {
-    // 強リーチ：riti08固定
-    ritiSE = ritiSEList[7]; // riti08
-    ritiSE.currentTime = 0;
-    ritiSE.volume = seVolume;
-    ritiSE.play().catch(() => {});
-  }
+  // 中リーチ・強リーチの SE は各動画内の音声トラックで再生されるため、
+  // ここでの ritiSE 個別再生は不要（muted 削除済み）
   // atarigo動画再生時：右打ちON＆ラウンドカウンター開始
   if (videoEl === vidAtarigo) {
     _startAtarigoRoundManagement(vidAtarigo);
@@ -4073,22 +4404,105 @@ function updateRoulette() {
               // 期待度：リーチ強さフェーズを上乗せ
               setExpReach(reachType);
               if (reachType === 'normal') {
-                // 弱リーチ：動画なし、riti01〜riti15 からランダムSE再生
+                // 弱リーチ：zyaku01〜06 からランダムで演出動画再生 → 終了後にSE+d2スピン開始
+                const zyakuVid = getRandomZyakuVid();
+
+                // 動画終了後の処理（riti01/02と同様のパターン）
+                zyakuVid.onended = null;
+                zyakuVid.onended = () => {
+                  zyakuVid.onended = null;
+                  // d2スピン開始（動画非表示・ループ復帰は d2停止後の stopAllVideos() に任せる）
+                  reachVideoEnded = true;
+                  d2SpinStartFrame = rouletteTimer;
+                  // ── digit2 激アツ演出 ──────────────────────────
+                  startD2FeverEffect();
+                };
+
+                // playVideo で再生（ループ停止・他動画停止・フォールバック込み）
+                playVideo(zyakuVid);
+
+                // リーチボイスを動画と同タイミングで再生
                 ritiSE = getRandomRitiSE();
                 ritiSE.currentTime = 0;
                 ritiSE.volume = seVolume;
                 ritiSE.play().catch(() => {});
-                reachVideoEnded = true;
-                d2SpinStartFrame = rouletteTimer;
 
-                // ── digit2 激アツ演出 ──────────────────────────
-                startD2FeverEffect();
+                // ── 動画ごとの秒数後に停止 → botan表示 → OSE待ち ──────────────────
+                let _zyakuPauseResolved = false;
+                const _zyakuAutoTimer = { id: null };
+                const zyakuIdx  = vidZyakuList.indexOf(zyakuVid);
+                const pauseDelay = ZYAKU_PAUSE_MS[zyakuIdx] ?? 2000;
 
-                // 演出をSPIN終了後に自動クリア（d2停止時にcleanupする）
+                const _resumeZyaku = () => {
+                  if (_zyakuPauseResolved) return;
+                  _zyakuPauseResolved = true;
+                  clearTimeout(_zyakuAutoTimer.id);
+                  // botan・テキスト非表示・OSEボタン消灯
+                  botanImg.style.display = 'none';
+                  zyakuText.style.display = 'none';
+                  oseBtn.classList.remove('blinking');
+                  _osePendingCallback = null;
+                  // ketei.mp3 再生
+                  keteiSe.currentTime = 0;
+                  keteiSe.volume = seVolume;
+                  keteiSe.play().catch(() => {});
+                  // 動画resume
+                  zyakuVid.play().catch(() => {});
+                };
+
+                const _zyakuPauseTimer = setTimeout(() => {
+                  if (_zyakuPauseResolved) return;
+                  zyakuVid.pause();
+                  // botan.png を中央に表示 + 動画番号に対応したテキスト
+                  zyakuText.textContent = ZYAKU_TEXT_MAP[zyakuIdx] || '';
+                  botanImg.style.display = 'block';
+                  zyakuText.style.display = 'block';
+                  // OSEボタン点滅開始
+                  _osePendingCallback = _resumeZyaku;
+                  oseBtn.classList.add('blinking');
+                  // 5秒後に自動で再開
+                  _zyakuAutoTimer.id = setTimeout(_resumeZyaku, 5000);
+                }, pauseDelay);
+
+                // フォールバック：動画が再生されない/長時間終了しない場合は強制進行（30秒）
+                (function() {
+                  const _origOnended = zyakuVid.onended;
+                  const _timer = setTimeout(() => {
+                    _zyakuPauseResolved = true; // pause演出もスキップ
+                    clearTimeout(_zyakuPauseTimer);
+                    clearTimeout(_zyakuAutoTimer.id);
+                    botanImg.style.display = 'none';
+                    zyakuText.style.display = 'none';
+                    oseBtn.classList.remove('blinking');
+                    _osePendingCallback = null;
+                    const _h = zyakuVid.onended;
+                    if (_h) { zyakuVid.onended = null; _h.call(zyakuVid, new Event('ended')); }
+                  }, 30000);
+                  zyakuVid.onended = function(e) {
+                    clearTimeout(_timer);
+                    clearTimeout(_zyakuPauseTimer);
+                    clearTimeout(_zyakuAutoTimer.id);
+                    _zyakuPauseResolved = true;
+                    botanImg.style.display = 'none';
+                    zyakuText.style.display = 'none';
+                    oseBtn.classList.remove('blinking');
+                    _osePendingCallback = null;
+                    if (_origOnended) { zyakuVid.onended = _origOnended; _origOnended.call(this, e); }
+                  };
+                })();
               } else {
                 // riti02（15%）が優先、riti01（25%）はriti02でない場合のみ
                 const useRiti02 = reachType === 'riti02';
               const reachVid = useRiti02 ? vidReach2 : vidReach;
+
+              // ─── 弱リーチ前置き演出（中リーチの前にzyaku動画を挟む） ───────────────────
+              // reachType が riti01 or riti02 のとき、一定確率でzyaku動画を先に再生してから
+              // 中リーチ動画へ移行する。期待値・当否率は一切変わらない（演出順序の変更のみ）。
+              // 当たり時・ハズレ時ともに同率（_preZyakuProb）で前置きが発生するため期待値不変。
+              const _preZyakuProb = 0.4;
+              const _doPreZyaku = window._testForcePreZyaku ? (window._testForcePreZyaku = false, true) : Math.random() < _preZyakuProb;
+
+              function _playMidReachVid(fromPreamble) {
               // onended を play() より先に設定（ended 競合による停止バグを防ぐ）
               reachVid.onended = null;
               reachVid.onended = () => {
@@ -4184,11 +4598,19 @@ function updateRoulette() {
                   }
                   }); // end startOseBlink (riti02)
                 } else {
-                  // riti01: OSEシーケンス → 押したらdigit2スピンへ
-                  startOseSequence(() => {
-                    reachVideoEnded = true;
-                    d2SpinStartTimer = rouletteTimer;
-                  });
+                  if (fromPreamble) {
+                    // riti01 前置きフロー：中リーチ動画終了後に d2Stopped を立てて
+                    // 通常の当たり/ハズレ判定ルート（d2Done && rouletteActive）へ流す
+                    startOseSequence(() => {
+                      d2Stopped = true;
+                    });
+                  } else {
+                    // riti01 前置きなし：OSEシーケンス → 押したらdigit2スピンへ
+                    startOseSequence(() => {
+                      reachVideoEnded = true;
+                      d2SpinStartTimer = rouletteTimer;
+                    });
+                  }
                 }
               };
               playVideo(reachVid);
@@ -4206,6 +4628,107 @@ function updateRoulette() {
                 };
                 return _timer;
               })();
+              } // end _playMidReachVid
+
+              // ─── 前置き弱リーチあり：zyaku → digit2結果表示 → 中リーチ動画 ───
+              if (_doPreZyaku) {
+                const preZyakuVid = getRandomZyakuVid();
+                const preZyakuIdx = vidZyakuList.indexOf(preZyakuVid);
+                const prePauseDelay = ZYAKU_PAUSE_MS[preZyakuIdx] ?? 2000;
+
+                // zyaku動画終了後の処理
+                preZyakuVid.onended = null;
+                preZyakuVid.onended = () => {
+                  preZyakuVid.onended = null;
+                  botanImg.style.display = 'none';
+                  zyakuText.style.display = 'none';
+                  oseBtn.classList.remove('blinking');
+                  _osePendingCallback = null;
+                  // digit2の結果を一瞬表示してから中リーチへ（0.8秒）
+                  // ※前置きフロー限定：わざと外れた数字を表示（正解とは必ず異なる1〜9の数字）
+                  const _d2WrongNums = [1,2,3,4,5,6,7,8,9].filter(n => n !== rouletteResult[1]);
+                  const _d2FakeNum = _d2WrongNums[Math.floor(Math.random() * _d2WrongNums.length)];
+                  showDigit2Result(d2, _d2FakeNum);
+                  // d2Stopped はここでは立てない（立てると rouletteActive が即 false になり
+                  // atari01動画が riti01動画より先に発火してしまうため）
+                  // → _playMidReachVid 内で中リーチ動画終了後に立てる
+                  if (window._d2FeverCleanup) window._d2FeverCleanup();
+                  playStopSound();
+                  setTimeout(() => {
+                    // digit2を非表示に戻してから中リーチ動画へ
+                    d2.classList.remove('visible');
+                    _playMidReachVid(true);
+                  }, 800);
+                };
+
+                // リーチSEを再生
+                ritiSE = getRandomRitiSE();
+                ritiSE.currentTime = 0;
+                ritiSE.volume = seVolume;
+                ritiSE.play().catch(() => {});
+
+                playVideo(preZyakuVid);
+
+                // 弱リーチ停止演出（ボタン表示 → OSE待ち → resume）
+                let _preZyakuPauseResolved = false;
+                const _preZyakuAutoTimer = { id: null };
+
+                const _resumePreZyaku = () => {
+                  if (_preZyakuPauseResolved) return;
+                  _preZyakuPauseResolved = true;
+                  clearTimeout(_preZyakuAutoTimer.id);
+                  botanImg.style.display = 'none';
+                  zyakuText.style.display = 'none';
+                  oseBtn.classList.remove('blinking');
+                  _osePendingCallback = null;
+                  keteiSe.currentTime = 0;
+                  keteiSe.volume = seVolume;
+                  keteiSe.play().catch(() => {});
+                  preZyakuVid.play().catch(() => {});
+                };
+
+                const _preZyakuPauseTimer = setTimeout(() => {
+                  if (_preZyakuPauseResolved) return;
+                  preZyakuVid.pause();
+                  zyakuText.textContent = ZYAKU_TEXT_MAP[preZyakuIdx] || '';
+                  botanImg.style.display = 'block';
+                  zyakuText.style.display = 'block';
+                  _osePendingCallback = _resumePreZyaku;
+                  oseBtn.classList.add('blinking');
+                  _preZyakuAutoTimer.id = setTimeout(_resumePreZyaku, 5000);
+                }, prePauseDelay);
+
+                // フォールバック（30秒）
+                (function() {
+                  const _origOnended = preZyakuVid.onended;
+                  const _timer = setTimeout(() => {
+                    _preZyakuPauseResolved = true;
+                    clearTimeout(_preZyakuPauseTimer);
+                    clearTimeout(_preZyakuAutoTimer.id);
+                    botanImg.style.display = 'none';
+                    zyakuText.style.display = 'none';
+                    oseBtn.classList.remove('blinking');
+                    _osePendingCallback = null;
+                    const _h = preZyakuVid.onended;
+                    if (_h) { preZyakuVid.onended = null; _h.call(preZyakuVid, new Event('ended')); }
+                  }, 30000);
+                  preZyakuVid.onended = function(e) {
+                    clearTimeout(_timer);
+                    clearTimeout(_preZyakuPauseTimer);
+                    clearTimeout(_preZyakuAutoTimer.id);
+                    _preZyakuPauseResolved = true;
+                    botanImg.style.display = 'none';
+                    zyakuText.style.display = 'none';
+                    oseBtn.classList.remove('blinking');
+                    _osePendingCallback = null;
+                    if (_origOnended) { preZyakuVid.onended = _origOnended; _origOnended.call(this, e); }
+                  };
+                })();
+
+              } else {
+                // 前置きなし：従来通り直接中リーチ動画
+                _playMidReachVid();
+              }
               } // end else (riti01/riti02 video reach)
             } // end if (!reachTriggered ...)
           }, remainingMs);
@@ -5356,6 +5879,16 @@ window.addEventListener('load', () => {
   updateBallCountDisplay();
   document.getElementById('consumption-disp').innerHTML = `${totalLaunched}<span>個</span>`;
   document.getElementById('rotations-disp').innerHTML = `${totalRotations}<span>回</span>`;
+  // 回転数を上部パネルにも反映（初期値）
+  const rotDispTop = document.getElementById('rotations-disp-top');
+  if (rotDispTop) rotDispTop.innerHTML = `${totalRotations}<span>回</span>`;
+  // MutationObserver で rotations-disp の変化を rotations-disp-top に同期
+  const rotDisp = document.getElementById('rotations-disp');
+  if (rotDisp && rotDispTop) {
+    new MutationObserver(() => {
+      rotDispTop.innerHTML = rotDisp.innerHTML;
+    }).observe(rotDisp, { childList: true, subtree: true, characterData: true });
+  }
 });
 window.addEventListener('resize', positionOseBtn);
 
@@ -5372,7 +5905,7 @@ function startOseSequence(callback) {
   vidOse.loop = true;
   vidOse.style.display = 'block';
   vidOse.currentTime = 0;
-  vidOse.play().catch(() => {});
+  _seekedPlay(vidOse); // seeked 待ちから play()
   // osevc.mp3 再生
   oseVc.currentTime = 0;
   oseVc.volume = seVolume;
@@ -5410,6 +5943,9 @@ function stopOseSequence() {
   vidOse.pause();
   vidOse.currentTime = 0;
   vidOse.style.display = 'none';
+  // 弱リーチ停止演出のクリーンアップ
+  if (botanImg) botanImg.style.display = 'none';
+  if (zyakuText) zyakuText.style.display = 'none';
 }
 
 // 旧名エイリアス（内部互換）
@@ -5425,7 +5961,7 @@ function startOseSequenceShort(callback) {
   vidOse.loop = true;
   vidOse.style.display = 'block';
   vidOse.currentTime = 0;
-  vidOse.play().catch(() => {});
+  _seekedPlay(vidOse); // seeked 待ちから play()
 
   // OSEボタン点滅開始
   _osePendingCallback = () => {
@@ -5473,6 +6009,7 @@ oseBtn.addEventListener('click', function(e) {
 // 呼び出し後、holdColors[0/1]=ハズレ白、holdColors[2]=当たり（winTypeに対応）
 let _testHoldWinType = null; // 3回目に使う演出種別を記憶
 window._testForceFukkatsu = false; // 復活ルート強制フラグ
+window._testForcePreZyaku = false; // 前置きフロー強制フラグ
 function _setupTestHolds3(winType) {
   _testHoldWinType = winType;
   holdColors = [];
@@ -5624,8 +6161,8 @@ function triggerTestRushBonus() {
   if (vid) {
     vid.style.display = 'block';
     vid.currentTime = 0;
-    vid.play().catch(() => {});
     vid.onended = _onTestRushDone;
+    _seekedPlay(vid); // seeked 待ちから play()
   }
   if (rushVc) {
     rushVc.currentTime = 0;
@@ -5669,6 +6206,44 @@ function triggerTestFukkatsu() {
 }
 
 document.getElementById('test-fukkatsu-btn').addEventListener('click', triggerTestFukkatsu);
+
+// ─── テスト用：前置きフロー全パターンの強制テストボタン ───────────────
+// window._testForcePreZyaku = true にセットすることで _doPreZyaku を強制 true にする
+
+// 前置き＋中リーチ当たり
+document.getElementById('test-pre-riti01-win-btn').addEventListener('click', () => {
+  window._testForcePreZyaku = true;
+  _setupTestHolds3('riti01');
+  _startTestFromHold1();
+});
+
+// 前置き＋中リーチハズレ
+document.getElementById('test-pre-riti01-hazure-btn').addEventListener('click', () => {
+  window._testForcePreZyaku = true;
+  _setupTestHolds3('hazure-riti01');
+  _startTestFromHold1();
+});
+
+// 前置き＋強リーチ当たり（直行）
+document.getElementById('test-pre-riti02-win-btn').addEventListener('click', () => {
+  window._testForcePreZyaku = true;
+  _setupTestHolds3('riti02');
+  _startTestFromHold1();
+});
+
+// 前置き＋強リーチ復活
+document.getElementById('test-pre-riti02-fukkatsu-btn').addEventListener('click', () => {
+  window._testForcePreZyaku = true;
+  _setupTestHolds3('fukkatsu');
+  _startTestFromHold1();
+});
+
+// 前置き＋強リーチハズレ
+document.getElementById('test-pre-riti02-hazure-btn').addEventListener('click', () => {
+  window._testForcePreZyaku = true;
+  _setupTestHolds3('hazure-riti02');
+  _startTestFromHold1();
+});
 
 // ─── テスト用：弱リーチ演出に直接移行するボタン ─────────────────
 function triggerTestReachNormal() {
@@ -6313,12 +6888,12 @@ function _setupBonusSpin() {
           resultVid.currentTime = 0;
           resultVid.onended = onResultDone;
           resultVid.onerror = onResultDone;
-          resultVid.play().catch(onResultDone);
+          _seekedPlay(resultVid, onResultDone); // seeked 待ちから play()
         }
 
         reachVid.onended = playResultVid;
         reachVid.onerror = playResultVid;
-        reachVid.play().catch(playResultVid);
+        _seekedPlay(reachVid, playResultVid); // seeked 待ちから play()
 
       }, BONUS_RESULT_MS);
     });
@@ -6601,10 +7176,8 @@ function _maybeRush(proceedFn) {
       vid.style.display = 'block';
       vid.currentTime = 0;
       vid.onended = _onRushEntryDone;
-      vid.play().catch(() => {
-        // 再生失敗時はすぐ次へ
-        _onRushEntryDone();
-      });
+      // seeked 待ちから play()（currentTime=0 のシーク完了前に play() すると固まるバグを防ぐ）
+      _seekedPlay(vid, _onRushEntryDone);
       // ストール・タイムアウト対策（60秒）
       const _rushEntryTimer = setTimeout(_onRushEntryDone, 60000);
       vid.addEventListener('stalled', () => setTimeout(_onRushEntryDone, 5000), { once: true });
@@ -6720,5 +7293,42 @@ function _maybeRush(proceedFn) {
     </div>
   </div>
 </div>
+<!-- ─── 設定モーダル ─── -->
+<div id="settings-overlay" onclick="if(event.target===this)closeSettings()">
+  <div id="settings-modal">
+    <button id="settings-close-btn" onclick="closeSettings()">✕</button>
+    <h2>⚙ 設定</h2>
+
+    <!-- 音量 -->
+    <div class="settings-section">
+      <h4>🔊 音量</h4>
+      <div class="vol-row">
+        <span class="vol-label">BGM</span>
+        <input type="range" id="vol-bgm" min="0" max="100" value="20">
+        <span class="vol-val" id="vol-bgm-val">20%</span>
+      </div>
+      <div class="vol-row">
+        <span class="vol-label">動画</span>
+        <input type="range" id="vol-vid" min="0" max="100" value="80">
+        <span class="vol-val" id="vol-vid-val">80%</span>
+      </div>
+      <div class="vol-row">
+        <span class="vol-label">SE</span>
+        <input type="range" id="vol-se" min="0" max="100" value="80">
+        <span class="vol-val" id="vol-se-val">80%</span>
+      </div>
+    </div>
+
+    <!-- ワク形式 -->
+    <div class="settings-section">
+      <h4>🎞 ワク形式（全色共通）</h4>
+      <div class="waku-fmt-btns">
+        <button class="waku-fmt-btn active" id="waku-fmt-webm" onclick="setWakuBlueFormat('webm')">webm</button>
+        <button class="waku-fmt-btn"        id="waku-fmt-apng" onclick="setWakuBlueFormat('apng')">apng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

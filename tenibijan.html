@@ -2239,7 +2239,7 @@ body{
       <!-- 統計 -->
       <div style="margin-top:12px;text-align:center;font-size:.55rem;color:#2a4a3a;" id="gachaStat"></div>
       <!-- 排出内訳 -->
-      <div class="gacha-sub" style="margin-top:16px;">LEGEND排出で全18種から完全均等抽選（各1/18）！</div>
+      <div class="gacha-sub" style="margin-top:16px;">LEGEND排出で全19種から完全均等抽選（各1/19）！</div>
       <!-- レアリティ表 -->
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;justify-content:center;">
         <span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:#0a1a14;border:1px solid #2a4a3a;color:#5a8a7a;">NORMAL 89.9%</span>
@@ -2373,6 +2373,10 @@ body{
           <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
             <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
             <div style="font-size:.48rem;color:#ffd700;">L19</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#0a0800;border:1px solid #ffd700;border-radius:8px;padding:8px 12px;min-width:56px;">
+            <div style="width:36px;height:36px;background:#1a0e00;border:1.5px solid #ffd700;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ffd700;font-weight:900;">?</div>
+            <div style="font-size:.48rem;color:#ffd700;">L20</div>
           </div>
         </div>
         <!-- リーチBGM -->
@@ -3576,6 +3580,7 @@ body{
           <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L17" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L17 エリシア</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L17',+this.value)"></div>
           <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L18" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L18 ハスキー</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L18',+this.value)"></div>
           <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L19" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L19 ハムハム</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L19',+this.value)"></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span data-lv-id="L20" style="font-size:.6rem;color:#c9a84c;width:130px;flex-shrink:0;">L20 コウリオ</span><input type="range" min="0" max="1" step="0.05" value="1" style="flex:1;accent-color:#c9a84c;" oninput="setIconVoiceScale('L20',+this.value)"></div>
         </div>
       </div>
     </div>
@@ -11322,7 +11327,7 @@ function _updateAFKBtn(){
 function _applyIconVoiceSliders(){
   const container = document.getElementById('legendVoiceSliders');
   if(!container) return;
-  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09','L10','L11','L12','L13','L14','L15','L16','L17','L18','L19'];
+  const ids = ['L01','L02','L03','L04','L05','L06','L07','L08','L09','L10','L11','L12','L13','L14','L15','L16','L17','L18','L19','L20'];
   const sliders = container.querySelectorAll('input[type=range]');
   sliders.forEach((sl, i) => {
     const id = ids[i];
@@ -19104,6 +19109,7 @@ const GACHA_ICONS = [
   {id:'L17',rarity:'legend',label:'エリシア'},
   {id:'L18',rarity:'legend',label:'ハスキー'},
   {id:'L19',rarity:'legend',label:'ハムハム'},
+  {id:'L20',rarity:'legend',label:'コウリオ'},
 ];
 // ローカル管理アイコン（ガチャ排出なし・常時所持）
 const LOCAL_ICONS = [
@@ -19270,6 +19276,13 @@ const ICON_SE_MAP = {
     ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron17.mp3',
     tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo17.mp3',
   },
+  'L20': {
+    kan:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/kan18.mp3',
+    pon:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/pon18.mp3',
+    riichi: 'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/riti18.mp3',
+    ron:    'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/ron18.mp3',
+    tsumo:  'https://raw.githubusercontent.com/tenibi/tenibijan/main/vc/tumo18.mp3',
+  },
 };
 
 // レジェンドアイコンごとの個別ボイス音量スケール (0〜1, デフォルト1)
@@ -19277,7 +19290,7 @@ const iconVoiceScale = {
   'L01':1,'L02':1,'L03':1,'L04':1,'L05':1,
   'L06':1,'L07':1,'L08':1,'L09':1,'L10':1,'L11':1,'L12':1,
   'L13':1,'L14':1,'L15':1,'L16':1,'L17':1,
-  'L18':1,'L19':1,
+  'L18':1,'L19':1,'L20':1,
 };
 function setIconVoiceScale(iconId, val){
   iconVoiceScale[iconId] = Math.min(1, Math.max(0, val));

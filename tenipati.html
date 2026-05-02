@@ -1094,9 +1094,514 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
   transition: color 0.15s;
 }
 #settings-close-btn:hover { color: #fbbf24; }
+
+/* ═══ 右パネル 収納トグル ═══ */
+#right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  max-width: 300px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-width 0.38s cubic-bezier(.4,0,.2,1),
+              opacity   0.28s ease,
+              margin    0.38s ease,
+              padding   0.38s ease;
+}
+#right-panel.rp-collapsed {
+  max-width: 0 !important;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+#panel-toggle-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-family: sans-serif;
+  border-radius: 8px;
+  border: 1px solid rgba(167,139,250,0.4);
+  background: rgba(124,58,237,0.15);
+  color: rgba(167,139,250,0.7);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+#panel-toggle-top:hover {
+  background: rgba(124,58,237,0.3);
+  color: #fbbf24;
+  border-color: rgba(251,191,36,0.5);
+}
+#panel-open-below {
+  display: none;
+  margin-top: 6px;
+  margin-bottom: 2px;
+}
+#panel-open-below button {
+  padding: 9px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  font-family: sans-serif;
+  border-radius: 10px;
+  border: 1.5px solid rgba(167,139,250,0.6);
+  background: rgba(124,58,237,0.28);
+  color: #a78bfa;
+  cursor: pointer;
+  transition: all 0.18s;
+  box-shadow: 0 0 12px rgba(124,58,237,0.25);
+}
+#panel-open-below button:hover {
+  background: rgba(124,58,237,0.55);
+  color: #fbbf24;
+  border-color: rgba(251,191,36,0.7);
+  box-shadow: 0 0 18px rgba(124,58,237,0.5);
+}
+
+/* ═══ 縦画面（portrait）レスポンシブ ═══ */
+@media (orientation: portrait) {
+  body {
+    padding: 0 !important;
+    align-items: flex-start;
+  }
+  #main-container {
+    flex-direction: column !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    gap: 0 !important;
+  }
+  #wrap {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+    flex-shrink: 1 !important;
+  }
+  #right-panel {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin-top: 0 !important;
+    padding: 12px 16px !important;
+    gap: 10px !important;
+    background: rgba(10,0,16,0.95) !important;
+    border-top: 1px solid rgba(124,58,237,0.3) !important;
+  }
+  #right-panel.rp-collapsed {
+    max-width: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+  #panel-open-below {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  #panel-open-below button {
+    width: 100% !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 12px !important;
+  }
+}
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════
+     ローディングスクリーン
+     ═══════════════════════════════════════════════════ -->
+<div id="loading-overlay">
+<style>
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: radial-gradient(ellipse at 50% 40%, #1a0035 0%, #0a0010 60%, #000 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+  transition: opacity 0.9s ease, visibility 0.9s ease;
+}
+#loading-overlay.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* パーティクル背景 */
+#lo-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lo-ball {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe97a, #c49b00);
+  box-shadow: 0 0 6px rgba(255,210,0,0.5);
+  animation: loBallFall linear infinite;
+  opacity: 0;
+}
+@keyframes loBallFall {
+  0%   { transform: translateY(-20px); opacity: 0; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(110vh); opacity: 0; }
+}
+
+/* コンテンツ */
+#lo-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* タイトル */
+#lo-title {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #fbbf24;
+  text-shadow: 0 0 20px rgba(251,191,36,0.7), 0 0 50px rgba(251,191,36,0.3);
+  margin-bottom: 6px;
+  animation: loTitlePulse 2s ease-in-out infinite;
+}
+@keyframes loTitlePulse {
+  0%, 100% { text-shadow: 0 0 20px rgba(251,191,36,0.7), 0 0 50px rgba(251,191,36,0.3); }
+  50%       { text-shadow: 0 0 30px rgba(251,191,36,1),   0 0 70px rgba(251,191,36,0.5); }
+}
+#lo-subtitle {
+  font-size: 12px;
+  letter-spacing: 4px;
+  color: #a78bfa;
+  margin-top: -8px;
+  margin-bottom: 16px;
+}
+
+/* ── 円形ゲージ ── */
+#lo-ring-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+#lo-ring-svg {
+  transform: rotate(-90deg);
+  width: 200px;
+  height: 200px;
+  filter: drop-shadow(0 0 12px rgba(167,139,250,0.5));
+}
+#lo-ring-track {
+  fill: none;
+  stroke: rgba(124,58,237,0.2);
+  stroke-width: 14;
+}
+#lo-ring-fill {
+  fill: none;
+  stroke: url(#loGradient);
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-dasharray: 502;
+  stroke-dashoffset: 502;
+  transition: stroke-dashoffset 0.4s ease;
+}
+#lo-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+#lo-pct-num {
+  font-size: 42px;
+  font-weight: 900;
+  color: #fbbf24;
+  letter-spacing: -1px;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(251,191,36,0.6);
+}
+#lo-pct-label {
+  font-size: 11px;
+  color: #a78bfa;
+  letter-spacing: 3px;
+}
+
+/* ── 細いバー ── */
+#lo-bar-wrap {
+  width: 260px;
+  height: 8px;
+  background: rgba(124,58,237,0.15);
+  border-radius: 4px;
+  border: 1px solid rgba(124,58,237,0.3);
+  overflow: hidden;
+  margin-top: 4px;
+}
+#lo-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7c3aed, #a855f7, #fbbf24);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 10px rgba(168,85,247,0.5);
+}
+
+/* ── LED セグメントバー ── */
+#lo-leds {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+.lo-led {
+  width: 12px;
+  height: 18px;
+  border-radius: 3px;
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.25);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.lo-led.on {
+  background: #a855f7;
+  box-shadow: 0 0 8px rgba(168,85,247,0.8);
+  border-color: #c084fc;
+}
+.lo-led.on.gold {
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251,191,36,0.8);
+  border-color: #fde68a;
+}
+
+/* ── テキスト ── */
+#lo-count {
+  font-size: 12px;
+  color: #6d28d9;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+#lo-status {
+  font-size: 13px;
+  color: #c4b5fd;
+  letter-spacing: 1px;
+  min-height: 18px;
+  text-align: center;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#lo-ready {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #fbbf24;
+  text-shadow: 0 0 20px rgba(251,191,36,0.8);
+  opacity: 0;
+  transition: opacity 0.4s;
+  animation: loReadyBlink 0.5s step-start infinite;
+}
+#lo-ready.show { opacity: 1; }
+@keyframes loReadyBlink {
+  50% { opacity: 0.3; }
+}
+</style>
+
+<!-- SVGグラデーション定義 -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="loGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#7c3aed"/>
+      <stop offset="60%"  stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<!-- パーティクル -->
+<div id="lo-particles"></div>
+
+<div id="lo-content">
+  <div id="lo-title">🎰 手にパチ</div>
+  <div id="lo-subtitle">L O A D I N G</div>
+
+  <!-- 円形ゲージ -->
+  <div id="lo-ring-wrap">
+    <svg id="lo-ring-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle id="lo-ring-track" cx="100" cy="100" r="80"/>
+      <circle id="lo-ring-fill"  cx="100" cy="100" r="80"/>
+    </svg>
+    <div id="lo-ring-center">
+      <div id="lo-pct-num">0</div>
+      <div id="lo-pct-label">%</div>
+    </div>
+  </div>
+
+  <!-- LED バー -->
+  <div id="lo-leds"></div>
+
+  <!-- 細バー -->
+  <div id="lo-bar-wrap"><div id="lo-bar"></div></div>
+
+  <!-- テキスト -->
+  <div id="lo-count">0 / 0 完了</div>
+  <div id="lo-status">起動準備中...</div>
+  <div id="lo-ready">GAME START！</div>
+</div>
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────
+   ローディングマネージャー
+   ────────────────────────────────────────────────── */
+(function() {
+  /* ---- パーティクル生成 ---- */
+  const pContainer = document.getElementById('lo-particles');
+  for (let i = 0; i < 18; i++) {
+    const b = document.createElement('div');
+    b.className = 'lo-ball';
+    b.style.left = (Math.random() * 100) + '%';
+    b.style.animationDuration = (3 + Math.random() * 5) + 's';
+    b.style.animationDelay = (Math.random() * 6) + 's';
+    b.style.width = b.style.height = (5 + Math.random() * 6) + 'px';
+    pContainer.appendChild(b);
+  }
+
+  /* ---- LED 初期化 ---- */
+  const LED_COUNT = 20;
+  const ledContainer = document.getElementById('lo-leds');
+  for (let i = 0; i < LED_COUNT; i++) {
+    const d = document.createElement('div');
+    d.className = 'lo-led';
+    ledContainer.appendChild(d);
+  }
+
+  /* ---- 追跡対象リスト ---- */
+  const VIDEO_IDS = [
+    'vid-loop','vid-reach','vid-reach2','vid-hazure','vid-hazure2',
+    'vid-atari','vid-atari2','vid-hukatu2','vid-atarigo','vid-zenkaiten',
+    'vid-kanecorn','vid-ose','vid-bonus01',
+    'vid-rush-atarigo','vid-rush-atarigo02','vid-rush-entry','vid-rush-keizoku',
+    'vid-rush-loop','vid-rush-ataNou','vid-rush-hazuNou',
+    'vid-rush-ataNouAta','vid-rush-ataNouHazu','vid-rush-hazuNouAta','vid-rush-hazuNouHazu',
+    'vid-zyaku1','vid-zyaku2','vid-zyaku3','vid-zyaku4','vid-zyaku5','vid-zyaku6',
+    'vid-waku-blue','vid-waku-green','vid-waku-red','vid-waku-gold'
+  ];
+  const AUDIO_IDS = ['ose-vc','ose-end','ketei-se','rush-vc'];
+  const FRAME_URL  = 'https://github.com/tenibi/tenibijan/releases/download/v1.0/frame.png';
+
+  const TOTAL = VIDEO_IDS.length + AUDIO_IDS.length + 1; /* +1 frame.png */
+  let loadedCount = 0;
+  let finished = false;
+
+  /* ---- UI 更新 ---- */
+  const elPct    = document.getElementById('lo-pct-num');
+  const elBar    = document.getElementById('lo-bar');
+  const elFill   = document.getElementById('lo-ring-fill');
+  const elCount  = document.getElementById('lo-count');
+  const elStatus = document.getElementById('lo-status');
+  const elReady  = document.getElementById('lo-ready');
+  const leds     = ledContainer.querySelectorAll('.lo-led');
+  const CIRCUM   = 2 * Math.PI * 80; /* r=80 → ≈502.65 */
+
+  function updateUI(name) {
+    const pct = Math.min(100, Math.round(loadedCount / TOTAL * 100));
+    elPct.textContent  = pct;
+    elBar.style.width  = pct + '%';
+    elFill.style.strokeDashoffset = CIRCUM * (1 - pct / 100);
+    elCount.textContent = loadedCount + ' / ' + TOTAL + ' 完了';
+    if (name) {
+      const short = name.split('/').pop().replace('releases/download/v1.0/', '');
+      elStatus.textContent = '✓ ' + short;
+    }
+    /* LED */
+    const onCount = Math.round(pct / 100 * LED_COUNT);
+    leds.forEach((led, i) => {
+      if (i < onCount) {
+        led.classList.add('on');
+        led.classList.toggle('gold', i >= LED_COUNT - 3);
+      } else {
+        led.classList.remove('on','gold');
+      }
+    });
+  }
+
+  function onResourceLoaded(name) {
+    if (finished) return;
+    loadedCount++;
+    updateUI(name);
+    if (loadedCount >= TOTAL) complete();
+  }
+
+  function complete() {
+    if (finished) return;
+    finished = true;
+    elStatus.textContent = 'すべての動画が準備できました！';
+    elReady.classList.add('show');
+    setTimeout(dismissOverlay, 900);
+  }
+
+  function dismissOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+      overlay.classList.add('fade-out');
+      setTimeout(() => overlay.remove(), 1000);
+    }
+  }
+
+  /* ---- 動画を追跡 ---- */
+  VIDEO_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) { onResourceLoaded(id); return; }
+    if (el.readyState >= 1) { onResourceLoaded(el.src || id); return; }
+    el.addEventListener('loadedmetadata', () => onResourceLoaded(el.src || id), { once: true });
+    el.addEventListener('error', () => onResourceLoaded(el.src || id), { once: true });
+  });
+
+  /* ---- 音声を追跡 ---- */
+  AUDIO_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) { onResourceLoaded(id); return; }
+    if (el.readyState >= 1) { onResourceLoaded(el.src || id); return; }
+    el.addEventListener('loadedmetadata', () => onResourceLoaded(el.src || id), { once: true });
+    el.addEventListener('error', () => onResourceLoaded(el.src || id), { once: true });
+  });
+
+  /* ---- frame.png を追跡 ---- */
+  const fImg = new Image();
+  fImg.onload  = () => onResourceLoaded(FRAME_URL);
+  fImg.onerror = () => onResourceLoaded(FRAME_URL);
+  fImg.src = FRAME_URL;
+
+  /* ---- タイムアウト保険（25秒） ---- */
+  setTimeout(() => {
+    if (!finished) {
+      elStatus.textContent = 'タイムアウト — ゲームを起動します';
+      complete();
+    }
+  }, 25000);
+
+  /* ---- 初期描画 ---- */
+  updateUI(null);
+})();
+</script>
+
 <div id="main-container">
   <div id="wrap">
     <div id="jackpot-banner">★★★ 777 大当たり！ ★★★</div>
@@ -1206,10 +1711,16 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
     </div>
     <img id="nizi-overlay" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/framenizi.gif" alt="">
     <img id="frame-overlay" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/frame.png" alt="">
+    <!-- 台画像の下：パネルが収納されているときだけ表示 -->
+    <div id="panel-open-below">
+      <button onclick="toggleRightPanel()">☰ メニューを開く</button>
+    </div>
   </div>
 
   <!-- 常時表示エリア：持ち玉・期待値表・音量 -->
-  <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+  <div id="right-panel">
+    <!-- 収納ボタン（パネル上部） -->
+    <button id="panel-toggle-top" onclick="toggleRightPanel()">◀ 収納する</button>
     <!-- タイトルへ戻るボタン -->
     <div class="panel-item" style="padding:0;">
       <a href="https://tenibi.github.io/tenibijan/tenibijan.html"
@@ -1353,6 +1864,69 @@ function toggleGearPanel() {
   btn.style.background = open ? 'rgba(124,58,237,0.55)' : 'rgba(124,58,237,0.25)';
   btn.style.color = open ? '#fbbf24' : '#a78bfa';
 }
+
+// ─── 右パネル 収納トグル ────────────────────────────
+function toggleRightPanel() {
+  const panel    = document.getElementById('right-panel');
+  const openBtn  = document.getElementById('panel-open-below');
+  const isOpen   = !panel.classList.contains('rp-collapsed');
+
+  if (isOpen) {
+    /* 収納 */
+    panel.classList.add('rp-collapsed');
+    openBtn.style.display = 'flex';
+    openBtn.style.justifyContent = 'center';
+  } else {
+    /* 展開 */
+    panel.classList.remove('rp-collapsed');
+    openBtn.style.display = 'none';
+  }
+}
+
+// ─── 縦横切り替え時のキャンバスリサイズ ─────────────
+function onOrientationChange() {
+  applyCanvasSize();
+  // 縦画面に切り替わった際、横画面でのwrapスクロール量を引き継がないようにリセット
+  const wrapEl = document.getElementById('wrap');
+  if (wrapEl) { wrapEl.scrollTop = 0; wrapEl.scrollLeft = 0; }
+  // rebuildLayout は後半で定義されるため、定義済みの場合のみ呼ぶ
+  if (typeof rebuildLayout === 'function') {
+    rebuildLayout();
+  }
+
+  /* 縦画面なら右パネルを自動収納 */
+  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+  const panel  = document.getElementById('right-panel');
+  const openBtn = document.getElementById('panel-open-below');
+  if (isPortrait && panel && !panel.classList.contains('rp-collapsed')) {
+    panel.classList.add('rp-collapsed');
+    if (openBtn) { openBtn.style.display = 'flex'; openBtn.style.justifyContent = 'center'; }
+  }
+}
+window.addEventListener('resize', onOrientationChange);
+window.addEventListener('orientationchange', () => setTimeout(onOrientationChange, 150));
+
+/* ページ読み込み時：縦画面なら即収納 */
+(function() {
+  if (window.matchMedia('(orientation: portrait)').matches) {
+    const panel   = document.getElementById('right-panel');
+    const openBtn = document.getElementById('panel-open-below');
+    if (panel)   panel.classList.add('rp-collapsed');
+    if (openBtn) { openBtn.style.display = 'flex'; openBtn.style.justifyContent = 'center'; }
+  }
+})();
+
+/* #wrapスクロール時にオーバーレイ位置を再計算（横画面でwrapをスクロールした場合） */
+(function() {
+  const wrapEl = document.getElementById('wrap');
+  if (wrapEl) {
+    wrapEl.addEventListener('scroll', function() {
+      if (typeof positionOseBtn === 'function') positionOseBtn();
+      if (typeof syncFrameOverlay === 'function') syncFrameOverlay();
+      if (typeof syncNiziOverlay === 'function') syncNiziOverlay();
+    });
+  }
+})();
 
 // ─── スロット画像 ────────────────────────────────────
 const BASE_URL = 'https://raw.githubusercontent.com/tenibi/tenibijan/main/';
@@ -1617,32 +2191,35 @@ let imgNatW = 1024, imgNatH = 1536;
 let W, H;
 let frameLoaded = false;
 
-{
-  const maxW = Math.min(imgNatW, 525);
+/* ── 縦画面でフル幅、横画面は525px上限 ── */
+function getCanvasMaxW() {
+  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+  return isPortrait ? window.innerWidth : Math.min(imgNatW, 525);
+}
+function applyCanvasSize() {
+  const maxW = getCanvasMaxW();
   const scale = maxW / imgNatW;
   W = Math.round(imgNatW * scale);
   H = Math.round(imgNatH * scale);
+  canvas.width  = W;
+  canvas.height = H;
 }
-canvas.width = W;
-canvas.height = H;
+
+{
+  applyCanvasSize();
+}
 
 const frameImg = new Image();
 frameImg.crossOrigin = 'anonymous';
 frameImg.src = FRAME_URL;
 frameImg.onload = () => {
   // imgNatW/Hは1024×1536固定のまま（画像実サイズではなく設計基準）
-  const maxW = Math.min(imgNatW, 525);
-  const scale = maxW / imgNatW;
-  W = Math.round(imgNatW * scale);
-  H = Math.round(imgNatH * scale);
-  canvas.width = W;
-  canvas.height = H;
+  applyCanvasSize();
   frameLoaded = true;
   rebuildLayout();
 };
 frameImg.onerror = () => {
-  canvas.width = W;
-  canvas.height = H;
+  applyCanvasSize();
   rebuildLayout();
 };
 
@@ -2759,8 +3336,9 @@ function syncFrameOverlay() {
   const wrapEl = document.getElementById('wrap');
   const canvasRect = canvasEl.getBoundingClientRect();
   const wrapRect = wrapEl.getBoundingClientRect();
-  frameOverlay.style.left   = (canvasRect.left - wrapRect.left) + 'px';
-  frameOverlay.style.top    = (canvasRect.top  - wrapRect.top)  + 'px';
+  // getBoundingClientRect()はスクロール量を反映するがposition:absoluteはしないので補正
+  frameOverlay.style.left   = (canvasRect.left - wrapRect.left + wrapEl.scrollLeft) + 'px';
+  frameOverlay.style.top    = (canvasRect.top  - wrapRect.top  + wrapEl.scrollTop)  + 'px';
   frameOverlay.style.width  = canvasRect.width  + 'px';
   frameOverlay.style.height = canvasRect.height + 'px';
 }
@@ -2770,8 +3348,9 @@ function syncNiziOverlay() {
   const wrapEl = document.getElementById('wrap');
   const canvasRect = canvasEl.getBoundingClientRect();
   const wrapRect = wrapEl.getBoundingClientRect();
-  niziOverlay.style.left   = (canvasRect.left - wrapRect.left) + 'px';
-  niziOverlay.style.top    = (canvasRect.top  - wrapRect.top)  + 'px';
+  // getBoundingClientRect()はスクロール量を反映するがposition:absoluteはしないので補正
+  niziOverlay.style.left   = (canvasRect.left - wrapRect.left + wrapEl.scrollLeft) + 'px';
+  niziOverlay.style.top    = (canvasRect.top  - wrapRect.top  + wrapEl.scrollTop)  + 'px';
   niziOverlay.style.width  = canvasRect.width  + 'px';
   niziOverlay.style.height = canvasRect.height + 'px';
   // GIFアニメーションを先頭からリスタート
@@ -2851,6 +3430,28 @@ function rebuildLayout() {
   ];
   // OSEボタン位置を再計算
   if (typeof positionOseBtn === 'function') positionOseBtn();
+
+  // ── 動画レイヤーをキャンバス幅に合わせてスケール ──
+  // top: 90px は 525px 幅基準で設計されているので比例スケール
+  const videoLayer = document.getElementById('video-layer');
+  if (videoLayer) {
+    videoLayer.style.top = Math.round(90 * W / 525) + 'px';
+    videoLayer.querySelectorAll('video').forEach(v => {
+      v.style.width    = W + 'px';
+      v.style.height   = 'auto';
+      v.style.maxWidth = 'none';
+    });
+  }
+  const wakuLayer = document.getElementById('waku-layer');
+  if (wakuLayer) {
+    wakuLayer.querySelectorAll('video, img').forEach(el => {
+      el.style.width    = W + 'px';
+      el.style.height   = 'auto';
+      el.style.maxWidth = 'none';
+    });
+    // waku-layer 自体の幅も合わせる
+    wakuLayer.style.width = W + 'px';
+  }
 }
 
 function startRoulette() {
@@ -5891,13 +6492,16 @@ const oseBtn = document.getElementById('ose-btn');
 function positionOseBtn() {
   const xs = sx(), ys = sy();
   const canvasRect = canvas.getBoundingClientRect();
-  const wrapRect = document.getElementById('wrap').getBoundingClientRect();
+  const wrapEl = document.getElementById('wrap');
+  const wrapRect = wrapEl.getBoundingClientRect();
   // CENTERチューリップ: x=512px基準中央, y=1000px基準、高さ16px
   const centerX = 512 * xs; // canvas内X
   const tulipBottomY = (1000 + 16) * ys; // canvas内Y（チューリップ下端）
   // wrapからcanvas上端までのオフセット
-  const canvasOffsetTop = canvasRect.top - wrapRect.top;
-  const canvasOffsetLeft = canvasRect.left - wrapRect.left;
+  // getBoundingClientRect()はスクロール済み位置を返すが、
+  // position:absoluteのtop/leftはスクロール前の座標系なので scrollTop/Left で補正する
+  const canvasOffsetTop  = canvasRect.top  - wrapRect.top  + wrapEl.scrollTop;
+  const canvasOffsetLeft = canvasRect.left - wrapRect.left + wrapEl.scrollLeft;
   const btnW = 112, btnH = 66;
   // oseOverlay を直接取得（const宣言より前に呼ばれてもエラーにならないように）
   const _ov = document.getElementById('ose-overlay');

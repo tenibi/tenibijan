@@ -1241,6 +1241,12 @@ body{
 /* ===== STEAL ABILITY ===== */
 .btn-steal{background:linear-gradient(135deg,#0a1a0a,#050e05);border-color:#44aa44;color:#88ff88;font-weight:700;}
 .btn-steal:hover{border-color:#66cc66;box-shadow:0 0 10px #44aa4433;transform:translateY(-1px);}
+.btn-curse{background:linear-gradient(135deg,#1a0a2a,#0d0518);border-color:#aa44cc;color:#dd88ff;font-weight:700;}
+.btn-curse:hover{border-color:#cc66ee;box-shadow:0 0 10px #aa44cc33;transform:translateY(-1px);}
+.tile.curse-locked{border-color:#aa44cc!important;box-shadow:0 0 8px #aa44cc88!important;background:linear-gradient(160deg,#1a0a2a,#0d0518)!important;position:relative;}
+.tile.curse-locked::after{content:'🔮';position:absolute;top:1px;right:1px;font-size:.4em;opacity:.9;}
+.curse-select-target{cursor:pointer;border-color:#dd88ff!important;box-shadow:0 0 8px #aa44cc66!important;animation:cursePulse 1s ease-in-out infinite;}
+@keyframes cursePulse{0%,100%{box-shadow:0 0 5px #aa44cc55;}50%{box-shadow:0 0 14px #cc66ff99;}}
 .tile.steal-target{border-color:#44ff44!important;cursor:pointer!important;animation:stealPulse 1s ease-in-out infinite;z-index:2;position:relative;}
 @keyframes stealPulse{0%,100%{box-shadow:0 0 4px #44ff4466;}50%{box-shadow:0 0 12px #44ff44cc;}}
 /* ===== PINZU-KYO (ピンズー教) ABILITY ===== */
@@ -7319,7 +7325,7 @@ function _forceStartRankCPUGame(){
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,
-     lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,
+     lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,curseSelectMode:false,senouMode:false,senouUserIdx:null,senouTarget:null,senouActive:false,
      mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},
      penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
@@ -8623,7 +8629,7 @@ function _addCpuToRoomWithAbility(ability){
   const CPU_PROFILE = {
     'mine':'地雷師ナミ','light':'光の探偵ヒカル','yami':'闇使いカゲ',
     'haku':'白術士ハク','sanctuary':'聖域守りセイ','pinzu':'筒子教ピン',
-    'steal':'盗賊スティール','tenbi':'手にビ','red_eye':'赤眼レッド','':{name:'CPU'}
+    'steal':'盗賊スティール','tenbi':'手にビ','red_eye':'赤眼レッド','curse':'呪い師ノロイ','':{name:'CPU'}
   };
   const CPU_ICON = {
     'mine':'C01','light':'C02','yami':'C03','haku':'C04',
@@ -8631,7 +8637,7 @@ function _addCpuToRoomWithAbility(ability){
   };
   let resolvedAbility = ability;
   if(ability === 'random'){
-    const cpuAbilities=['mine','light','yami','haku','sanctuary','pinzu','steal','tenbi','red_eye'];
+    const cpuAbilities=['mine','light','yami','haku','sanctuary','pinzu','steal','tenbi','red_eye','curse'];
     const unlockedAbs = cpuAbilities.filter(a => isCpuUnlocked(a));
     const pool = unlockedAbs.length > 0 ? unlockedAbs : ['light'];
     resolvedAbility = pool[Math.floor(Math.random() * pool.length)];
@@ -9139,7 +9145,7 @@ function onNetData(msg, senderIdx){
              log:[],dealer:0,current:0,roundNum:1,roundWind:'東',honba:0,
              riichiPot:0,savedScores:null,_dealerWon:false,
              lightMode:false,lightUserIdx:null,lightRevealedSlots:{},
-             lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineOwners:{},
+             lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,curseSelectMode:false,senouMode:false,senouUserIdx:null,senouTarget:null,senouActive:false,mineSlots:[],mineOwners:{},
              mineRinshanIdxs:[],mineRinshanOwners:{},mineCount:0,mineStock:{},
              penDrawings:{},yamiChallenge:null,_sessionYakuman:[]};
       }
@@ -9274,6 +9280,10 @@ function handleGuestAction(msg, senderIdx){
     case 'haku':      if(amIHost()){remoteHaku(msg.pidx,msg.tidx);} break;
     case 'hakuOpponent': if(amIHost()){remoteHakuOpponent(msg.pidx,msg.tidx,senderIdx);} break;
     case 'hakuDiscard': if(amIHost()){remoteHakuDiscard(msg.pidx,msg.di,senderIdx);} break;
+    case 'curse':     if(amIHost()){_doCurse(msg.myIdx,msg.targetPidx,msg.tidx);} break;
+    case 'senou':     if(amIHost()){ G.senouTarget=msg.targetPidx; G.senouUserIdx=msg.userIdx; G.senouMode=false; G.players[msg.userIdx].abilityUsed=true; addLog(`🧠 洗脳！${G.players[msg.userIdx]?.name||'?'} が ${G.players[msg.targetPidx]?.name||'?'} の次のターンを乗っ取る！`,'log-dora'); broadcastState(); renderAll(); } break;
+    case 'senouWallPick': if(amIHost()){ drawTile(msg.pidx); G.phase='discard'; selIdx=-1; broadcastState(); renderAll(); } break;
+    case 'senouDiscard': if(amIHost()){ selIdx=-1; discardAction(msg.pidx,msg.tidx,false); _clearSenou(); broadcastState(); renderAll(); } break;
     case 'lightRevealWall':
       if(amIHost()){
         const si=msg.slotIdx;
@@ -9562,7 +9572,7 @@ function applyHostState(msg){
     const _localYamiTileIdx = (NET.myIdx!=null && G.players[NET.myIdx]) ? (G.players[NET.myIdx].yamiTileIdx??-1) : -1;
     const _guestYamiSelected = (_localYamiTileIdx >= 0);
     G.yamiSelectMode=_guestYamiSelecting?true:(s.yamiSelectMode??false);
-    G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.lightAutoRevealedTurn=s.lightAutoRevealedTurn??{};G.penDrawings=s.penDrawings??{};
+    G.hakuSelectPlayers=s.hakuSelectPlayers??[];G.stealMode=s.stealMode??false;G.curseSelectMode=s.curseSelectMode??false;G.senouMode=s.senouMode??false;G.senouUserIdx=s.senouUserIdx??null;G.senouTarget=s.senouTarget??null;G.senouActive=s.senouActive??false;G.lightMode=s.lightMode??false;G.lightUserIdx=s.lightUserIdx??null;G.yamiChallenge=s.yamiChallenge??null;G.lightRevealedSlots=s.lightRevealedSlots??{};G.lightRevealedHand=s.lightRevealedHand??{};G.lightExtraDora=s.lightExtraDora??[];G.lightAutoRevealedTurn=s.lightAutoRevealedTurn??{};G.penDrawings=s.penDrawings??{};
     G._mineHit=s._mineHit??null;
     // ★ 闇バグ修正: ゲストが闇選択中 or 闇指定済みなら、自分のyamiTileIdxをホストstateで上書きされる前に保存
     const _savedYamiTileIdx = (_guestYamiSelecting||_guestYamiSelected) ? _localYamiTileIdx : -1;
@@ -9757,7 +9767,7 @@ function _buildStateSnapshot(extra={}){
     phase:G.phase,firstRound:G.firstRound,log:G.log,
     savedScores:G.savedScores,_dealerWon:G._dealerWon,
     pendingRiichi:G.pendingRiichi,riichiValidIdx:G.riichiValidIdx,
-    mineSlots:G.mineSlots,mineRinshanIdxs:G.mineRinshanIdxs,mineOwners:G.mineOwners??{},mineRinshanOwners:G.mineRinshanOwners??{},mineCount:G.mineCount,mineStock:G.mineStock??{},minePlantPlayers:G.minePlantPlayers??[],yamiSelectMode:G.yamiSelectMode,hakuSelectPlayers:G.hakuSelectPlayers??[],stealMode:G.stealMode,lightMode:G.lightMode,lightUserIdx:G.lightUserIdx??null,yamiChallenge:G.yamiChallenge??null,lightRevealedSlots:G.lightRevealedSlots,lightRevealedHand:G.lightRevealedHand,lightExtraDora:G.lightExtraDora??[],lightAutoRevealedTurn:G.lightAutoRevealedTurn??{},penDrawings:G.penDrawings??{},
+    mineSlots:G.mineSlots,mineRinshanIdxs:G.mineRinshanIdxs,mineOwners:G.mineOwners??{},mineRinshanOwners:G.mineRinshanOwners??{},mineCount:G.mineCount,mineStock:G.mineStock??{},minePlantPlayers:G.minePlantPlayers??[],yamiSelectMode:G.yamiSelectMode,hakuSelectPlayers:G.hakuSelectPlayers??[],stealMode:G.stealMode,curseSelectMode:G.curseSelectMode??false,senouMode:G.senouMode??false,senouUserIdx:G.senouUserIdx??null,senouTarget:G.senouTarget??null,senouActive:G.senouActive??false,lightMode:G.lightMode,lightUserIdx:G.lightUserIdx??null,yamiChallenge:G.yamiChallenge??null,lightRevealedSlots:G.lightRevealedSlots,lightRevealedHand:G.lightRevealedHand,lightExtraDora:G.lightExtraDora??[],lightAutoRevealedTurn:G.lightAutoRevealedTurn??{},penDrawings:G.penDrawings??{},
     _mineHit:G._mineHit??null,
     players:G.players,numPlayers,pendingAction,
     guestPeerIds:NET.guestPeerIds,
@@ -10035,7 +10045,7 @@ function startOnlineGame(){
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
   updateEmoteAreaVisibility();
-  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
+  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,curseSelectMode:false,senouMode:false,senouUserIdx:null,senouTarget:null,senouActive:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:numPlayers===1?0:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,_sessionYakuman:[]};
@@ -10216,6 +10226,7 @@ const CPU_ABILITY_OPTIONS = [
   {key:'haku',      label:'白術士ハク',      icon:'C04', emoji:'🀆'},
   {key:'pinzu',     label:'筒子教ピン',      icon:'C06', emoji:'🔵'},
   {key:'tenbi',     label:'手にビ',           icon:'L01', emoji:'🀄'},
+  {key:'curse',     label:'呪い師ノロイ',    icon:null,  emoji:'🔮'},
 ];
 
 function selectCount(n){
@@ -10424,7 +10435,7 @@ function initGame(){
   document.getElementById('lobby').style.display='none';
   document.getElementById('gameScreen').classList.add('active'); _acquireWakeLock();
   scaleTable(); if(typeof window._applyVpadVisibility==='function') window._applyVpadVisibility();
-  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
+  G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},stealMode:false,curseSelectMode:false,senouMode:false,senouUserIdx:null,senouTarget:null,senouActive:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*numPlayers),current:0,roundNum:1,roundWind:'東',honba:numPlayers===1?1:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
      phase:'idle',firstRound:true,log:[],savedScores:null,_dealerWon:false,
@@ -10452,7 +10463,7 @@ function makePlayer(id,dealer){
     pname = (PROFILE.name||'あなた'); // 自分の名前、CPU名は後でpAbilityから設定
     if(id !== 0) pname = ''; // CPU側は後で上書き
   }
-  const cpuAbilities=['mine','light','yami','haku','sanctuary','pinzu','steal','tenbi','red_eye'];
+  const cpuAbilities=['mine','light','yami','haku','sanctuary','pinzu','steal','tenbi','red_eye','curse'];
   let pAbility;
   if(!G_ABILITY_MODE){
     pAbility = '';
@@ -10493,6 +10504,7 @@ function makePlayer(id,dealer){
     '':          {name:'CPU',          icon:'C08'},
     'tenbi':     {name:'手にビ',         icon:'L01'},
     'red_eye':   {name:'赤眼レッド',     icon:'C02'},
+    'curse':     {name:'呪い師ノロイ',   icon:'C08'},
   };
   // ソロCPU名をpAbilityから設定
   if(!NET.online && id !== NET.myIdx){
@@ -10512,7 +10524,7 @@ function makePlayer(id,dealer){
     score:0,isDealer:dealer,riichi:false,doubleRiichi:false,openRiichi:false,
     ippatsu:false,isTenhou:false,isChiihou:false,isRenhou:false,
     isHaite:false,isRinshanKaihou:false,isChankan:false,
-    drawnTile:null,tenpai:false,waits:[],riichiDiscardIdx:-1,kanCount:0,yamiTileIdx:-1,hakuTileId:null,turnCount:0,hakuUsedTurn:-1,
+    drawnTile:null,tenpai:false,waits:[],riichiDiscardIdx:-1,kanCount:0,yamiTileIdx:-1,hakuTileId:null,cursedTileId:null,turnCount:0,hakuUsedTurn:-1,
     ability:pAbility, abilityUsed:false,
 };
 }
@@ -10706,9 +10718,11 @@ function startRound(){ _doraCanvasInited=false; _wallExpandInited=false; timerSt
   G._firstPickDone=false;   // 💣 初回ピック安全処理フラグ（マインスイーパー式）
   G.yamiSelectMode=false;
   G.stealMode=false;
+  G.curseSelectMode=false;
+  G.senouMode=false; G.senouUserIdx=null; G.senouTarget=null; G.senouActive=false;
   G.hakuSelectPlayers=[];
   // プレイヤーごとの能力使用フラグをリセット
-  if(G.players)G.players.forEach(p=>{p.abilityUsed=false;p._cpuNextYami=false;});
+  if(G.players)G.players.forEach(p=>{p.abilityUsed=false;p._cpuNextYami=false;p.cursedTileId=null;});
   // 白変換リセットはstartRound冒頭で実施済み
   G.lightMode=false;   // 'wall'|'hand'|false
   G.lightUserIdx=null;
@@ -11131,6 +11145,13 @@ function handlePon(pidx,tile,fromPidx){
 function nextTurn(pidx){
   G.current=pidx;G.phase='draw';
 
+  // 🧠 洗脳: 対象のターンが来たらsenouActiveをオン
+  if(G_ABILITY_MODE && G.senouTarget===pidx && G.senouUserIdx!=null && !G.senouActive){
+    G.senouActive=true;
+    addLog(`🧠 洗脳発動！${G.players[G.senouUserIdx]?.name||'?'} が ${G.players[pidx]?.name||'?'} のターンを乗っ取った！`,'log-dora');
+    flashLightEffect();
+  }
+
   // ☀️ 光: 自分のターンに牌を引く前に山牌1枚をランダムで自動表示（光能力装備者のみ）
   // ホスト（またはオフライン）のみが実行し、broadcastStateで同期する
   if(G_ABILITY_MODE && (!NET.online || amIHost())){
@@ -11158,8 +11179,10 @@ function nextTurn(pidx){
   }
 
   // Online: ホスト（amIHost()）だけがCPU/ドロー進行。ゲストはstate pushを待つ
-  if(NET.online&&!amIHost()){renderAll();broadcastState();return;}
-  if(NET.online&&amIHost()){
+  // 🧠 洗脳発動中: 洗脳者が操作する（CPUやゲストのターンでも洗脳者が引き継ぐ）
+  const _isSenouTurn = G_ABILITY_MODE && G.senouActive && G.senouTarget===pidx && G.senouUserIdx===NET.myIdx;
+  if(NET.online&&!amIHost()&&!_isSenouTurn){renderAll();broadcastState();return;}
+  if(NET.online&&amIHost()&&!_isSenouTurn){
     if(isOnlineGuestIdx(pidx)){
       if(G.deck.length===0){handleExhausted();return;} // デッキ空→流局
       renderAll();broadcastState();return; // 接続中ゲストの番 → state push して待つ
@@ -11167,7 +11190,7 @@ function nextTurn(pidx){
     if(pidx!==NET.myIdx){renderAll();scheduleCpuAction(700);return;} // CPU（isCpu or 接続なし）の番
     // 自分(ホスト)の番はそのまま下へ
   }
-  if(!NET.online&&pidx!==0){renderAll();scheduleCpuAction(700);return;}
+  if(!NET.online&&pidx!==0&&!_isSenouTurn){renderAll();scheduleCpuAction(700);return;}
 
   // Human draw — show wall for selection
   const myIdx=NET.myIdx;
@@ -11193,7 +11216,8 @@ function nextTurn(pidx){
     setTimeout(autoPickWall,200);
     return;
   }
-  addLog('山牌を選んでクリックしてください','log-new');
+  if(_isSenouTurn) addLog(`🧠 洗脳中！${G.players[pidx]?.name||'相手'}の代わりに山牌を引いてください`,'log-new');
+  else addLog('山牌を選んでクリックしてください','log-new');
   renderAll();broadcastState();
 }
 
@@ -11815,6 +11839,93 @@ function humanHakuAuto(){
   updateTenpai(p);broadcastState();renderAll();
 }
 
+// ── 呪い: 相手手牌選択 ────────────────────────────────────
+function humanCurseSelect(targetPidx, tidx){
+  if(!G.curseSelectMode) return;
+  const myIdx=NET.myIdx;
+  const target=G.players[targetPidx];
+  if(!target||target.riichi) return;
+  const t=target.hand[tidx];
+  if(!t) return;
+  if(NET.online&&!amIHost()){
+    G.curseSelectMode=false;
+    netSend({type:'curse',myIdx,targetPidx,tidx});
+    renderAll(); return;
+  }
+  _doCurse(myIdx,targetPidx,tidx);
+}
+
+function _doCurse(myIdx,targetPidx,tidx){
+  const target=G.players[targetPidx];
+  if(!target) return;
+  const t=target.hand[tidx];
+  if(!t) return;
+  t._cursed=true;
+  target.cursedTileId=t._id;
+  G.players[myIdx].abilityUsed=true;
+  G.curseSelectMode=false;
+  SFX.discard(); // 簡易SE（将来専用SEに変更可能）
+  addLog(`🔮 呪い！${G.players[myIdx].name} が ${target.name} の手牌1枚を呪った`,'log-dora');
+  broadcastState(); renderAll();
+}
+
+// ── 洗脳: ターゲット選択 ─────────────────────────────────
+function _doSenouTarget(targetPidx){
+  const myIdx=NET.myIdx;
+  if(!G.senouMode) return;
+  if(targetPidx===myIdx) return;
+  const p=G.players[targetPidx];
+  if(!p) return;
+  G.senouTarget=targetPidx;
+  G.senouUserIdx=myIdx;
+  G.senouMode=false;
+  G.players[myIdx].abilityUsed=true;
+  addLog(`🧠 洗脳！${G.players[myIdx].name} が ${p.name} の次のターンを乗っ取る！`,'log-dora');
+  if(NET.online&&!amIHost()) netSend({type:'senou',userIdx:myIdx,targetPidx});
+  broadcastState(); renderAll();
+}
+
+// ── 洗脳: 対象のターン終了時リセット ────────────────────
+function _clearSenou(){
+  G.senouActive=false; G.senouTarget=null; G.senouUserIdx=null;
+}
+
+// ── 洗脳: 対象の代わりにドロー ──────────────────────────
+function humanSenouPickWall(slotIdx){
+  if(!G.senouActive||G.senouUserIdx!==NET.myIdx) return;
+  if(G.phase!=='draw_wait') return;
+  const targetPidx=G.senouTarget;
+  if(G.deckSlots[slotIdx]===null) return;
+  SFX.draw();
+  if(NET.online&&!amIHost()){
+    netSend({type:'senouWallPick',pidx:targetPidx,slotIdx,userIdx:NET.myIdx});
+    return;
+  }
+  drawTile(targetPidx); // ランダムでOK（スロット指定は複雑なので省略）
+  G.phase='discard';
+  selIdx=-1;
+  broadcastState(); renderAll();
+}
+
+// ── 洗脳: 対象の代わりに捨て ────────────────────────────
+function humanSenouDiscard(){
+  if(!G.senouActive||G.senouUserIdx!==NET.myIdx) return;
+  if(G.phase!=='discard') return;
+  const targetPidx=G.senouTarget;
+  const tp=G.players[targetPidx];
+  if(!tp) return;
+  let idx=selIdx;
+  if(idx<0||idx>=tp.hand.length){addLog('捨てる牌を選んでください','log-new');return;}
+  if(NET.online&&!amIHost()){
+    netSend({type:'senouDiscard',pidx:targetPidx,tidx:idx,userIdx:NET.myIdx});
+    return;
+  }
+  selIdx=-1;
+  discardAction(targetPidx,idx,false);
+  _clearSenou();
+  broadcastState(); renderAll();
+}
+
 function _updateAutoDrawBtn(){
   const btn=document.getElementById('autoDrawBtn');
   if(!btn) return;
@@ -12145,6 +12256,21 @@ function toggleAutoDiscard(){
 }
 
 function humanPickWall(slotIdx, _fromAuto){
+  // 🧠 洗脳中: 洗脳者が対象の代わりにドロー
+  if(G_ABILITY_MODE && G.senouActive && G.senouUserIdx===NET.myIdx && G.current===G.senouTarget && G.phase==='draw_wait'){
+    if(G.deckSlots[slotIdx]===null) return;
+    SFX.draw();
+    if(NET.online&&!amIHost()){
+      netSend({type:'senouWallPick',pidx:G.senouTarget,slotIdx,userIdx:NET.myIdx});
+      return;
+    }
+    drawTile(G.senouTarget);
+    G.phase='discard';
+    selIdx=-1;
+    addLog(`🧠 洗脳：${G.players[G.senouTarget]?.name||'相手'}の代わりに牌を引いた`,'log-new');
+    broadcastState(); renderAll();
+    return;
+  }
   if(G.phase!=='draw_wait'||G.current!==NET.myIdx)return;
   if(G.lightMode)return; // 光モード中はツモ不可
   // ペン能力 + 聴牌中は手動の山牌選択ツモ不可（自動引きは許可）
@@ -12776,6 +12902,26 @@ function cpuTryAbility(idx){
     }
   }
 
+  // 🔮 呪い: 捨てフェーズまたはdraw_wait時に40%で発動
+  if(ab==='curse' && !p.abilityUsed && (G.phase==='discard'||G.phase==='draw_wait') && Math.random()<0.4){
+    const targets=G.players.map((op,i)=>i).filter(i=>i!==idx&&G.players[i].hand.length>0&&!G.players[i].riichi);
+    if(targets.length>0){
+      const targetPidx=targets[Math.floor(Math.random()*targets.length)];
+      const target=G.players[targetPidx];
+      // 相手の最も重要な牌（シャンテンに一番貢献している牌）を呪う
+      let worstIdx=0, worstScore=-Infinity;
+      for(let i=0;i<target.hand.length;i++){
+        const test=target.hand.filter((_,j)=>j!==i);
+        const sh=calcShanten(test);
+        const uk=calcUkeire(test);
+        const score = -sh*10000 + uk*100; // 低いほど重要（捨てると損な牌）
+        if(score>worstScore){ worstScore=score; worstIdx=i; }
+      }
+      _doCurse(idx, targetPidx, worstIdx);
+      return false; // 捨てを継続
+    }
+  }
+
   // 🏛️ 聖域: 親番中は失点を受けない（evalYakuで参照、CPU側では何もしない）
 
   return false;
@@ -12898,6 +13044,10 @@ function cpuDiscard(){
 
   if(p.riichi){discardAction(idx,p.hand.length-1);return;}
 
+  // 🔮 呪い: 呪われた牌は捨てられない（CPUも同様）
+  const _cursedId = G_ABILITY_MODE ? (p.cursedTileId??null) : null;
+  function _isCursedIdx(i){ return _cursedId!=null && p.hand[i] && p.hand[i]._id===_cursedId; }
+
   // オープンリーチ中のプレイヤーの待ち牌を収集（役満警戒）
   const dangerTiles=new Set();
   for(let i=0;i<numPlayers;i++){
@@ -12917,6 +13067,7 @@ function cpuDiscard(){
       const doras=getDoras();
       let worst=-1, worstScore=Infinity;
       for(const i of nonHonorIdxs){
+        if(_isCursedIdx(i)) continue; // 🔮 呪われた牌は除外
         const t=p.hand[i];
         const test=p.hand.filter((_,j)=>j!==i);
         const sh=calcShanten(test);
@@ -12941,6 +13092,7 @@ function cpuDiscard(){
       const doras=getDoras();
       let worst=-1, worstScore=Infinity;
       for(const i of nonPinIdxs){
+        if(_isCursedIdx(i)) continue; // 🔮 呪われた牌は除外
         const t=p.hand[i];
         const test=p.hand.filter((_,j)=>j!==i);
         const sh=calcShanten(test);
@@ -12966,6 +13118,7 @@ function cpuDiscard(){
 
   let best=0, bestShanten=999, bestUkeire=-1, bestScore=-Infinity;
   for(let i=0;i<p.hand.length;i++){
+    if(_isCursedIdx(i)) continue; // 🔮 呪われた牌は捨て候補から除外
     const t=p.hand[i];
     const test=p.hand.filter((_,j)=>j!==i);
     const sh=calcShanten(test);
@@ -12979,6 +13132,8 @@ function cpuDiscard(){
       - (isYaku ? 200 : 0);
     if(score>bestScore){ bestScore=score; best=i; bestShanten=sh; bestUkeire=uk; }
   }
+  // 全牌が呪われている（理論上ありえないが念のため）場合はそのまま捨てる
+  if(bestScore===-Infinity) best=0;
   discardAction(idx,best);
 }
 
@@ -13320,6 +13475,11 @@ document.addEventListener('contextmenu', e=>{
 
 function humanDiscard(){
   if(_discardAnimLocked) return; // 捨てアニメ中は操作無効
+  // 🧠 洗脳中: 洗脳者が対象の代わりに捨てる
+  if(G_ABILITY_MODE && G.senouActive && G.senouUserIdx===NET.myIdx && G.current===G.senouTarget && G.phase==='discard'){
+    humanSenouDiscard();
+    return;
+  }
   const myTurn = NET.online ? G.current===NET.myIdx : G.current===0;
   if(!myTurn||G.phase!=='discard')return;
   if(G.yamiSelectMode)return; // 闇選択中は切り不可
@@ -13331,6 +13491,11 @@ function humanDiscard(){
     if(!NET.online)commitRiichi(p);
   }
   if(idx<0||idx>=p.hand.length){addLog('捨てる牌を選んでください','log-new');return;}
+  // 🔮 呪い: 呪われた牌は捨てられない
+  if(G_ABILITY_MODE && p.cursedTileId!=null && p.hand[idx] && p.hand[idx]._id===p.cursedTileId){
+    addLog('🔮 呪い！この牌は呪われているため捨てられません','log-new');
+    selIdx=-1; return;
+  }
   // 闇捨て: 闇指定牌を捨てる場合はフラグを立てる
   const isYamiDiscard = (p.yamiTileIdx>=0 && p.yamiTileIdx===idx);
   if(isYamiDiscard) p.abilityUsed=true;
@@ -14288,7 +14453,7 @@ function startTenbiBattle(){
   bgmToGame();
   G={players:[],deck:[],deckSlots:[],doraInds:[],uraInds:[],doraPile:[],rinshan:[],rinshanIdx:6,
      kanDoraCount:0,lightMode:false,lightUserIdx:null,lightRevealedSlots:{},lightRevealedHand:{},lightAutoRevealedTurn:{},
-     stealMode:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},
+     stealMode:false,curseSelectMode:false,senouMode:false,senouUserIdx:null,senouTarget:null,senouActive:false,mineSlots:[],mineRinshanIdxs:[],mineOwners:{},mineRinshanOwners:{},mineCount:0,mineStock:{},
      penDrawings:{},yamiChallenge:null,
      dealer:Math.floor(Math.random()*2),current:0,roundNum:1,roundWind:'東',honba:0,riichiPot:0,
      pendingRiichi:null,riichiValidIdx:null,
@@ -14970,6 +15135,13 @@ function renderCornerAbilityBtns(){
       add('🃏 スチール','#88ff88','#44aa44',()=>{G.stealMode=true;renderAll();},'捨て牌から1枚盗む');
   }
 
+  // ── 呪い 🔮 ──────────────────────────────────────────────
+  if(ab==='curse'&&!p.abilityUsed&&!G.curseSelectMode&&(phase==='discard'||phase==='draw_wait')&&isMyTurn){
+    const hasHandTarget=G.players.some((op,i)=>i!==myIdx&&op.hand.length>0&&!op.riichi);
+    if(hasHandTarget)
+      add('🔮 呪い','#dd88ff','#aa44cc',()=>{G.curseSelectMode=true;renderAll();},'相手の手牌1枚を捨てられなくする');
+  }
+
   // ── 白 🀆 ───────────────────────────────────────────────
   if(ab==='haku'&&!p.abilityUsed&&(phase==='discard'||phase==='draw_wait')&&isMyTurn){
     if(!( G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx) )){
@@ -14987,6 +15159,13 @@ function renderCornerAbilityBtns(){
       if(!yamiSet)
         add('🌑 闇','#cc99ff','#7744aa',()=>{G.yamiSelectMode=true;G.players[myIdx].yamiTileIdx=-1;renderAll();},'捨て牌を裏向きに');
     }
+  }
+
+  // ── 洗脳 🧠 ──────────────────────────────────────────────
+  if(ab==='senou'&&!p.abilityUsed&&!G.senouMode&&!G.senouActive&&(phase==='discard'||phase==='draw_wait')&&isMyTurn){
+    const hasTarget=G.players.some((op,i)=>i!==myIdx&&!op.riichi);
+    if(hasTarget)
+      add('🧠 洗脳','#ff88ff','#aa44aa',()=>{G.senouMode=true;renderAll();},'相手の次のターンを乗っ取る');
   }
 }
 
@@ -16434,7 +16613,7 @@ function renderTable(){
     const riichiStick=p.riichi?`<span class="riichi-stick">リーチ</span>`:''; 
     const afkBadge=((isHuman&&playerAFK)||(p.isCpu&&!p._rankCpuFill))?`<span class="badge" style="background:#1a0000;border:1px solid #cc3333;color:#ff6666;">離席</span>`:'';
 
-    const abilityLabels2={'':'','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン','tenbi':'🀆 手にビ','red_eye':'🔴 レッドアイ'};
+    const abilityLabels2={'':'','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン','tenbi':'🀆 手にビ','red_eye':'🔴 レッドアイ','curse':'🔮 呪い','senou':'🧠 洗脳'};
     const _dispAbility2 = p.displayAbility || p.ability;
     const abilityBadge = (G_ABILITY_MODE && p.ability) ? `<span class="ability-badge">${abilityLabels2[_dispAbility2]||_dispAbility2}</span>` : '';
     stripDiv.innerHTML=`
@@ -16535,6 +16714,13 @@ function renderTable(){
       windOrb2.title = 'フレンドを送る';
       windOrb2.onclick = (e)=>{ e.stopPropagation(); openOpponentFriendModal(pidx); };
     }
+    // ★ 洗脳モード: 相手アイコンをクリックでターゲット選択
+    if(!isHuman && G.senouMode && G.players[NET.myIdx]?.ability==='senou'){
+      windOrb2.style.cursor = 'pointer';
+      windOrb2.style.outline = '3px solid #ff88ff';
+      windOrb2.title = `${p.name}を洗脳する`;
+      windOrb2.onclick = (e)=>{ e.stopPropagation(); _doSenouTarget(pidx); };
+    }
     // 称号表示（名前の下）
     const _pTitle = p.equippedTitle || '';
     if(_pTitle){
@@ -16621,7 +16807,7 @@ function renderTable(){
 
     // 能力バッジをscoreRowの右に追加
     if(G_ABILITY_MODE && p.ability){
-      const abilityLabels3={'mine':'💣','light':'☀️','yami':'🌑','haku':'🀆','sanctuary':'🏛️','pinzu':'🔵','steal':'🃏','pen':'🖊️','tenbi':'🀆'};
+      const abilityLabels3={'mine':'💣','light':'☀️','yami':'🌑','haku':'🀆','sanctuary':'🏛️','pinzu':'🔵','steal':'🃏','pen':'🖊️','tenbi':'🀆','curse':'🔮','senou':'🧠'};
       const abBadge = document.createElement('div');
       abBadge.style.cssText='display:flex;align-items:center;justify-content:center;height:48px;min-width:48px;font-size:.85rem;background:#0a0a00;border:1px solid #3a3010;border-radius:4px;padding:0 6px;white-space:nowrap;';
       const _dispAbility3 = p.displayAbility || p.ability;
@@ -16657,11 +16843,13 @@ function renderTable(){
         const isYamiMarked = (p.yamiTileIdx===i);
         const isHaku = !!(p.hand[i]._isHaku);
         const isHakuSelectable = G.hakuSelectPlayers&&G.hakuSelectPlayers.includes(NET.myIdx) && isActive && G.phase==='discard' && !p.riichi && !isHaku;
+        // 🔮 呪い: 呪われた牌は視覚的に示す
+        const isCursedTile = G_ABILITY_MODE && p.cursedTileId!=null && p.hand[i]._id===p.cursedTileId;
         // 闇選択モード中はクリック可能に
         const canSelYami = G.yamiSelectMode && isActive && G.phase==='discard' && !p.riichi;
         // オープンリーチ中の闇指定牌: 自分には薄暗く見える
         const isYamiOpenHide = p.riichi && p.openRiichi && isYamiMarked;
-        let cls=`tile ${tc(t)}${(canSel||canSelYami||isHakuSelectable)?' selectable':''}${isSel?' selected':''}${isDrawn?' drawn':''}${isKita?' kita-tile':''}${isYamiMarked?' yami-marked':''}${isHaku?' haku-converted':''}`;
+        let cls=`tile ${tc(t)}${(canSel||canSelYami||isHakuSelectable)?' selectable':''}${isSel?' selected':''}${isDrawn?' drawn':''}${isKita?' kita-tile':''}${isYamiMarked?' yami-marked':''}${isHaku?' haku-converted':''}${isCursedTile?' curse-locked':''}`;
 
         // 引いた牌スペース: drawnTileがある時のみ最後の牌の直前に挿入
         if(p.drawnTile&&i===p.hand.length-1&&i>0){
@@ -16781,6 +16969,24 @@ function renderTable(){
             bt.textContent='🀫';
             bt.onclick=()=>humanHakuSelectOpponent(pidx,i);
           }
+        } else if(G.curseSelectMode&&pidx!==NET.myIdx&&!p.riichi){
+          // 呪い選択モード: 相手の手牌を選択可能（リーチ中は除外）
+          const isCursed=p.hand[i]&&p.cursedTileId!=null&&p.hand[i]._id===p.cursedTileId;
+          if(isCursed){
+            bt.className='tile back curse-locked';
+            bt.textContent='🔮';
+          } else {
+            bt.className='tile back curse-select-target';
+            bt.textContent='🀫';
+            bt.onclick=()=>humanCurseSelect(pidx,i);
+          }
+        } else if(G.senouActive&&G.senouUserIdx===NET.myIdx&&pidx===G.senouTarget&&G.phase==='discard'){
+          // 洗脳中: 対象の手牌を表向きで表示・選択可能
+          const t=p.hand[i];
+          const isSel=(selIdx===i);
+          bt.className=`tile ${tc(t)}${t&&t._isAka?' tile-aka-glow':''}${isSel?' selected':''}`;
+          bt.innerHTML=t?emj(t):'';
+          (function(_i){ bt.onclick=function(){ selIdx=_i; renderAll(); }; })(i);
         } else if(p.hand[i]&&p.hand[i]._isHaku){
           // 白能力で変換された牌: 表向きで🀆️表示
           bt.className='tile honor haku-converted';
@@ -17307,6 +17513,18 @@ if(canWinNow&&!pinzuNoTsumo&&!isHakuTurnNormal)html+=`<button class="btn btn-tsu
         html+=`<span class="action-hint" style="color:#88ff88;">🃏 盗む捨て牌をクリック！</span>`;
         html+=`<button class="btn btn-danger" onclick="G.stealMode=false;renderAll();">キャンセル</button>`;
       }
+      if(G.curseSelectMode){
+        html+=`<span class="action-hint" style="color:#dd88ff;">🔮 呪う相手の手牌をクリック！</span>`;
+        html+=`<button class="btn btn-danger" onclick="G.curseSelectMode=false;renderAll();">キャンセル</button>`;
+      }
+      if(G.senouMode){
+        html+=`<span class="action-hint" style="color:#ff88ff;">🧠 洗脳する相手のアイコンをクリック！</span>`;
+        html+=`<button class="btn btn-danger" onclick="G.senouMode=false;renderAll();">キャンセル</button>`;
+      }
+      if(G.senouActive&&G.senouUserIdx===NET.myIdx){
+        html+=`<span class="action-hint" style="color:#ff88ff;">🧠 洗脳中！${G.players[G.senouTarget]?.name||'相手'}のターンを操作中</span>`;
+        if(G.phase==='discard') html+=`<button class="btn btn-primary" onclick="humanDiscard();" style="background:#aa44aa;border-color:#ff88ff;">捨てる</button>`;
+      }
     }
   }else if(G.current!==NET.myIdx){
     if(G.minePlantPlayers&&G.minePlantPlayers.includes(NET.myIdx)){
@@ -17323,6 +17541,15 @@ if(canWinNow&&!pinzuNoTsumo&&!isHakuTurnNormal)html+=`<button class="btn btn-tsu
     } else if(G.stealMode){
       html+=`<span class="action-hint" style="color:#88ff88;">🃏 盗む捨て牌をクリック！</span>`;
       html+=`<button class="btn btn-danger" onclick="G.stealMode=false;renderAll();">キャンセル</button>`;
+    } else if(G.curseSelectMode){
+      html+=`<span class="action-hint" style="color:#dd88ff;">🔮 呪う相手の手牌をクリック！</span>`;
+      html+=`<button class="btn btn-danger" onclick="G.curseSelectMode=false;renderAll();">キャンセル</button>`;
+    } else if(G.senouMode){
+      html+=`<span class="action-hint" style="color:#ff88ff;">🧠 洗脳する相手のアイコンをクリック！</span>`;
+      html+=`<button class="btn btn-danger" onclick="G.senouMode=false;renderAll();">キャンセル</button>`;
+    } else if(G.senouActive&&G.senouUserIdx===NET.myIdx){
+      html+=`<span class="action-hint" style="color:#ff88ff;">🧠 洗脳中！${G.players[G.senouTarget]?.name||'相手'}のターン操作中</span>`;
+      html+=`<button class="btn btn-primary" onclick="humanDiscard();" style="background:#aa44aa;border-color:#ff88ff;">捨てる</button>`;
     } else {
       // CPU番表示なし
     }
@@ -19038,6 +19265,8 @@ const ALL_ABILITY_DATA = [
   {key:'steal',  icon:'🃏', name:'スチール',    desc:'１局に１回、相手プレイヤーの捨て牌から１枚盗める。聴牌時には使用不可。',   tag:'奪取系', initial:false},
   {key:'pinzu',  icon:'🔵', name:'ピンズー教',  desc:'親番中は筒子の位置が分かる。親番でツモ上りが出来なくなる。',   tag:'情報系', initial:false},
   {key:'red_eye',icon:'🔴', name:'レッドアイ',  desc:'常に山牌の中の赤ドラの位置が分かる。',                            tag:'情報系', initial:false},
+  {key:'curse',  icon:'🔮', name:'呪い',        desc:'１局に１回、相手の手牌の一枚を選択して捨てられない牌にする。',    tag:'妨害系', initial:false},
+  {key:'senou',  icon:'🧠', name:'洗脳',        desc:'１局に１回、次の相手のターンを乗っ取り操作する。',                tag:'妨害系', initial:false},
 ];
 
 function _isAbilityOwned(key){
@@ -19089,6 +19318,8 @@ function pickAbility(ability){
     'pen':['🖊️','ペン','山牌に絵を描く。'],
     'pinzu':['🔵','ピンズー教','親番中は筒子の位置が分かる。親番でツモ上りが出来なくなる。'],
     'red_eye':['🔴','レッドアイ','常に山牌の中の赤ドラの位置が分かる。'],
+    'curse':['🔮','呪い','１局に１回、相手の手牌の一枚を選択して捨てられない牌にする。'],
+    'senou':['🧠','洗脳','１局に１回、次の相手のターンを乗っ取り操作する。'],
   };
   PROFILE.ability=ability;
   const d=ABILITY_DATA[ability]||['🚫','能力なし',''];
@@ -19117,6 +19348,8 @@ const GACHA_ABILITIES = [
   {key:'steal',  icon:'🃏', name:'スチール',  tag:'奪取系'},
   {key:'pinzu',  icon:'🔵', name:'ピンズー教', tag:'情報系'},
   {key:'red_eye',icon:'🔴', name:'レッドアイ', tag:'情報系'},
+  {key:'curse',  icon:'🔮', name:'呪い',      tag:'妨害系'},
+  {key:'senou',  icon:'🧠', name:'洗脳',      tag:'妨害系'},
 ];
 const RARITY_TABLE = [
   {rarity:'legend', label:'LEGEND', prob:0.001, color:'#ffd700', bg:'#1a0e00', border:'#ffd700'},
@@ -20518,7 +20751,7 @@ function renderFriendList(){
 
 function _esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function _abilityLabel(a){
-  const m={'':'能力なし','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン'};
+  const m={'':'能力なし','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン','curse':'🔮 呪い','senou':'🧠 洗脳'};
   return m[a||'']||'能力なし';
 }
 
@@ -22163,7 +22396,7 @@ function renderGiftInbox(gifts){
     } else if(isBgm){
       mediaHtml = '<span style="font-size:1.4rem;">🎵</span>';
     } else if(isAbility){
-      const abilityIcons = {pen:'🖊️',mine:'💣',light:'☀️',yami:'🌑',haku:'🀆',sanctuary:'🏛️',pinzu:'🔵',steal:'🃏'};
+      const abilityIcons = {pen:'🖊️',mine:'💣',light:'☀️',yami:'🌑',haku:'🀆',sanctuary:'🏛️',pinzu:'🔵',steal:'🃏',curse:'🔮',senou:'🧠'};
       mediaHtml = `<span style="font-size:1.4rem;">${abilityIcons[g.skin_key]||'⚡'}</span>`;
     } else if(isIcon){
       mediaHtml = '<span style="font-size:1.4rem;">🖼️</span>';
@@ -22420,7 +22653,7 @@ function updateProfileBadge(){
   const ba=document.getElementById('badgeAbility');
   if(bn) bn.textContent=PROFILE.name||'プレイヤー';
   if(ba){
-    const abilityLabels={'':'能力なし','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン'};
+    const abilityLabels={'':'能力なし','mine':'💣 地雷','light':'☀️ 光','yami':'🌑 闇','haku':'🀆 白','sanctuary':'🏛️ 聖域','pinzu':'🔵 ピンズー教','steal':'🃏 スチール','pen':'🖊️ ペン','curse':'🔮 呪い','senou':'🧠 洗脳'};
     ba.textContent=abilityLabels[PROFILE.ability||'']||'能力なし';
   }
   // ── ロビープレイヤーカード更新 ──
@@ -22430,7 +22663,7 @@ function updateProfileBadge(){
   const lpcIconInner = document.getElementById('lpcIconInner');
   if(lpcName) lpcName.textContent = PROFILE.name||'プレイヤー';
   if(lpcAbility){
-    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ','red_eye':'🔴 レッドアイ'};
+    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ','red_eye':'🔴 レッドアイ','curse':'🔮 呪い','senou':'🧠 洗脳'};
     lpcAbility.textContent = abilityIcons[PROFILE.ability||'']||'⚡ 能力なし';
   }
   if(lpcCoins) lpcCoins.innerHTML = '<img src="https://raw.githubusercontent.com/tenibi/tenibijan/main/coin/tenibi.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:2px;">' + (PROFILE.coins!=null ? PROFILE.coins.toLocaleString() : '---');
@@ -22450,7 +22683,7 @@ function updateProfileBadge(){
   }
   // ── 横画面ロビーUI同期 ──
   (function(){
-    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ','red_eye':'🔴 レッドアイ'};
+    const abilityIcons={'':'⚡ 能力なし','mine':'💣 地雷師','light':'☀️ 光の探偵','yami':'🌑 闇使い','haku':'🀆 白術士','sanctuary':'🏛️ 聖域守り','pinzu':'🔵 ピンズー教','steal':'🃏 盗賊','pen':'🖊️ ペン','tenbi':'🀄 手にビ','red_eye':'🔴 レッドアイ','curse':'🔮 呪い','senou':'🧠 洗脳'};
     const g = (id)=>document.getElementById(id);
     const pn=g('llPName'); if(pn) pn.textContent = PROFILE.name||'プレイヤー';
     const pa=g('llPAbility'); if(pa) pa.textContent = abilityIcons[PROFILE.ability||'']||'⚡ 能力なし';

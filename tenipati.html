@@ -1166,8 +1166,51 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
   box-shadow: 0 0 18px rgba(124,58,237,0.5);
 }
 
+/* ─── 縦画面専用：自動発射フローティングボタン ─── */
+#portrait-auto-btn {
+  display: none; /* 横画面では非表示 */
+}
+@keyframes portraitAutoPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(124,58,237,0.6), 0 4px 16px rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 0 22px rgba(251,191,36,0.8), 0 4px 16px rgba(0,0,0,0.5); }
+}
+
 /* ═══ 縦画面（portrait）レスポンシブ ═══ */
 @media (orientation: portrait) {
+  #portrait-auto-btn {
+    display: flex;
+    position: fixed;
+    bottom: 20px;
+    right: 16px;
+    z-index: 150;
+    align-items: center;
+    justify-content: center;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    border: 2.5px solid rgba(167,139,250,0.7);
+    background: rgba(20,8,48,0.92);
+    color: #a78bfa;
+    font-size: 11px;
+    font-weight: 800;
+    font-family: sans-serif;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.2;
+    box-shadow: 0 0 12px rgba(124,58,237,0.6), 0 4px 16px rgba(0,0,0,0.5);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  #portrait-auto-btn.active {
+    background: rgba(124,58,237,0.75);
+    border-color: #fbbf24;
+    color: #fbbf24;
+    animation: portraitAutoPulse 0.9s ease-in-out infinite;
+  }
+
   body {
     padding: 0 !important;
     align-items: flex-start;
@@ -1498,8 +1541,10 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
     'vid-atari','vid-atari2','vid-hukatu2','vid-atarigo','vid-zenkaiten',
     'vid-kanecorn','vid-ose','vid-bonus01',
     'vid-rush-atarigo','vid-rush-atarigo02','vid-rush-entry','vid-rush-keizoku',
-    'vid-rush-loop','vid-rush-ataNou','vid-rush-hazuNou',
-    'vid-rush-ataNouAta','vid-rush-ataNouHazu','vid-rush-hazuNouAta','vid-rush-hazuNouHazu',
+    'vid-rush-loop','vid-rush-ataNou','vid-rush-ataNou02','vid-rush-ataNou03','vid-rush-ataNou04','vid-rush-hazuNou',
+    'vid-rush-ataNouAta','vid-rush-ataNouAta02','vid-rush-ataNouAta03','vid-rush-ataNouAta04',
+    'vid-rush-ataNouHazu','vid-rush-ataNouHazu02','vid-rush-ataNouHazu03','vid-rush-ataNouHazu04',
+    'vid-rush-hazuNouAta','vid-rush-hazuNouHazu',
     'vid-zyaku1','vid-zyaku2','vid-zyaku3','vid-zyaku4','vid-zyaku5','vid-zyaku6',
     'vid-waku-blue','vid-waku-green','vid-waku-red','vid-waku-gold'
   ];
@@ -1628,9 +1673,18 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
       <video id="vid-rush-loop" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/RUSHloop.mp4" preload="auto" playsinline loop muted></video>
       <!-- RUSH演出動画 -->
       <video id="vid-rush-ataNou"   src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNou01.mp4"      preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNou02" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNou02.mp4"      preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNou03" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNou03.mp4"      preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNou04" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNou04.mp4"      preload="metadata" playsinline muted></video>
       <video id="vid-rush-hazuNou"  src="https://github.com/tenibi/tenibijan/releases/download/v1.0/HazuNou01.mp4"     preload="metadata" playsinline muted></video>
-      <video id="vid-rush-ataNouAta"  src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouAta01.mp4"   preload="metadata" playsinline muted></video>
-      <video id="vid-rush-ataNouHazu" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouHazu01.mp4"  preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNouAta"    src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouAta01.mp4"   preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNouAta02"  src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouAta02.mp4"   preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNouAta03"  src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouAta03.mp4"   preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNouAta04"  src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouAta04.mp4"   preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNouHazu"   src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouHazu01.mp4"  preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNouHazu02" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouHazu02.mp4"  preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNouHazu03" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouHazu03.mp4"  preload="metadata" playsinline muted></video>
+      <video id="vid-rush-ataNouHazu04" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/AtaNouHazu04.mp4"  preload="metadata" playsinline muted></video>
       <video id="vid-rush-hazuNouAta"  src="https://github.com/tenibi/tenibijan/releases/download/v1.0/HazuNouAta01.mp4"  preload="metadata" playsinline muted></video>
       <video id="vid-rush-hazuNouHazu" src="https://github.com/tenibi/tenibijan/releases/download/v1.0/HazuNouHazu01.mp4" preload="metadata" playsinline muted></video>
       <!-- 弱リーチ演出動画 zyaku01〜06 -->
@@ -7444,15 +7498,20 @@ function _setupBonusSpin() {
         setExpReach(isAtaNouReach ? 'ataNou' : 'hazuNou');
         setExpFigure(rouletteResult[0]); // 図柄フェーズ（偶数/奇数/7）をRUSH期待度メーターに反映
 
-        const reachVid = isAtaNouReach
-          ? document.getElementById('vid-rush-ataNou')
-          : document.getElementById('vid-rush-hazuNou');
-        let resultVid;
+        // フロー番号を決定し、リーチ動画・結果動画をセットで選択
+        let reachVid, resultVid;
         if (isAtaNouReach) {
-          resultVid = isWin
-            ? document.getElementById('vid-rush-ataNouAta')
-            : document.getElementById('vid-rush-ataNouHazu');
+          const _ataNouSuffixes = ['','02','03','04'];
+          const _suffix = _ataNouSuffixes[Math.floor(Math.random() * _ataNouSuffixes.length)];
+          const _reachId  = 'vid-rush-ataNou' + _suffix;
+          const _ataId    = 'vid-rush-ataNouAta'  + _suffix;
+          const _hazuId   = 'vid-rush-ataNouHazu' + _suffix;
+          reachVid  = document.getElementById(_reachId)  || document.getElementById('vid-rush-ataNou');
+          const _ataEl  = document.getElementById(_ataId)  || document.getElementById('vid-rush-ataNouAta');
+          const _hazuEl = document.getElementById(_hazuId) || document.getElementById('vid-rush-ataNouHazu');
+          resultVid = isWin ? _ataEl : _hazuEl;
         } else {
+          reachVid  = document.getElementById('vid-rush-hazuNou');
           resultVid = isWin
             ? document.getElementById('vid-rush-hazuNouAta')
             : document.getElementById('vid-rush-hazuNouHazu');
@@ -8026,6 +8085,25 @@ function _maybeRush(proceedFn) {
     <div id="zyaku-status-list" style="font-size:11px;line-height:1.8;"></div>
   </div>
 </div>
+<!-- ─── 縦画面専用：自動発射フローティングボタン ─── -->
+<button id="portrait-auto-btn" onclick="document.getElementById('auto-btn').click(); this.classList.toggle('active', autoMode);">▶<br>自動<br>発射</button>
+<script>
+// portrait-auto-btn を auto-btn と常に同期
+(function() {
+  const pab = document.getElementById('portrait-auto-btn');
+  if (!pab) return;
+  // autoMode の変化を監視して表示を同期
+  const _origAutoBtn = document.getElementById('auto-btn');
+  if (_origAutoBtn) {
+    _origAutoBtn.addEventListener('click', function() {
+      setTimeout(() => {
+        pab.classList.toggle('active', autoMode);
+        pab.innerHTML = autoMode ? '⏸<br>停止<br>&nbsp;' : '▶<br>自動<br>発射';
+      }, 0);
+    });
+  }
+})();
+</script>
 <script>
 // ─── テストパネル制御 ───────────────────────────────────────────
 document.getElementById('zyaku-test-toggle').addEventListener('change', function() {

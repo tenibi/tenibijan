@@ -4,9 +4,30 @@
 <meta charset="UTF-8">
 <title>パチンコ v4 (レイアウト修正版)</title>
 <script>
-// ─── 認証ゲート：jwt_token がなければログイン画面を表示 ───
-// ─── 認証ゲート：テストモードのためOFF ───
-// (function() { ... })();
+// ─── 認証ゲート：ページ表示と同時に即時チェック ───
+(function () {
+  const token = localStorage.getItem('jwt_token') || '';
+  if (!token) {
+    // トークンなし → ロード画面を隠してログイン誘導を即表示
+    document.addEventListener('DOMContentLoaded', () => {
+      const lo = document.getElementById('loading-overlay');
+      if (lo) lo.style.display = 'none';
+      const gate = document.getElementById('auth-gate-overlay');
+      if (gate) gate.style.display = 'flex';
+    });
+  } else {
+    // トークンあり → ローディング中にバックグラウンドで認証確認を開始
+    fetch('https://tenibijan.duckdns.org/api/pachi/coins', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(r => {
+      if (r.status === 401) {
+        // トークン期限切れ → ログインページへ
+        localStorage.removeItem('jwt_token');
+        location.href = 'https://tenibi.github.io/tenibijan/tenibijan.html';
+      }
+    }).catch(() => {/* ネットワークエラーは無視してゲーム続行 */});
+  }
+})();
 </script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }

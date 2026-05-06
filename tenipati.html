@@ -30,6 +30,7 @@
 })();
 </script>
 <style>
+:root { --ds: 1; } /* digit scale: 525px基準。rebuildLayout()でW/525をセット */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #000; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 10px; overflow-x: hidden; overflow-y: auto; }
 
@@ -164,8 +165,23 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.35; }
 }
+@keyframes oseGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 12px 4px rgba(251,191,36,0.7),
+      0 0 28px 8px rgba(251,191,36,0.4),
+      0 0 50px 12px rgba(124,58,237,0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 20px 8px rgba(251,191,36,1.0),
+      0 0 45px 16px rgba(251,191,36,0.6),
+      0 0 80px 24px rgba(124,58,237,0.5);
+  }
+}
 #ose-btn.blinking {
-  animation: oseBlink 0.6s ease-in-out infinite;
+  animation: oseBlink 0.6s ease-in-out infinite, oseGlow 0.6s ease-in-out infinite;
+  border-radius: 50% / 50%;
   border: none;
   color: transparent;
   cursor: pointer;
@@ -302,8 +318,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 /* digit1 時計配置コンテナ（右端をstill-imgの右端に合わせて配置） */
 #digit1 .d1-circle {
   position: absolute;
-  top: 288px;
-  left: -368px;
+  top: calc(288px * var(--ds, 1));
+  left: calc(-368px * var(--ds, 1));
   width: 0;
   height: 0;
   animation: digit1CircleSpin 4s linear infinite;
@@ -312,8 +328,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 /* digit1 各数字アイテム（still-imgと同サイズ 135×135） */
 #digit1 .d1-item {
   position: absolute;
-  width: 135px;
-  height: 135px;
+  width: calc(135px * var(--ds, 1));
+  height: calc(135px * var(--ds, 1));
   transition: width 0.4s ease, height 0.4s ease, transform 0.4s ease;
 }
 #digit1 .d1-item img {
@@ -330,7 +346,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 /* digit1スピン中・結果表示中は上60px非表示 */
 #digit1.spinning,
 #digit1.d1-result {
-  clip-path: inset(60px -50px 0 0) !important;
+  clip-path: inset(calc(60px * var(--ds, 1)) -50px 0 0) !important;
   overflow: visible !important;
 }
 /* digit1結果表示中はstill-imgを隠す（circleで表示するため） */
@@ -349,16 +365,16 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 }
 #digit2 .d2-circle {
   position: absolute;
-  top: 287.5px;
-  left: 67.5px;
+  top: calc(287.5px * var(--ds, 1));
+  left: calc(67.5px * var(--ds, 1));
   width: 0;
   height: 0;
   transition: top 0.4s ease, left 0.4s ease;
 }
 #digit2 .d2-item {
   position: absolute;
-  width: 135px;
-  height: 135px;
+  width: calc(135px * var(--ds, 1));
+  height: calc(135px * var(--ds, 1));
   left: 0;
   top: 0;
   transform-origin: center center;
@@ -376,7 +392,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 }
 #digit2.spinning,
 #digit2.d2-result {
-  clip-path: inset(60px 0px 0px 0px) !important;
+  clip-path: inset(calc(60px * var(--ds, 1)) 0px 0px 0px) !important;
   overflow: hidden !important;
 }
 #digit2.d2-result .still-img {
@@ -395,8 +411,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 /* digit3 時計配置コンテナ（左端をstill-imgの左端に合わせて配置） */
 #digit3 .d3-circle {
   position: absolute;
-  top: 288px;
-  left: 503px;
+  top: calc(288px * var(--ds, 1));
+  left: calc(503px * var(--ds, 1));
   width: 0;
   height: 0;
   animation: digit3CircleSpin 2s linear infinite;
@@ -405,8 +421,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 /* digit3 各数字アイテム（still-imgと同サイズ 135×135） */
 #digit3 .d3-item {
   position: absolute;
-  width: 135px;
-  height: 135px;
+  width: calc(135px * var(--ds, 1));
+  height: calc(135px * var(--ds, 1));
   transition: width 0.4s ease, height 0.4s ease, transform 0.4s ease;
 }
 #digit3 .d3-item img {
@@ -419,14 +435,14 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #digit3.spinning .strip { animation: none !important; }
 #digit3.spinning,
 #digit3.d3-result {
-  clip-path: inset(60px -50px 0 0) !important;
+  clip-path: inset(calc(60px * var(--ds, 1)) -50px 0 0) !important;
   overflow: visible !important;
 }
 #digit3.d3-result .still-img { display: none !important; }
 /* 1〜9+先頭複製で1.5秒で1回転（シームレスループ） */
 .digit {
   position: absolute;
-  width: 135px;
+  width: calc(135px * var(--ds, 1));
   height: 100%;
   top: 0;
   background: transparent;
@@ -442,7 +458,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.3s, width 0.4s ease;
-  clip-path: inset(40px 0 400px 0);
+  clip-path: inset(calc(40px * var(--ds, 1)) 0 calc(400px * var(--ds, 1)) 0);
 }
 /* スピン中：縦スクロール用ストリップ */
 .digit .strip {
@@ -455,7 +471,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 }
 .digit .strip img {
   width: 100%;
-  height: 135px;
+  height: calc(135px * var(--ds, 1));
   object-fit: contain;
   flex-shrink: 0;
   display: block;
@@ -467,10 +483,10 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 /* 停止中：単一画像 */
 .digit .still-img {
   position: absolute;
-  top: 220px;
+  top: calc(220px * var(--ds, 1));
   left: 0;
   width: 100%;
-  height: 135px;
+  height: calc(135px * var(--ds, 1));
   object-fit: contain;
   display: block;
   transition: top 0.4s ease, height 0.4s ease;
@@ -487,7 +503,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #wrap.atari02-video-playing .digit,
 #wrap.rush-reach-video-playing .digit,
 #wrap.rush-result-video-playing .digit {
-  width: 90px;
+  width: calc(90px * var(--ds, 1));
 }
 #wrap.reach-video-playing .digit .strip img,
 #wrap.hazure-video-playing .digit .strip img,
@@ -495,7 +511,7 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #wrap.atari02-video-playing .digit .strip img,
 #wrap.rush-reach-video-playing .digit .strip img,
 #wrap.rush-result-video-playing .digit .strip img {
-  height: 90px;
+  height: calc(90px * var(--ds, 1));
 }
 #wrap.reach-video-playing .digit .still-img,
 #wrap.hazure-video-playing .digit .still-img,
@@ -503,8 +519,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #wrap.atari02-video-playing .digit .still-img,
 #wrap.rush-reach-video-playing .digit .still-img,
 #wrap.rush-result-video-playing .digit .still-img {
-  top: 320px;
-  height: 90px;
+  top: calc(320px * var(--ds, 1));
+  height: calc(90px * var(--ds, 1));
 }
 #wrap.reach-video-playing #digit1 .d1-circle,
 #wrap.hazure-video-playing #digit1 .d1-circle,
@@ -512,8 +528,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #wrap.atari02-video-playing #digit1 .d1-circle,
 #wrap.rush-reach-video-playing #digit1 .d1-circle,
 #wrap.rush-result-video-playing #digit1 .d1-circle {
-  top: 365px;
-  left: -390px;
+  top: calc(365px * var(--ds, 1));
+  left: calc(-390px * var(--ds, 1));
 }
 #wrap.reach-video-playing #digit2 .d2-circle,
 #wrap.hazure-video-playing #digit2 .d2-circle,
@@ -521,8 +537,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #wrap.atari02-video-playing #digit2 .d2-circle,
 #wrap.rush-reach-video-playing #digit2 .d2-circle,
 #wrap.rush-result-video-playing #digit2 .d2-circle {
-  top: 365px;
-  left: 45px;
+  top: calc(365px * var(--ds, 1));
+  left: calc(45px * var(--ds, 1));
 }
 #wrap.reach-video-playing #digit3 .d3-circle,
 #wrap.hazure-video-playing #digit3 .d3-circle,
@@ -530,8 +546,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #wrap.atari02-video-playing #digit3 .d3-circle,
 #wrap.rush-reach-video-playing #digit3 .d3-circle,
 #wrap.rush-result-video-playing #digit3 .d3-circle {
-  top: 365px;
-  left: 481px;
+  top: calc(365px * var(--ds, 1));
+  left: calc(481px * var(--ds, 1));
 }
 #wrap.reach-video-playing #digit1 .d1-item,
 #wrap.reach-video-playing #digit3 .d3-item,
@@ -545,9 +561,9 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #wrap.rush-reach-video-playing #digit3 .d3-item,
 #wrap.rush-result-video-playing #digit1 .d1-item,
 #wrap.rush-result-video-playing #digit3 .d3-item {
-  width: 90px;
-  height: 90px;
-  transform: translate(22.5px, 22.5px);
+  width: calc(90px * var(--ds, 1));
+  height: calc(90px * var(--ds, 1));
+  transform: translate(calc(22.5px * var(--ds, 1)), calc(22.5px * var(--ds, 1)));
 }
 #wrap.reach-video-playing #digit2 .d2-item,
 #wrap.hazure-video-playing #digit2 .d2-item,
@@ -555,17 +571,17 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
 #wrap.atari02-video-playing #digit2 .d2-item,
 #wrap.rush-reach-video-playing #digit2 .d2-item,
 #wrap.rush-result-video-playing #digit2 .d2-item {
-  width: 90px;
-  height: 90px;
+  width: calc(90px * var(--ds, 1));
+  height: calc(90px * var(--ds, 1));
 }
 /* digit1停止時：左に中心がある円弧・時計回りで現在位置へ入場 */
 #digit1:not(.spinning) .still-img {
-  transform-origin: -240px 67.5px;
+  transform-origin: calc(-240px * var(--ds, 1)) calc(67.5px * var(--ds, 1));
   animation: digit1ArcEnter 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
-#digit1 { left: calc(50% - 150px); }
+#digit1 { left: calc(50% - 150px * var(--ds, 1)); }
 #digit2 { left: 50%;               }
-#digit3 { left: calc(50% + 150px); }
+#digit3 { left: calc(50% + 150px * var(--ds, 1)); }
 
 /* サイドパネル表示用スタイル（固定位置ではなく相対配置に） */
 #side-panel {
@@ -1201,8 +1217,8 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
   #portrait-auto-btn {
     display: flex;
     position: fixed;
-    bottom: 20px;
-    right: 16px;
+    bottom: 810px;
+    right: 71px;
     z-index: 150;
     align-items: center;
     justify-content: center;
@@ -1631,29 +1647,38 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
     }
   }
 
-  /* ---- 動画を追跡 ---- */
-  VIDEO_IDS.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) { onResourceLoaded(id); return; }
-    if (el.readyState >= 1) { onResourceLoaded(el.src || id); return; }
-    el.addEventListener('loadedmetadata', () => onResourceLoaded(el.src || id), { once: true });
-    el.addEventListener('error', () => onResourceLoaded(el.src || id), { once: true });
-  });
+  /* ---- DOMContentLoaded後にリソース追跡を開始（要素がDOMに存在してから実行） ---- */
+  function startTracking() {
+    /* ---- 動画を追跡 ---- */
+    VIDEO_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) { onResourceLoaded(id); return; }
+      if (el.readyState >= 1) { onResourceLoaded(el.src || id); return; }
+      el.addEventListener('loadedmetadata', () => onResourceLoaded(el.src || id), { once: true });
+      el.addEventListener('error', () => onResourceLoaded(el.src || id), { once: true });
+    });
 
-  /* ---- 音声を追跡 ---- */
-  AUDIO_IDS.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) { onResourceLoaded(id); return; }
-    if (el.readyState >= 1) { onResourceLoaded(el.src || id); return; }
-    el.addEventListener('loadedmetadata', () => onResourceLoaded(el.src || id), { once: true });
-    el.addEventListener('error', () => onResourceLoaded(el.src || id), { once: true });
-  });
+    /* ---- 音声を追跡 ---- */
+    AUDIO_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) { onResourceLoaded(id); return; }
+      if (el.readyState >= 1) { onResourceLoaded(el.src || id); return; }
+      el.addEventListener('loadedmetadata', () => onResourceLoaded(el.src || id), { once: true });
+      el.addEventListener('error', () => onResourceLoaded(el.src || id), { once: true });
+    });
 
-  /* ---- frame.png を追跡 ---- */
-  const fImg = new Image();
-  fImg.onload  = () => onResourceLoaded(FRAME_URL);
-  fImg.onerror = () => onResourceLoaded(FRAME_URL);
-  fImg.src = FRAME_URL;
+    /* ---- frame.png を追跡 ---- */
+    const fImg = new Image();
+    fImg.onload  = () => onResourceLoaded(FRAME_URL);
+    fImg.onerror = () => onResourceLoaded(FRAME_URL);
+    fImg.src = FRAME_URL;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startTracking);
+  } else {
+    startTracking();
+  }
 
   /* ---- タイムアウト保険（25秒） ---- */
   setTimeout(() => {
@@ -1796,15 +1821,6 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
   <div id="right-panel">
     <!-- 収納ボタン（パネル上部） -->
     <button id="panel-toggle-top" onclick="toggleRightPanel()">◀ 収納する</button>
-    <!-- タイトルへ戻るボタン -->
-    <div class="panel-item" style="padding:0;">
-      <a href="https://tenibi.github.io/tenibijan/tenibijan.html"
-         style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px 12px;font-size:14px;font-weight:700;letter-spacing:1px;background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(124,58,237,0.2));border:1.5px solid rgba(251,191,36,0.6);border-radius:8px;color:#fbbf24;text-decoration:none;font-family:sans-serif;text-shadow:0 0 8px rgba(251,191,36,0.4);box-shadow:0 0 10px rgba(251,191,36,0.15);transition:all 0.15s;"
-         onmouseover="this.style.background='linear-gradient(135deg,rgba(251,191,36,0.3),rgba(124,58,237,0.35))'"
-         onmouseout="this.style.background='linear-gradient(135deg,rgba(251,191,36,0.15),rgba(124,58,237,0.2))'">
-        🏠 タイトルへ戻る
-      </a>
-    </div>
     <div class="panel-item">
       <h3>回転数</h3>
       <div id="rotations-disp-top" class="panel-value">0<span>回</span></div>
@@ -1841,6 +1857,15 @@ body { background: #000; display: flex; justify-content: center; align-items: fl
         onmouseout="this.style.background='linear-gradient(135deg,rgba(124,58,237,0.25),rgba(109,40,217,0.2))'">
         ⚙ 設定
       </button>
+    </div>
+    <!-- タイトルへ戻るボタン -->
+    <div class="panel-item" style="padding:0;">
+      <a href="https://tenibi.github.io/tenibijan/tenibijan.html"
+         style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px 12px;font-size:14px;font-weight:700;letter-spacing:1px;background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(124,58,237,0.2));border:1.5px solid rgba(251,191,36,0.6);border-radius:8px;color:#fbbf24;text-decoration:none;font-family:sans-serif;text-shadow:0 0 8px rgba(251,191,36,0.4);box-shadow:0 0 10px rgba(251,191,36,0.15);transition:all 0.15s;"
+         onmouseover="this.style.background='linear-gradient(135deg,rgba(251,191,36,0.3),rgba(124,58,237,0.35))'"
+         onmouseout="this.style.background='linear-gradient(135deg,rgba(251,191,36,0.15),rgba(124,58,237,0.2))'">
+        🏠 タイトルへ戻る
+      </a>
     </div>
   </div>
 
@@ -2043,7 +2068,8 @@ function updateDigit2VerticalItems(el, phaseDeg) {
     wrap.classList.contains('atari02-video-playing')
   );
   const itemSize = isSmall ? 90 : 135;
-  const radius = 467 * (itemSize / 135); // アイテムサイズに比例してradiusを調整
+  const baseRadius = 467 * (window._digitScale || 1); // 525px基準にスケール
+  const radius = baseRadius * (itemSize / 135); // アイテムサイズに比例してradiusを調整
   const D2_MAX_VISIBLE_ITEMS = 5;
   // 正面から±82°以内のみ表示（中央＋上下2枚まで＝最大5枚）
   const SHOW_ANGLE = 82;
@@ -2122,7 +2148,8 @@ function startDigitSpin(el) {
 
     circle.style.animation = `${kfCircle} 4s linear infinite`;
 
-    const radius = 435;
+    const radius = 435 * (window._digitScale || 1);
+    const halfItem = 67.5 * (window._digitScale || 1);
     for (let i = 0; i < 9; i++) {
       // 12時の位置(-90度)から時計回りに40度ずつ配置
       const angleDeg = -90 + i * 40;
@@ -2132,8 +2159,8 @@ function startDigitSpin(el) {
 
       const item = document.createElement('div');
       item.className = 'd1-item';
-      item.style.left = (x - 68) + 'px'; // 135/2 = 67.5 → 中心合わせ
-      item.style.top  = (y - 68) + 'px';
+      item.style.left = (x - halfItem) + 'px'; // 中心合わせ
+      item.style.top  = (y - halfItem) + 'px';
 
       const img = document.createElement('img');
       img.src = slotImgSrc(i + 1); // 1〜9を順に割り当て
@@ -2170,7 +2197,8 @@ function startDigitSpin(el) {
 
     circle.style.animation = `${kfCircle} 4s linear infinite`;
 
-    const radius = 435;
+    const radius = 435 * (window._digitScale || 1);
+    const halfItem = 67.5 * (window._digitScale || 1);
     for (let i = 0; i < 9; i++) {
       const angleDeg = -90 + i * 40;
       const angleRad = angleDeg * Math.PI / 180;
@@ -2179,8 +2207,8 @@ function startDigitSpin(el) {
 
       const item = document.createElement('div');
       item.className = 'd3-item';
-      item.style.left = (x - 68) + 'px';
-      item.style.top  = (y - 68) + 'px';
+      item.style.left = (x - halfItem) + 'px';
+      item.style.top  = (y - halfItem) + 'px';
 
       const img = document.createElement('img');
       img.src = slotImgSrc(i + 1);
@@ -3068,7 +3096,8 @@ const _HOLD_IMG_URL = {
 };
 
 function _holdDotCSS(color, active) {
-  if (!active) return 'width:36px;height:36px;border-radius:50%;border:none;background:transparent;transition:transform 0.3s ease,opacity 0.3s ease;flex-shrink:0;';
+  const sz = (window._holdDotSize || 36) + 'px';
+  if (!active) return `width:${sz};height:${sz};border-radius:50%;border:none;background:transparent;transition:transform 0.3s ease,opacity 0.3s ease;flex-shrink:0;`;
   let sh;
   switch (color) {
     case 'blue':  sh='0 0 7px #3b82f6'; break;
@@ -3077,7 +3106,7 @@ function _holdDotCSS(color, active) {
     case 'gold':  sh='0 0 8px #fbbf24'; break;
     default:      sh='0 0 5px rgba(255,255,255,0.5)'; break;
   }
-  return `width:36px;height:36px;border-radius:50%;box-shadow:${sh};transition:transform 0.3s ease,opacity 0.3s ease;flex-shrink:0;overflow:hidden;background:transparent;border:none;`;
+  return `width:${sz};height:${sz};border-radius:50%;box-shadow:${sh};transition:transform 0.3s ease,opacity 0.3s ease;flex-shrink:0;overflow:hidden;background:transparent;border:none;`;
 }
 
 function updateHoldDisplay() {
@@ -3345,8 +3374,11 @@ function consumeHold(callback) {
   playWakuVideo(holdData.displayColor || holdData.color);
   const dotsEl = document.getElementById('hold-dots');
   const dotEls = Array.from(dotsEl.children);
-  const stepPx = 44; // 36px + 8px gap
-  if (dotEls[0]) { dotEls[0].style.transform = 'translateX(-30px)'; dotEls[0].style.opacity = '0'; }
+  const dotSz  = window._holdDotSize || 36;
+  const gapSz  = parseInt(dotsEl.style.gap) || 8;
+  const stepPx = dotSz + gapSz;
+  const slidePx = Math.round(dotSz * 0.83);
+  if (dotEls[0]) { dotEls[0].style.transform = `translateX(-${slidePx}px)`; dotEls[0].style.opacity = '0'; }
   for (let i = 1; i < dotEls.length; i++) {
     if (i < holdColors.length) dotEls[i].style.transform = `translateX(-${stepPx}px)`;
   }
@@ -3496,6 +3528,13 @@ function stopWakuVideo() {
 
 function rebuildLayout() {
   const xs = sx(), ys = sy();
+
+  /* ── digit スケール（525px基準）を CSS 変数で全 digit に伝播 ── */
+  const digitScale = W / 525;
+  window._digitScale = digitScale;
+  const rc = document.getElementById('roulette-container');
+  if (rc) rc.style.setProperty('--ds', digitScale);
+
   syncFrameOverlay();
   syncNiziOverlay();
   TULIPS = [
@@ -3526,6 +3565,36 @@ function rebuildLayout() {
     });
     // waku-layer 自体の幅も合わせる
     wakuLayer.style.width = W + 'px';
+  }
+
+  // ── 保留玉（hold-dots-board）の位置・サイズ ──
+  // 横画面：CSS固定値（top:392px, left:calc(50%+32px), 36px）が正しいのでそのまま
+  // 縦画面：キャンバスが525px→innerWidth に拡大されるので比例スケール補正する
+  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+  const holdBoard = document.getElementById('hold-dots-board');
+  const holdDots  = document.getElementById('hold-dots');
+  if (isPortrait && holdBoard) {
+    const scale = W / 525; // 横画面(525px)→縦画面(W)の拡大率
+    holdBoard.style.top  = Math.round(392 * scale) + 'px';
+    holdBoard.style.left = Math.round((525 / 2 + 32) * scale) + 'px';
+    const dotSize = Math.round(36 * scale);
+    if (holdDots) holdDots.style.gap = Math.round(8 * scale) + 'px';
+    window._holdDotSize = dotSize;
+  } else {
+    // 横画面：CSS固定値に戻す
+    if (holdBoard) {
+      holdBoard.style.top  = '392px';
+      holdBoard.style.left = 'calc(50% + 32px)';
+    }
+    if (holdDots) holdDots.style.gap = '8px';
+    window._holdDotSize = 36;
+  }
+  // 現在表示中の玉サイズを再適用
+  if (holdDots) {
+    holdDots.querySelectorAll('div').forEach(dot => {
+      dot.style.width  = window._holdDotSize + 'px';
+      dot.style.height = window._holdDotSize + 'px';
+    });
   }
 }
 
@@ -4184,7 +4253,8 @@ function _playZenkaitenAnimation(proceedFn) {
     const circle = document.createElement('div');
     circle.className = 'd1-circle';
     circle.style.animation = 'none';
-    const radius = 435;
+    const radius = 435 * (window._digitScale || 1);
+    const halfItem = 67.5 * (window._digitScale || 1);
     for (let i = 0; i < 9; i++) {
       const angleDeg = -90 - i * 40;
       const angleRad = angleDeg * Math.PI / 180;
@@ -4192,8 +4262,8 @@ function _playZenkaitenAnimation(proceedFn) {
       const y = Math.round(Math.sin(angleRad) * radius);
       const item = document.createElement('div');
       item.className = 'd1-item';
-      item.style.left = (x - 68) + 'px';
-      item.style.top  = (y - 68) + 'px';
+      item.style.left = (x - halfItem) + 'px';
+      item.style.top  = (y - halfItem) + 'px';
       const img = document.createElement('img');
       img.src = slotImgSrc(i + 1);
       img.style.animation = 'none';
@@ -4208,7 +4278,8 @@ function _playZenkaitenAnimation(proceedFn) {
     const circle = document.createElement('div');
     circle.className = 'd3-circle';
     circle.style.animation = 'none';
-    const radius = 435;
+    const radius = 435 * (window._digitScale || 1);
+    const halfItem = 67.5 * (window._digitScale || 1);
     for (let i = 0; i < 9; i++) {
       const angleDeg = -90 + i * 40;
       const angleRad = angleDeg * Math.PI / 180;
@@ -4216,8 +4287,8 @@ function _playZenkaitenAnimation(proceedFn) {
       const y = Math.round(Math.sin(angleRad) * radius);
       const item = document.createElement('div');
       item.className = 'd3-item';
-      item.style.left = (x - 68) + 'px';
-      item.style.top  = (y - 68) + 'px';
+      item.style.left = (x - halfItem) + 'px';
+      item.style.top  = (y - halfItem) + 'px';
       const img = document.createElement('img');
       img.src = slotImgSrc(i + 1);
       img.style.animation = 'none';
@@ -6566,33 +6637,34 @@ const oseBtn = document.getElementById('ose-btn');
 
 function positionOseBtn() {
   const xs = sx(), ys = sy();
-  const canvasRect = canvas.getBoundingClientRect();
-  const wrapEl = document.getElementById('wrap');
-  const wrapRect = wrapEl.getBoundingClientRect();
+  const canvasOffsetTop  = canvas.offsetTop;
+  const canvasOffsetLeft = canvas.offsetLeft;
   // CENTERチューリップ: x=512px基準中央, y=1000px基準、高さ16px
-  const centerX = 512 * xs; // canvas内X
-  const tulipBottomY = (1000 + 16) * ys; // canvas内Y（チューリップ下端）
-  // wrapからcanvas上端までのオフセット
-  // getBoundingClientRect()はスクロール済み位置を返すが、
-  // position:absoluteのtop/leftはスクロール前の座標系なので scrollTop/Left で補正する
-  const canvasOffsetTop  = canvasRect.top  - wrapRect.top  + wrapEl.scrollTop;
-  const canvasOffsetLeft = canvasRect.left - wrapRect.left + wrapEl.scrollLeft;
-  const btnW = 112, btnH = 66;
-  // oseOverlay を直接取得（const宣言より前に呼ばれてもエラーにならないように）
+  const centerX      = 512 * xs;
+  const tulipBottomY = (1000 + 16) * ys;
+  // ボタンサイズも横画面基準(525px)からスケール
+  const scale = W / 525;
+  const btnW = Math.round(112 * scale);
+  const btnH = Math.round(66  * scale);
   const _ov = document.getElementById('ose-overlay');
   if (!_ov) return;
   _ov.style.left = (canvasOffsetLeft + centerX - btnW / 2) + 'px';
-  _ov.style.top = (canvasOffsetTop + tulipBottomY + 14) + 'px';
+  _ov.style.top  = (canvasOffsetTop  + tulipBottomY + Math.round(14 * scale)) + 'px';
   _ov.style.display = 'block';
+  // ボタン自体のサイズも更新
+  const _btn = document.getElementById('ose-btn');
+  if (_btn) {
+    _btn.style.width  = btnW + 'px';
+    _btn.style.height = btnH + 'px';
+  }
 
-  // 丸いボタン：OSEボタンの50px下・右150px
+  // 丸いボタン：OSEボタンの右225px・下105px（スケール追従）
   const _rb = document.getElementById('round-btn-overlay');
   if (_rb) {
     const oseLeft = canvasOffsetLeft + centerX - btnW / 2;
-    const oseTop  = canvasOffsetTop + tulipBottomY + 14;
-    const rbSize  = 150;
-    _rb.style.left = (oseLeft + 225) + 'px';
-    _rb.style.top  = (oseTop + 105)   + 'px';
+    const oseTop  = canvasOffsetTop  + tulipBottomY + Math.round(14 * scale);
+    _rb.style.left = (oseLeft + Math.round(225 * scale)) + 'px';
+    _rb.style.top  = (oseTop  + Math.round(105 * scale)) + 'px';
     _rb.style.display = 'block';
   }
 }
@@ -6635,7 +6707,7 @@ function startOseSequence(callback) {
   _seekedPlay(vidOse); // seeked 待ちから play()
   // osevc.mp3 再生
   oseVc.currentTime = 0;
-  oseVc.volume = seVolume;
+  oseVc.volume = seVolume * 0.5; // 弱リーチOSE効果音：音量半分
   oseVc.play().catch(() => {});
 
   // OSEボタン点滅開始
@@ -6648,7 +6720,7 @@ function startOseSequence(callback) {
     vidOse.style.display = 'none';
     // oseend.mp3 再生 → 終了後にcallback
     oseEnd.currentTime = 0;
-    oseEnd.volume = seVolume;
+    oseEnd.volume = seVolume * 0.5; // 弱リーチOSE効果音：音量半分
     oseEnd.onended = () => {
       oseEnd.onended = null;
       callback();

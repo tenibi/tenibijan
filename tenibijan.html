@@ -46,12 +46,17 @@ function scaleTable(){
   if(!w||!document.getElementById('gameScreen').classList.contains('active')) return;
   const table=document.getElementById('mahjongTable');
 
-  const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+  // Safari iOS: visualViewport はブラウザのUI(URLバー・下部ナビ)を除いた
+  // 実際に表示可能な領域を返す。window.innerHeight は不正確なため使わない。
+  const vvw = (window.visualViewport ? window.visualViewport.width  : window.innerWidth);
+  const vvh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+
+  const isPortrait = vvw < vvh && vvw < 768;
   let s, tableH, ox, oy;
 
   if(isPortrait){
     // 幅いっぱいにスケール
-    s = window.innerWidth / _TABLE_W;
+    s = vvw / _TABLE_W;
     // 上下150pxずつ（計300px）引いた分にする
     tableH = 1900; // 縦画面固定高さ
     ox = 0;
@@ -59,9 +64,9 @@ function scaleTable(){
     oy = 150;
   } else {
     tableH = _TABLE_H;
-    s = Math.min(window.innerWidth/_TABLE_W, window.innerHeight/_TABLE_H);
-    ox = (window.innerWidth - _TABLE_W*s)/2;
-    oy = (window.innerHeight - _TABLE_H*s)/2;
+    s = Math.min(vvw/_TABLE_W, vvh/_TABLE_H);
+    ox = (vvw - _TABLE_W*s)/2;
+    oy = (vvh - _TABLE_H*s)/2;
   }
 
   w.style.cssText='position:fixed;left:'+ox+'px;top:'+oy+'px;width:'+_TABLE_W+'px;height:'+tableH+'px;transform:scale('+s+');transform-origin:0 0;';
@@ -147,6 +152,11 @@ function scaleTable(){
   }
 }
 window.addEventListener('resize', scaleTable);
+// Safari iOS: URLバーの表示/非表示でvisualViewportのサイズが変わる。
+// resizeイベントだけでは検知できないためvisualViewportも監視する。
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', scaleTable);
+}
 
 // ── ブラウザ閉じ・タブ閉じ時にピアを確実に閉じる ──────────
 // ランクマッチ中の切断をサーバーに通知するヘルパー
@@ -29372,9 +29382,11 @@ function _gameScreenOffsetReset() {
   function applyTableOffset() {
     const w = document.getElementById('tableWrapper');
     if (!w) return;
-    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    const vvw = (window.visualViewport ? window.visualViewport.width  : window.innerWidth);
+    const vvh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const isPortrait = vvw < vvh && vvw < 768;
     if (!isPortrait) return;
-    const s = window.innerWidth / 1400;
+    const s = vvw / 1400;
     w.style.top = P.tableTopOffset.val + 'px';
   }
   window._applyTableOffset = applyTableOffset;
@@ -29764,7 +29776,9 @@ function _gameScreenOffsetReset() {
   }
 
   function tryInit() {
-    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    const vvw = (window.visualViewport ? window.visualViewport.width  : window.innerWidth);
+    const vvh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const isPortrait = vvw < vvh && vvw < 768;
     if (!isPortrait) return;
     if (document.getElementById('_debugLayoutPanel')) return;
     if (!document.getElementById('gameScreen')?.classList.contains('active')) return;
@@ -29784,10 +29798,14 @@ function _gameScreenOffsetReset() {
     tryInit();
   }, 600);
 
-  window.addEventListener('resize', () => {
+  const _onResizeDebug = () => {
     const pnl = document.getElementById('_debugLayoutPanel');
-    const isPortrait = window.innerWidth < window.innerHeight && window.innerWidth < 768;
+    const vvw = (window.visualViewport ? window.visualViewport.width  : window.innerWidth);
+    const vvh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const isPortrait = vvw < vvh && vvw < 768;
     if (pnl && !isPortrait) pnl.style.display = 'none';
-  });
+  };
+  window.addEventListener('resize', _onResizeDebug);
+  if(window.visualViewport) window.visualViewport.addEventListener('resize', _onResizeDebug);
 })();
 </script>

@@ -1255,6 +1255,8 @@ body{
 .btn-curse:hover{border-color:#cc66ee;box-shadow:0 0 10px #aa44cc33;transform:translateY(-1px);}
 .tile.curse-locked{border-color:#aa44cc!important;box-shadow:0 0 8px #aa44cc88!important;background:linear-gradient(160deg,#1a0a2a,#0d0518)!important;position:relative;}
 .tile.curse-locked::after{content:'🔮';position:absolute;top:1px;right:1px;font-size:.4em;opacity:.9;}
+.tile.curse-back{background:linear-gradient(160deg,#0a0010,#050008)!important;border-color:#aa44cc!important;box-shadow:0 0 6px #aa44cc66!important;color:#553377!important;position:relative;}
+.tile.curse-back::after{content:'🔮';position:absolute;top:1px;right:1px;font-size:.4em;opacity:.7;}
 .curse-select-target{cursor:pointer;border-color:#dd88ff!important;box-shadow:0 0 8px #aa44cc66!important;animation:cursePulse 1s ease-in-out infinite;}
 @keyframes cursePulse{0%,100%{box-shadow:0 0 5px #aa44cc55;}50%{box-shadow:0 0 14px #cc66ff99;}}
 .tile.steal-target{border-color:#44ff44!important;cursor:pointer!important;animation:stealPulse 1s ease-in-out infinite;z-index:2;position:relative;}
@@ -9177,8 +9179,9 @@ function onNetData(msg, senderIdx){
       showEmoteOverlay(msg.pidx, msg.emoteId);
     } else if(msg.type==='seEvent'){
       // ホストから配信されたSEイベントをゲスト側で再生
-      // 自分自身のアクションは自分で既に鳴らしているのでスキップ
-      if(msg.pidx !== NET.myIdx){
+      // ホストは自分のアクションをローカルで既に鳴らしているのでスキップ
+      // ゲストはローカルで鳴らしていないため、自分のアクションも再生する
+      if(!NET.isHost || msg.pidx !== NET.myIdx){
         // iconIdはホストが解決済みで送ってくれているのでそのまま使う
         const _se = ()=>{
           if(msg.action==='ron')    SFX.ron();
@@ -17002,8 +17005,10 @@ function renderTable(){
           bt.className='tile honor haku-converted';
           bt.textContent='🀆️';
         } else {
-          bt.className='tile back';
-          bt.textContent='🀫';
+          // 🔮 呪い: 呪われた牌の裏側は黒く表示（呪われていないプレイヤーにも分かるように）
+          const isCursedBack = G_ABILITY_MODE && p.cursedTileId != null && p.hand[i] && p.hand[i]._id === p.cursedTileId;
+          bt.className = isCursedBack ? 'tile curse-back' : 'tile back';
+          bt.textContent = '🀫';
         }
         // CPU: 5枚(drawn有)の時のみ最後の牌の直前にスペーサー
         if(p.hand.length>=5&&i===p.hand.length-1){

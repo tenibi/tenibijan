@@ -11267,12 +11267,8 @@ function handlePon(pidx,tile,fromPidx){
 function nextTurn(pidx){
   G.current=pidx;G.phase='draw';
 
-  // 🧠 洗脳: 対象のターンが来たらsenouActiveをオン
-  if(G_ABILITY_MODE && G.senouTarget===pidx && G.senouUserIdx!=null && !G.senouActive){
-    G.senouActive=true;
-    addLog(`🧠 洗脳発動！${G.players[G.senouUserIdx]?.name||'?'} が ${G.players[pidx]?.name||'?'} のターンを乗っ取った！`,'log-dora');
-    flashLightEffect();
-  }
+  // 🧠 洗脳: 対象が牌を引いた後に発動するため、ここではまだsenouActiveをオンにしない
+  // （senouActiveはhumanPickWall内でdraw完了後に発動する）
 
   // ☀️ 光: 自分のターンに牌を引く前に山牌1枚をランダムで自動表示（光能力装備者のみ）
   // ホスト（またはオフライン）のみが実行し、broadcastStateで同期する
@@ -11338,8 +11334,8 @@ function nextTurn(pidx){
     setTimeout(autoPickWall,200);
     return;
   }
-  if(_isSenouTurn) addLog(`🧠 洗脳中！${G.players[pidx]?.name||'相手'}の代わりに山牌を引いてください`,'log-new');
-  else addLog('山牌を選んでクリックしてください','log-new');
+  // 🧠 洗脳: draw_waitでは対象が自分でドローする（発動はdraw完了後）
+  addLog('山牌を選んでクリックしてください','log-new');
   renderAll();broadcastState();
 }
 
@@ -12378,21 +12374,6 @@ function toggleAutoDiscard(){
 }
 
 function humanPickWall(slotIdx, _fromAuto){
-  // 🧠 洗脳中: 洗脳者が対象の代わりにドロー
-  if(G_ABILITY_MODE && G.senouActive && G.senouUserIdx===NET.myIdx && G.current===G.senouTarget && G.phase==='draw_wait'){
-    if(G.deckSlots[slotIdx]===null) return;
-    SFX.draw();
-    if(NET.online&&!amIHost()){
-      netSend({type:'senouWallPick',pidx:G.senouTarget,slotIdx,userIdx:NET.myIdx});
-      return;
-    }
-    drawTile(G.senouTarget);
-    G.phase='discard';
-    selIdx=-1;
-    addLog(`🧠 洗脳：${G.players[G.senouTarget]?.name||'相手'}の代わりに牌を引いた`,'log-new');
-    broadcastState(); renderAll();
-    return;
-  }
   if(G.phase!=='draw_wait'||G.current!==NET.myIdx)return;
   if(G.lightMode)return; // 光モード中はツモ不可
   // ペン能力 + 聴牌中は手動の山牌選択ツモ不可（自動引きは許可）
@@ -12538,6 +12519,14 @@ function humanPickWall(slotIdx, _fromAuto){
   G.phase='discard';
   selIdx=p.hand.length-1; // 引いた牌を最初から選択状態に
   _updateBombAutoPickBtn(); _updateBombFlagBtn(); _updateBombQueryBtn();
+
+  // 🧠 洗脳: 対象が牌を引いた後にsenouActiveをオン（このターン対象は自分で切れない）
+  if(G_ABILITY_MODE && G.senouTarget===myIdx && G.senouUserIdx!=null && !G.senouActive){
+    G.senouActive=true;
+    addLog(`🧠 洗脳発動！${G.players[G.senouUserIdx]?.name||'?'} が ${G.players[myIdx]?.name||'?'} の捨て牌を操作する！`,'log-dora');
+    flashLightEffect();
+  }
+
   // タイマーはdraw_wait開始時に起動済み → ここでは継続（restartしない）
   // 天和: 親 かつ 1巡目 かつ 自分がまだ一度も捨てていない
   if(p.isDealer&&G.firstRound&&(p.turnCount||0)===0&&canWin(p.hand))p.isTenhou=true;
@@ -12947,6 +12936,14 @@ function cpuAction(){
       return;
     }
     G.phase='discard';
+    // 🧠 洗脳: CPUがドローした直後にsenouActiveをオン（人間の洗脳者の操作を待つ）
+    if(G_ABILITY_MODE && G.senouTarget===idx && G.senouUserIdx!=null && !G.senouActive){
+      G.senouActive=true;
+      addLog(`🧠 洗脳発動！${G.players[G.senouUserIdx]?.name||'?'} が ${p.name} の捨て牌を操作する！`,'log-dora');
+      flashLightEffect();
+      broadcastState(); renderAll();
+      return; // 洗脳者の操作を待つ
+    }
     // ★ drawTile直後に即broadcastState
     broadcastState();
     if(canWin(p.hand)){scheduleForPlayer(idx,400,()=>handleWin(idx,tile,true,-1));return;}
@@ -12965,6 +12962,8 @@ function cpuAction(){
     if(cpuTryAbility(idx)) return;
     scheduleForPlayer(idx,550,cpuDiscard);
   }else if(G.phase==='discard'){
+    // 🧠 洗脳中: CPUは自分で切らず、人間の洗脳者の操作を待つ
+    if(G_ABILITY_MODE && G.senouActive && G.senouTarget===idx) return;
     if(p.riichi){scheduleForPlayer(idx,600,()=>discardAction(idx,p.hand.length-1));return;}
     // 暗槓後リーチ判定（暗槓は門前扱いのため全副露が暗槓ならリーチ可）
     if(!p.riichi&&p.tenpai&&p.melds.every(m=>m.type==='ankan')){cpuDeclareRiichi(idx);return;}
@@ -13600,6 +13599,11 @@ function humanDiscard(){
   // 🧠 洗脳中: 洗脳者が対象の代わりに捨てる
   if(G_ABILITY_MODE && G.senouActive && G.senouUserIdx===NET.myIdx && G.current===G.senouTarget && G.phase==='discard'){
     humanSenouDiscard();
+    return;
+  }
+  // 🧠 洗脳中: 洗脳されている側は自分で切れない
+  if(G_ABILITY_MODE && G.senouActive && G.senouTarget===NET.myIdx && G.phase==='discard'){
+    addLog('🧠 洗脳中！あなたの捨て牌は相手に操作されています','log-new');
     return;
   }
   const myTurn = NET.online ? G.current===NET.myIdx : G.current===0;

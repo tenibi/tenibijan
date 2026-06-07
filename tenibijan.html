@@ -10006,6 +10006,16 @@ function remoteWallPick(pidx,slotIdx){
   }
 
   G.phase='discard';
+
+  // 🧠 洗脳: ゲストが牌を引いた後にsenouActiveをオン（ホスト側で発動）
+  if(G_ABILITY_MODE && G.senouTarget===pidx && G.senouUserIdx!=null && !G.senouActive){
+    G.senouActive=true;
+    addLog(`🧠 洗脳発動！${G.players[G.senouUserIdx]?.name||'?'} が ${p.name} の捨て牌を操作する！`,'log-dora');
+    flashLightEffect();
+    renderAll();broadcastState();
+    return; // 洗脳者の操作を待つ
+  }
+
   // 天和: 親 かつ 1巡目 かつ 自分がまだ一度も捨てていない
   if(p.isDealer&&G.firstRound&&(p.turnCount||0)===0&&canWin(p.hand))p.isTenhou=true;
   // 地和: 非親 かつ 1巡目 かつ 自分がまだ捨てていない かつ 誰も鳴いていない
@@ -10031,8 +10041,8 @@ function remoteWallPick(pidx,slotIdx){
     // 暗槓できる場合はrenderAllで右下クイックボタンを表示して待つ
   }else{
     addLog(`${emj(tile)} ツモ`,'log-new');
-    // 自分の番なら自動切りを発火
-    if(pidx===NET.myIdx) _triggerAutoAction(NET.myIdx, 350);
+    // 自分の番なら自動切りを発火（洗脳中は自動切りしない）
+    if(pidx===NET.myIdx && !G.senouActive) _triggerAutoAction(NET.myIdx, 350);
   }
   renderAll();broadcastState();
 }
@@ -12561,8 +12571,8 @@ function humanPickWall(slotIdx, _fromAuto){
   else if(p.tenpai)addLog(`${emj(tile)} ツモ。テンパイ中。`,'log-new');
   else addLog(`${emj(tile)} ツモ`,'log-new');
   renderAll();broadcastState();
-  // 自動発火
-  if(G.current===myIdx && G.phase==='discard') _triggerAutoAction(myIdx, 350);
+  // 自動発火（洗脳中は自動切りしない）
+  if(G.current===myIdx && G.phase==='discard' && !G.senouActive) _triggerAutoAction(myIdx, 350);
 }
 
 // ============================================================

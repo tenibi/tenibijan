@@ -2024,6 +2024,102 @@ body{
 
 
 
+/* ── 洗脳被弾オーバーレイ ── */
+#senouVictimOverlay{
+  position:fixed;inset:0;z-index:195;
+  pointer-events:none;
+  display:none;
+  overflow:hidden;
+}
+#senouVictimOverlay.active{ display:block; }
+
+/* 暗幕レイヤー */
+#senouVictimOverlay .svo-dim{
+  position:absolute;inset:0;
+  background:rgba(40,0,60,0.55);
+  animation:svoDimIn .6s ease forwards;
+}
+@keyframes svoDimIn{
+  from{opacity:0} to{opacity:1}
+}
+
+/* 渦巻き紫オーラ */
+#senouVictimOverlay .svo-aura{
+  position:absolute;inset:-20%;
+  background:
+    radial-gradient(ellipse 60% 60% at 50% 50%, rgba(180,0,255,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 30% 70%, rgba(120,0,200,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 70% 30%, rgba(200,0,255,0.12) 0%, transparent 60%);
+  animation:svoAuraPulse 2.4s ease-in-out infinite alternate;
+}
+@keyframes svoAuraPulse{
+  from{opacity:.7;transform:scale(1);}
+  to  {opacity:1; transform:scale(1.04);}
+}
+
+/* 画面四隅から滲み出る影 */
+#senouVictimOverlay .svo-vignette{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(60,0,80,0.7) 100%);
+  animation:svoVigPulse 1.8s ease-in-out infinite alternate;
+}
+@keyframes svoVigPulse{
+  from{opacity:.8} to{opacity:1}
+}
+
+/* 中央テキスト */
+#senouVictimOverlay .svo-label{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;
+  animation:svoLabelIn .5s cubic-bezier(.2,1.4,.4,1) forwards;
+  opacity:0;
+}
+@keyframes svoLabelIn{
+  from{opacity:0;transform:translate(-50%,-60%) scale(.7);}
+  to  {opacity:1;transform:translate(-50%,-50%) scale(1);}
+}
+#senouVictimOverlay .svo-icon{
+  font-size:3.2rem;
+  display:block;
+  filter:drop-shadow(0 0 18px #cc44ff);
+  animation:svoIconFloat 2s ease-in-out infinite alternate;
+}
+@keyframes svoIconFloat{
+  from{transform:translateY(0);} to{transform:translateY(-8px);}
+}
+#senouVictimOverlay .svo-title{
+  display:block;
+  font-size:1.4rem;font-weight:900;letter-spacing:.15em;
+  color:#ff88ff;
+  text-shadow:0 0 24px #cc00ff, 0 0 8px #aa00cc, 0 2px 2px #000;
+  margin-top:6px;
+}
+#senouVictimOverlay .svo-sub{
+  display:block;
+  font-size:.65rem;letter-spacing:.18em;
+  color:#cc88ee;
+  text-shadow:0 0 12px #8800cc;
+  margin-top:6px;
+  opacity:.9;
+}
+
+/* 上下に流れるノイズライン */
+#senouVictimOverlay .svo-scanlines{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(180,0,255,0.04) 3px,
+    rgba(180,0,255,0.04) 4px
+  );
+  animation:svoScan 8s linear infinite;
+  opacity:.6;
+}
+@keyframes svoScan{
+  from{background-position:0 0;} to{background-position:0 400px;}
+}
+
 /* ── 捨て牌: mahjong-table内に絶対配置 ── */
 .discard-abs{
   position:absolute;
@@ -4317,6 +4413,19 @@ body{
 </div>
 
 <!-- GAME -->
+<!-- 洗脳被弾オーバーレイ（gameScreenと独立して固定配置） -->
+<div id="senouVictimOverlay">
+  <div class="svo-dim"></div>
+  <div class="svo-aura"></div>
+  <div class="svo-vignette"></div>
+  <div class="svo-scanlines"></div>
+  <div class="svo-label">
+    <span class="svo-icon">🧠</span>
+    <span class="svo-title">洗　脳　さ　れ　た！</span>
+    <span class="svo-sub" id="svoSubText">あなたのターンが乗っ取られています</span>
+  </div>
+</div>
+
 <div id="gameScreen">
   <div class="game-header" style="display:none;">
     <div id="timerDisplay" style="display:none!important;">
@@ -14511,6 +14620,7 @@ async function backToRoom(){
   document.getElementById('winOverlay').classList.remove('show');
   document.getElementById('titleConfirmOverlay').classList.remove('show');
   document.querySelectorAll('.light-peek-overlay').forEach(el=>el.remove());
+  const _svoHide1=document.getElementById('senouVictimOverlay');if(_svoHide1){_svoHide1.classList.remove('active');_svoHide1.style.display='none';}
   document.getElementById('gameScreen').classList.remove('active'); _releaseWakeLock();
   document.getElementById('lobby').style.display='none';
 
@@ -14775,6 +14885,7 @@ function backToLobby(){
   hideReconnectOverlay(); // ★ reconnectOverlay を閉じる（z-index:300 で lobby を覆う問題の修正）
   // 動的に生成されたオーバーレイも除去（light-peek-overlay など）
   document.querySelectorAll('.light-peek-overlay').forEach(el => el.remove());
+  const _svoHide2=document.getElementById('senouVictimOverlay');if(_svoHide2){_svoHide2.classList.remove('active');_svoHide2.style.display='none';}
   document.getElementById('gameScreen').classList.remove('active'); _releaseWakeLock();
   hideRoomLobby();
   document.getElementById('lobby').style.display='block';
@@ -15015,6 +15126,35 @@ function addLog(msg,cls){
 // ============================================================
 function renderAll(){
   if(!G.lightMode) _lightPending=null; // lightMode解除時にペンディングをリセット
+
+  // ── 洗脳被弾オーバーレイ制御 ──────────────────────────────
+  (function(){
+    const ov = document.getElementById('senouVictimOverlay');
+    if(!ov) return;
+    const iAmVictim = G_ABILITY_MODE && G.senouActive && G.senouTarget === NET.myIdx;
+    if(iAmVictim){
+      if(!ov.classList.contains('active')){
+        // 新たに洗脳された瞬間: アニメーションリセットのため付け直す
+        ov.classList.remove('active');
+        void ov.offsetWidth; // reflow
+        ov.classList.add('active');
+      }
+      // 洗脳者名をサブテキストに表示
+      const sub = document.getElementById('svoSubText');
+      if(sub){
+        const userName = G.players[G.senouUserIdx]?.name || '?';
+        sub.textContent = `${userName} にターンを乗っ取られています`;
+      }
+      // gameScreenが非表示なら隠す
+      const gs = document.getElementById('gameScreen');
+      ov.style.display = (gs && gs.classList.contains('active')) ? 'block' : 'none';
+    } else {
+      ov.classList.remove('active');
+      ov.style.display = 'none';
+    }
+  })();
+  // ────────────────────────────────────────────────────────────
+
   renderHeader();renderTable();renderActions();
   // ペンボタン: 能力モードONかつペン能力所持時のみ表示
   const ptb=document.getElementById('penToggleBtn');
